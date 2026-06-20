@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vanlyfa - Minimalist Van Life Community Hub</title>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <!-- Custom Styling System -->
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="app-sidebar">
+      <a href="#" class="logo-container">
+        <img src="VLLOGO.png" alt="Vanlyfa Logo" class="logo-img" onerror="this.style.visibility='hidden';">
+        <span class="logo-text">Van<span class="logo-accent">lyfa</span></span>
+      </a>
+      
+      <nav class="nav-menu">
+        <div class="nav-item active" data-tab="dashboard">
+          <i data-lucide="compass"></i>
+          <span>Dashboard</span>
+        </div>
+        <div class="nav-item" data-tab="feed">
+          <i data-lucide="rss"></i>
+          <span>Feed</span>
+        </div>
+        <div class="nav-item" data-tab="marketplace">
+          <i data-lucide="shopping-bag"></i>
+          <span>Marketplace</span>
+        </div>
+        <div class="nav-item" data-tab="skilltrade">
+          <i data-lucide="wrench"></i>
+          <span>Skill Trade</span>
+        </div>
+        <div class="nav-item" data-tab="tribes">
+          <i data-lucide="users"></i>
+          <span>Tribes</span>
+        </div>
+        <div class="nav-item" data-tab="meetups">
+          <i data-lucide="calendar"></i>
+          <span>Meetups</span>
+        </div>
+        <div class="nav-item" data-tab="forum">
+          <i data-lucide="message-square"></i>
+          <span>Forum</span>
+        </div>
+        <div class="nav-item" data-tab="profile">
+          <i data-lucide="user"></i>
+          <span>My Profile</span>
+        </div>
+      </nav>
+      
+      <!-- Current User Profile Widget -->
+      <div class="sidebar-profile" id="sidebar-profile-btn">
+        <img src="" alt="User Avatar" class="profile-avatar" id="sidebar-user-avatar">
+        <div class="profile-info">
+          <span class="profile-name" id="sidebar-user-name">Loading...</span>
+          <span class="profile-handle" id="sidebar-user-handle">@loading</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Container -->
+    <main class="app-content">
+      
+      <!-- Top Utility/Action Bar -->
+      <header class="top-bar">
+        <h1 class="page-title" id="page-display-title">Dashboard</h1>
+        
+        <div class="search-bar" id="search-bar-container">
+          <i data-lucide="search"></i>
+          <input type="text" id="global-search" placeholder="Search spots, rigs, skills...">
+        </div>
+        
+        <div class="top-bar-actions" id="top-bar-actions-container">
+          <button class="btn" id="theme-toggle-btn" title="Toggle Dark/Light Mode" style="padding: 8px;">
+            <i data-lucide="moon" id="theme-icon"></i>
+          </button>
+          <!-- Action buttons are rendered dynamically based on active tab -->
+          <button class="btn btn-primary" id="main-action-btn">
+            <i data-lucide="plus"></i>
+            <span>Add Spot</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- TAB: DASHBOARD (SPLIT MAP & FEED) -->
+      <section class="tab-content-pane active" id="pane-dashboard" style="padding:0; overflow:hidden;">
+        <div class="dashboard-layout">
+          
+          <!-- Map Display View -->
+          <div class="map-view-container">
+            <!-- 2D Leaflet Map -->
+            <div class="map-2d-wrapper active" id="map-2d-view">
+              <div id="leaflet-map"></div>
+            </div>
+
+            <!-- Shelf Restore Button -->
+            <button class="btn" id="unshelf-feed-btn" title="Show Feed" style="position: absolute; top: 16px; right: 16px; z-index: 1000; display: none; box-shadow: var(--shadow-md); align-items: center; gap: 8px;">
+              <i data-lucide="panel-right-open"></i>
+              <span>Show Feed</span>
+            </button>
+
+            <!-- Map Info Drawer -->
+            <div class="map-info-drawer" id="map-info-drawer">
+              <button class="drawer-close-btn" id="drawer-close"><i data-lucide="x"></i></button>
+              <span class="drawer-category" id="drawer-category">Wild Camping</span>
+              <h3 class="drawer-title" id="drawer-title">Pine Ridge Dispersed</h3>
+              <div class="drawer-author">
+                <img src="" alt="Author Avatar" id="drawer-author-img">
+                <span id="drawer-author-name">Clara Outdoors</span>
+              </div>
+              <p class="drawer-description" id="drawer-description">Beautiful pines, level dirt pullouts. Vouched coordinates and holds cell service.</p>
+              <div class="drawer-details">
+                <div class="drawer-detail-item">
+                  <span class="drawer-detail-label">Coordinates:</span>
+                  <span class="drawer-detail-value" id="drawer-coords">37.24, -112.56</span>
+                </div>
+                <div class="drawer-detail-item">
+                  <span class="drawer-detail-label">Vouched By:</span>
+                  <span class="drawer-detail-value" id="drawer-vouch-count">14 Vanlifers</span>
+                </div>
+              </div>
+              <div style="margin-top: 16px;">
+                <button class="btn btn-sm btn-primary" id="drawer-mark-visited-btn" style="width: 100%; justify-content: center; gap: 6px;">
+                  <i data-lucide="check-square" style="width: 14px; height: 14px;"></i>
+                  <span>Mark as Visited</span>
+                </button>
+              </div>
+            </div>
+            
+          </div>
+          
+          <!-- Social Feed Sidebar -->
+          <div class="dashboard-feed-container">
+            <div class="feed-header">
+              <h3>Community Feed</h3>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-sm btn-primary" id="feed-post-btn" style="padding: 6px 10px;" title="Post Update">
+                  <i data-lucide="edit-3"></i>
+                </button>
+                <button class="btn btn-sm" id="shelf-feed-btn" title="Shelf Feed" style="padding: 6px 10px;">
+                  <i data-lucide="panel-right-close"></i>
+                </button>
+              </div>
+            </div>
+            <div class="feed-scroll" id="social-feed-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+          
+        </div>
+      </section>
+
+      <!-- TAB: FEED -->
+      <section class="tab-content-pane" id="pane-feed">
+        <div class="feed-tab-layout">
+          
+          <!-- Post Creation Box -->
+          <div class="feed-tab-post-creator">
+            <h3>Share an Update</h3>
+            <div class="feed-tab-post-creator-body">
+              <img src="" alt="User Avatar" class="profile-avatar" id="feed-tab-user-avatar">
+              <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 12px;">
+                <textarea id="feed-tab-post-text" placeholder="What's happening on the road? Share campsite views, solar upgrades, or camper hacks..."></textarea>
+                <div class="feed-tab-post-creator-footer">
+                  <select id="feed-tab-post-img-select" class="select-filter">
+                    <option value="none">No Image</option>
+                    <option value="desert">Utah Desert Sunset (Scenic)</option>
+                    <option value="forest">Pacific Northwest Pine forest</option>
+                    <option value="interior">Rig Cozy Interior Cabin</option>
+                    <option value="solar">Solar installation details</option>
+                  </select>
+                  <button class="btn btn-primary" id="feed-tab-post-submit">
+                    <i data-lucide="send"></i>
+                    <span>Share Update</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Feed Posts List -->
+          <div class="feed-tab-posts-container" id="feed-tab-posts-list">
+            <!-- Dynamically populated -->
+          </div>
+          
+        </div>
+      </section>
+
+      <!-- TAB: MARKETPLACE -->
+      <section class="tab-content-pane" id="pane-marketplace">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h2>Marketplace</h2>
+            <p>Buy, sell, or trade camper rigs, spare parts, and van essentials.</p>
+          </div>
+          <button class="btn btn-primary" id="market-create-btn">
+            <i data-lucide="plus"></i>
+            <span>Add Listing</span>
+          </button>
+        </div>
+        
+        <div class="filter-row">
+          <select class="select-filter" id="market-filter-category">
+            <option value="all">All Categories</option>
+            <option value="campervan">Campervans</option>
+            <option value="electrical">Solar & Electrical</option>
+            <option value="parts">Rig Parts & Hardware</option>
+            <option value="gear">Camping Gear</option>
+          </select>
+          <input type="text" id="market-filter-zip" class="select-filter" style="width: 100px; text-align: center;" placeholder="Zip Code">
+          <select class="select-filter" id="market-filter-radius">
+            <option value="any">Any Distance</option>
+            <option value="25">Within 25 miles</option>
+            <option value="50">Within 50 miles</option>
+            <option value="100">Within 100 miles</option>
+            <option value="250">Within 250 miles</option>
+          </select>
+          <select class="select-filter" id="market-sort-price">
+            <option value="recent">Sort: Newest</option>
+            <option value="low-high">Price: Low to High</option>
+            <option value="high-low">Price: High to Low</option>
+          </select>
+        </div>
+        
+        <div class="marketplace-grid" id="marketplace-grid">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- TAB: SKILL TRADE -->
+      <section class="tab-content-pane" id="pane-skilltrade">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h2>Skill Trade Directory</h2>
+            <p>Exchange mechanical, building, electrical, or off-grid expertise with fellow nomads.</p>
+          </div>
+          <button class="btn btn-primary" id="skill-create-btn">
+            <i data-lucide="plus"></i>
+            <span>Offer / Request Skill</span>
+          </button>
+        </div>
+        
+        <div class="filter-row">
+          <select class="select-filter" id="skill-filter-type">
+            <option value="all">All Postings</option>
+            <option value="offer">Offered Skills</option>
+            <option value="want">Wanted Skills</option>
+          </select>
+          <select class="select-filter" id="skill-filter-category">
+            <option value="all">All Categories</option>
+            <option value="electrical">Solar / Electrical</option>
+            <option value="woodworking">Cabinetry & Woodworking</option>
+            <option value="mechanical">Engine & Braking</option>
+            <option value="plumbing">Plumbing & Water</option>
+            <option value="digital">Web Dev & Remote Work</option>
+          </select>
+        </div>
+        
+        <div class="skill-trade-layout">
+          <div class="skill-list" id="skill-list-container">
+            <!-- Dynamically populated -->
+          </div>
+          
+          <div class="skill-side-panel">
+            <div class="info-box">
+              <h4><i data-lucide="handshake"></i> How Skill Trade Works</h4>
+              <p style="margin-bottom: 12px;">Skill trading is the lifeblood of off-grid living. Vanlifers swap services without currency exchanging hands.</p>
+              <p>For example, trade a solar wiring repair for wood paneling assistance or mechanical diagnostics for website build advice. Tap "Message Trader" to strike up a trade plan.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: TRIBES -->
+      <section class="tab-content-pane" id="pane-tribes">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h2>Tribes</h2>
+            <p>Find your pack. Join regional groups, brand circles, and interest-based caravans.</p>
+          </div>
+          <button class="btn btn-primary" id="tribe-create-btn">
+            <i data-lucide="plus"></i>
+            <span>Form Tribe</span>
+          </button>
+        </div>
+        
+        <div class="tribes-grid" id="tribes-grid">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- TAB: MEETUPS -->
+      <section class="tab-content-pane" id="pane-meetups">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h2>Upcoming Meetups</h2>
+            <p>Gather around the campfire. Discover caravans, desert bonfires, and forest potlucks.</p>
+          </div>
+          <button class="btn btn-primary" id="meetup-create-btn">
+            <i data-lucide="plus"></i>
+            <span>Host Meetup</span>
+          </button>
+        </div>
+        
+        <div class="meetups-layout">
+          <div class="meetup-list" id="meetup-list-container">
+            <!-- Dynamically populated -->
+          </div>
+          
+          <div class="skill-side-panel">
+            <div class="info-box" style="background-color: var(--card-bg); border-color: var(--border-color);">
+              <h4 style="color: var(--text-charcoal);"><i data-lucide="info" style="color: var(--accent-green);"></i> Safety Guidelines</h4>
+              <p style="margin-bottom: 12px; font-size:12px;">Nomadic gathers are self-organized. Please respect public lands, observe Leave No Trace principles, and verify trail updates before starting any caravan.</p>
+              <p style="font-size:12px;">Make sure to RSVP so hosts can estimate vehicle counts and campsite impacts.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: FORUM -->
+      <section class="tab-content-pane" id="pane-forum">
+        <div class="forum-tab-layout">
+          <div class="section-header">
+            <div class="section-title-wrap">
+              <h2>Nomadic Forum</h2>
+              <p>Exchange in-depth knowledge on solar systems, mechanical issues, and destinations.</p>
+            </div>
+            <button class="btn btn-primary" id="forum-create-btn">
+              <i data-lucide="plus"></i>
+              <span>New Thread</span>
+            </button>
+          </div>
+          
+          <div class="forum-layout" id="forum-main-view">
+            <div class="forum-sidebar" id="forum-categories-sidebar">
+              <!-- Dynamically populated from threads database -->
+            </div>
+            
+            <div class="forum-thread-list" id="forum-thread-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+          
+          <!-- Thread Detail View (hidden by default) -->
+          <div class="thread-detail-container" id="forum-thread-detail" style="display: none;">
+            <div class="back-to-forum" id="back-to-forum-btn">
+              <i data-lucide="arrow-left"></i>
+              <span>Back to Forum List</span>
+            </div>
+            
+            <div class="thread-original-post" id="thread-op-container">
+              <!-- Dynamically populated OP -->
+            </div>
+            
+            <h4 style="margin-top: 16px; font-size: 15px; font-weight:700;">Replies</h4>
+            
+            <div class="thread-replies-list" id="thread-replies-list">
+              <!-- Dynamically populated replies -->
+            </div>
+            
+            <div class="reply-card" style="margin-top: 20px;">
+              <div class="form-group">
+                <label for="forum-reply-text">Post a reply</label>
+                <textarea id="forum-reply-text" placeholder="Share your perspective..."></textarea>
+              </div>
+              <div style="display:flex; justify-content:flex-end;">
+                <button class="btn btn-primary" id="forum-submit-reply-btn">Submit Reply</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: MY PROFILE -->
+      <section class="tab-content-pane" id="pane-profile">
+        <div class="profile-layout">
+          
+          <div class="profile-card-left">
+            <img src="" alt="User Avatar" class="profile-large-avatar" id="profile-user-avatar">
+            <h2 id="profile-user-name">Nomad Bob</h2>
+            <p id="profile-user-handle" style="color:var(--muted-text); font-size:14px; margin-top:-10px;">@nomad_bob</p>
+            <p id="profile-user-bio" style="font-size:13px; line-height:1.4;">Living full time in my build since 2024. Chasing weather patterns and solar power.</p>
+            
+            <!-- Owner actions (Edit Rig) -->
+            <button class="btn" style="width: 100%; justify-content:center;" id="profile-edit-btn">
+              <i data-lucide="edit"></i>
+              <span>Edit Rig Profile</span>
+            </button>
+
+            <!-- Visitor actions (Add Friend / Message) -->
+            <div id="profile-visitor-actions" style="display: none; width: 100%; flex-direction: column; gap: 8px;">
+              <button class="btn btn-primary" style="width: 100%; justify-content:center;" id="profile-friend-btn">
+                <i data-lucide="user-plus"></i>
+                <span>Add Friend</span>
+              </button>
+              <button class="btn" style="width: 100%; justify-content:center;" id="profile-message-btn">
+                <i data-lucide="message-square"></i>
+                <span>Message</span>
+              </button>
+            </div>
+            
+            <!-- Friends list indicator -->
+            <div style="margin-top: 16px; font-size: 13px; color: var(--muted-text); text-align: left; width: 100%; border-top: 1px solid var(--border-color); padding-top: 16px;">
+              <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text-charcoal); margin-bottom: 8px;">
+                <i data-lucide="users" style="width: 16px; height: 16px;"></i>
+                <span id="profile-friends-title">Friends (2)</span>
+              </div>
+              <div id="profile-friends-list" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <!-- Dynamically populated friend avatars -->
+              </div>
+            </div>
+          </div>
+          
+          <div class="profile-details-right">
+            <!-- Rig Specs -->
+            <div class="profile-card-section">
+              <h3>Vehicle / Rig Details</h3>
+              <div class="rig-details-grid">
+                <div class="rig-detail-box">
+                  <div class="rig-detail-title">Rig Model</div>
+                  <div class="rig-detail-value" id="profile-rig-model">Sprinter 144 AWD</div>
+                </div>
+                <div class="rig-detail-box">
+                  <div class="rig-detail-title">Solar Capacity</div>
+                  <div class="rig-detail-value" id="profile-rig-solar">400W Solar</div>
+                </div>
+                <div class="rig-detail-box">
+                  <div class="rig-detail-title">Power Bank</div>
+                  <div class="rig-detail-value" id="profile-rig-power">300Ah Lithium</div>
+                </div>
+                <div class="rig-detail-box">
+                  <div class="rig-detail-title">Water Capacity</div>
+                  <div class="rig-detail-value" id="profile-rig-water">25 Gal Fresh</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rig Gallery -->
+            <div class="profile-card-section">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                <h3 style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">Rig Image Gallery</h3>
+                <label id="profile-gallery-upload-btn" class="btn btn-sm" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                  <i data-lucide="upload" style="width: 14px; height: 14px;"></i>
+                  <span>Upload Image</span>
+                  <input type="file" id="profile-rig-photo-upload" accept="image/*" style="display: none;">
+                </label>
+              </div>
+              <div class="profile-gallery-grid" id="profile-gallery-grid">
+                <!-- Dynamically populated with photos -->
+              </div>
+            </div>
+
+            <!-- Personal map -->
+            <div class="profile-card-section">
+              <h3>Personal Pin Map</h3>
+              <p style="font-size: 12px; color: var(--muted-text); margin-bottom: 12px;">Showing places vouched or marked as visited by this nomad.</p>
+              <div id="profile-map" style="height: 250px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border-color);"></div>
+            </div>
+            
+            <!-- Spots visited -->
+            <div class="profile-card-section">
+              <h3>Places Visited & Vouched</h3>
+              <div class="visited-spots-list" id="profile-visited-spots-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==========================================================================
+     MODALS SECTION
+     ========================================================================== -->
+
+  <!-- Modal: Edit Profile -->
+  <div class="modal-overlay" id="modal-edit-profile">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Edit Rig Profile</h3>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="edit-profile-avatar-upload" style="cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px dashed var(--border-color); border-radius: var(--radius-md); text-align: center; justify-content: center; background: var(--bg-sand);">
+            <i data-lucide="camera" style="width: 16px; height: 16px;"></i>
+            <span>Upload Profile Photo</span>
+            <input type="file" id="edit-profile-avatar-upload" accept="image/*" style="display: none;">
+          </label>
+          <span id="profile-photo-upload-status" style="font-size: 11px; color: var(--muted-text); text-align: center;"></span>
+        </div>
+        <div class="form-group">
+          <label for="edit-profile-name">Display Name</label>
+          <input type="text" id="edit-profile-name">
+        </div>
+        <div class="form-group">
+          <label for="edit-profile-bio">Bio</label>
+          <textarea id="edit-profile-bio"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-profile-rig">Rig Model</label>
+            <input type="text" id="edit-profile-rig" placeholder="e.g. Ford Transit 148">
+          </div>
+          <div class="form-group">
+            <label for="edit-profile-solar">Solar Capacity</label>
+            <input type="text" id="edit-profile-solar" placeholder="e.g. 400W Solar">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-profile-power">Battery Power</label>
+            <input type="text" id="edit-profile-power" placeholder="e.g. 200Ah Lithium">
+          </div>
+          <div class="form-group">
+            <label for="edit-profile-water">Water Capacity</label>
+            <input type="text" id="edit-profile-water" placeholder="e.g. 20 Gallons">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-cancel">Cancel</button>
+        <button class="btn btn-primary" id="save-profile-btn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add Spot -->
+  <div class="modal-overlay" id="modal-add-spot">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add Vouched Vanlife Spot</h3>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="spot-title">Spot Name</label>
+          <input type="text" id="spot-title" placeholder="e.g. Cedar Ridge Overlook">
+        </div>
+        <div class="form-group">
+          <label for="spot-category">Spot Category</label>
+          <select id="spot-category">
+            <option value="wild-camping">Wild Camping (Free Dispersed)</option>
+            <option value="driveway-host">Driveway Host (Moochdocking)</option>
+            <option value="water-station">Water & Dumping Station</option>
+            <option value="service-mechanic">Trusted Van Mechanic</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="spot-lat">Latitude</label>
+            <input type="number" id="spot-lat" step="0.000001" placeholder="e.g. 37.2405">
+          </div>
+          <div class="form-group">
+            <label for="spot-lng">Longitude</label>
+            <input type="number" id="spot-lng" step="0.000001" placeholder="e.g. -112.5642">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="spot-desc">Description & Vouch Context</label>
+          <textarea id="spot-desc" placeholder="Describe the access, road clearance conditions, cell reception carriers, and spots availability."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-cancel">Cancel</button>
+        <button class="btn btn-primary" id="save-spot-btn">Vouch Spot</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add Post -->
+  <div class="modal-overlay" id="modal-add-post">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Share Update</h3>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="post-text">What's happening on the road?</label>
+          <textarea id="post-text" placeholder="Share advice, check-in updates, or campsite views..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="post-img-select">Attach Rig/Campsite Image Mockup</label>
+          <select id="post-img-select">
+            <option value="none">No Image</option>
+            <option value="desert">Utah Desert Sunset (Scenic)</option>
+            <option value="forest">Pacific Northwest Pine forest</option>
+            <option value="interior">Rig Cosy Interior Cabin</option>
+            <option value="solar">Solar installation details</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-cancel">Cancel</button>
+        <button class="btn btn-primary" id="save-post-btn">Post Update</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Create Listing -->
+  <div class="modal-overlay" id="modal-add-listing">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Create Marketplace Listing</h3>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="list-title">Listing Title</label>
+          <input type="text" id="list-title" placeholder="e.g. Renogy 100W Solar Suitcase">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="list-price">Price ($)</label>
+            <input type="number" id="list-price" placeholder="e.g. 150">
+          </div>
+          <div class="form-group">
+            <label for="list-category">Category</label>
+            <select id="list-category">
+              <option value="campervan">Campervans</option>
+              <option value="electrical">Solar & Electrical</option>
+              <option value="parts">Rig Parts & Hardware</option>
+              <option value="gear">Camping Gear</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="list-location">General Location / Current Spot</label>
+            <input type="text" id="list-location" placeholder="e.g. Flagstaff, AZ">
+          </div>
+          <div class="form-group">
+            <label for="list-zip">Zip Code</label>
+            <input type="text" id="list-zip" placeholder="e.g. 86001">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="list-desc">Item Condition & Details</label>
+          <textarea id="list-desc" placeholder="Describe the usage history, specifications, and if you are willing to deliver along your route."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="list-img-select">Item Image Mockup</label>
+          <select id="list-img-select">
+            <option value="solar">Renogy Solar Panel Panel</option>
+            <option value="campervan">Finished Sprinter Rig</option>
+            <option value="gear">Premium Camping Stove</option>
+            <option value="parts">MaxxFan Roof Ventilator</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-cancel">Cancel</button>
+        <button class="btn btn-primary" id="save-listing-btn">Publish Listing</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Offer/Request Skill -->
+  <div class="modal-overlay" id="modal-add-skill">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Create Skill Trade posting</h3>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="skill-title-input">Skill Title</label>
+          <input type="text" id="skill-title-input" placeholder="e.g. Solar Electrical System Design">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="skill-type-input">Posting Type</label>
+            <select id="skill-type-input">
+              <option value="offer">Offering (Available to help)</option>
+              <option value="want">Requesting (Need assistance)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="skill-cat-input">Category</label>
+            <select id="skill-cat-input">
+              <option value="electrical">Solar / Electrical</option>
+              <option value="woodworking">Cabinetry & Woodworking</option>
+              <option value="mechanical">Engine & Braking</option>
+              <option value="plumbing">Plumbing & Water</option>
+              <option value="digital">Web Dev & Remote Work</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="skill-tags-input">Tags (comma-separated)</label>
+          <input type="text" id="skill-tags-input" placeholder="e.g. solar, lithium, wiring, multi-meter">
+        </div>
+        <div class="form-group">
+          <label for="skill-desc-input">Explain your Trade or Need</label>
+          <textarea id="skill-desc-input" placeholder="Give context about your level of skill or the exact issue you're facing. State what trades you are open to."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-cancel">Cancel</button>
+        <button class="btn btn-primary" id="save-skill-btn">Post Trade Option</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Form Tribe -->
+  <div class="modal-overlay" id="modal-add-tribe">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Form Tribe</h3>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="tribe-name-input">Tribe Name</label>
+          <input type="text" id="tribe-name-input" placeholder="e.g. Pacific Northwest Sprinters">
+        </div>
+        <div class="form-group">
+          <label for="tribe-icon-input">Tribe Icon Letter</label>
+          <input type="text" id="tribe-icon-input" maxlength="2" placeholder="e.g. PNW">
+        </div>
+        <div class="form-group">
+          <label for="tribe-banner-select">Tribe Banner Vibe</label>
+          <select id="tribe-banner-select">
+            <option value="forest">Deep Pine Forest Green</option>
+            <option value="desert">Warm Desert Ochre</option>
+            <option value="ocean">Coastal Ocean Teal</option>
+            <option value="mountain">Granite Mountain Grey</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="tribe-desc-input">Tribe Purpose & Identity</label>
+          <textarea id="tribe-desc-input" placeholder="Who should join? What coordinates or interests bind this tribe together?"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-cancel">Cancel</button>
+        <button class="btn btn-primary" id="save-tribe-btn">Form Tribe</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Host Meetup -->
+  <div class="modal-overlay" id="modal-add-meetup">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Host Caravan Meetup</h3>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="meetup-title-input">Meetup Title</label>
+          <input type="text" id="meetup-title-input" placeholder="e.g. Annual Slab City Campout">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="meetup-date-input">Meetup Date</label>
+            <input type="date" id="meetup-date-input">
+          </div>
+          <div class="form-group">
+            <label for="meetup-time-input">Campsite Arrival Time</label>
+            <input type="text" id="meetup-time-input" placeholder="e.g. 3:00 PM onwards">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="meetup-loc-name">Campsite Location Name</label>
+          <input type="text" id="meetup-loc-name" placeholder="e.g. Quartzsite Town Lands, AZ">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="meetup-lat">Latitude</label>
+            <input type="number" id="meetup-lat" step="0.000001" placeholder="e.g. 33.684">
+          </div>
+          <div class="form-group">
+            <label for="meetup-lng">Longitude</label>
+            <input type="number" id="meetup-lng" step="0.000001" placeholder="e.g. -114.231">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="meetup-desc-input">Gathering Details</label>
+          <textarea id="meetup-desc-input" placeholder="What are the plans? Fireside discussions, gear exchange, shared dinner? Mention rig size limitations."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-cancel">Cancel</button>
+        <button class="btn btn-primary" id="save-meetup-btn">Create Meetup Pin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Create Forum Thread -->
+  <div class="modal-overlay" id="modal-add-thread">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Create Forum Thread</h3>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="thread-title-input">Thread Title</label>
+          <input type="text" id="thread-title-input" placeholder="e.g. Troubleshooting alternator charging issues">
+        </div>
+        <div class="form-group">
+          <label for="thread-cat-input">Category / Topic</label>
+          <input type="text" id="thread-cat-input" placeholder="e.g. Solar & Off-grid, Solo Nomad, Pets on Road">
+        </div>
+        <div class="form-group">
+          <label for="thread-body-input">Thread Body / Question</label>
+          <textarea id="thread-body-input" placeholder="Describe your question or discussion topic in detail. If sharing knowledge, lay it out clearly."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-cancel">Cancel</button>
+        <button class="btn btn-primary" id="save-thread-btn">Launch Thread</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contacts Sidebar Drawer -->
+  <div class="contacts-sidebar" id="contacts-sidebar">
+    <div class="contacts-sidebar-header">
+      <h3>Contacts</h3>
+      <button class="contacts-close-btn" id="contacts-close-btn"><i data-lucide="x"></i></button>
+    </div>
+    <div class="contacts-list" id="contacts-list-scroll">
+      <!-- Dynamically populated contacts -->
+    </div>
+  </div>
+
+  <!-- Chat Windows Container (floats at bottom right) -->
+  <div class="chat-windows-container" id="chat-windows-container"></div>
+
+  <!-- Floating Contacts Toggle FAB -->
+  <button class="contacts-toggle-btn" id="contacts-toggle-btn" title="Messages">
+    <i data-lucide="message-square"></i>
+    <span class="contacts-unread-badge" id="contacts-unread-badge" style="display: none;">0</span>
+  </button>
+
+  <!-- Notification Toast System -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Core Logic script -->
+  <script src="index.js"></script>
+</body>
+</html>
