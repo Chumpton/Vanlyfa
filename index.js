@@ -804,6 +804,19 @@ function closeMobileSidebar() {
   switchTab('dashboard');
   renderContactsSidebar();
   renderActiveChats();
+
+  // Onboarding Welcome Modal Dismiss
+  const welcomeDismissBtn = document.getElementById('welcome-dismiss-btn');
+  const welcomeModal = document.getElementById('welcome-modal');
+  if (welcomeDismissBtn && welcomeModal) {
+    welcomeDismissBtn.addEventListener('click', () => {
+      welcomeModal.classList.add('fading');
+      setTimeout(() => {
+        welcomeModal.classList.remove('active', 'fading');
+        welcomeModal.style.display = 'none';
+      }, 300);
+    });
+  }
   
   // Initialize Leaflet Map
   initLeafletMap();

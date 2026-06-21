@@ -797,6 +797,66 @@
   <!-- Notification Toast System -->
   <div class="toast-container" id="toast-container"></div>
 
+  <!-- Onboarding Welcome Modal -->
+  <div class="modal-overlay welcome-modal-overlay active" id="welcome-modal">
+    <div class="modal-content welcome-modal-content">
+      <div class="modal-header welcome-modal-header">
+        <div class="welcome-header-title">
+          <img src="VLLOGO.png" alt="Vanlyfa Logo" class="welcome-logo-img" onerror="this.style.display='none';">
+          <h2>Welcome to Van<span class="logo-accent">lyfa</span>!</h2>
+        </div>
+      </div>
+      <div class="modal-body welcome-modal-body">
+        <p class="welcome-intro">We're glad to have you in our community hub for van life travelers. Here is a quick guide to what you can do:</p>
+        
+        <div class="welcome-features-list">
+          <div class="welcome-feature-item">
+            <div class="welcome-feature-icon"><i data-lucide="compass"></i></div>
+            <div class="welcome-feature-desc">
+              <h4>Interactive Map & Dashboard</h4>
+              <p>Discover and share wild camping spots, water fill stations, dump stations, and repair shops. Filter map locations, add new spots, or vouch for existing ones.</p>
+            </div>
+          </div>
+          
+          <div class="welcome-feature-item">
+            <div class="welcome-feature-icon"><i data-lucide="rss"></i></div>
+            <div class="welcome-feature-desc">
+              <h4>Community Feed</h4>
+              <p>Post updates, share beautiful photos of your rig and travels, ask questions, and comment on other travelers' posts in real-time.</p>
+            </div>
+          </div>
+          
+          <div class="welcome-feature-item">
+            <div class="welcome-feature-icon"><i data-lucide="shopping-bag"></i></div>
+            <div class="welcome-feature-desc">
+              <h4>Nomadic Marketplace</h4>
+              <p>Buy, sell, or barter items, rigs, camper accessories, and services. Share off-grid skills with local travelers near you.</p>
+            </div>
+          </div>
+          
+          <div class="welcome-feature-item">
+            <div class="welcome-feature-icon"><i data-lucide="scroll-text"></i></div>
+            <div class="welcome-feature-desc">
+              <h4>Community Forums</h4>
+              <p>Participate in long-form threads about mechanical troubleshooting, solar configuration, pet safety on the road, and travel tips.</p>
+            </div>
+          </div>
+          
+          <div class="welcome-feature-item">
+            <div class="welcome-feature-icon"><i data-lucide="shield-check"></i></div>
+            <div class="welcome-feature-desc">
+              <h4>Vouching & Reputation System</h4>
+              <p>Vouch for campsites you have verified to raise spot credibility. Upvote helpful answers and trade interactions to build user reputation scores.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer welcome-modal-footer">
+        <button class="btn btn-primary welcome-btn" id="welcome-dismiss-btn">Thank You / Gracias</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <!-- Lucide Icons -->

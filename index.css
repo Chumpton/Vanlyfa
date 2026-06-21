@@ -1946,19 +1946,20 @@ body {
   .mobile-top-logo {
     display: flex !important;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     text-decoration: none;
-    flex-shrink: 0;
+    flex-grow: 1;
+    justify-content: center;
     margin-bottom: 0;
     cursor: pointer;
   }
   .mobile-top-logo .logo-img {
-    height: 32px;
-    max-width: 36px;
+    height: 38px;
+    max-width: 42px;
     object-fit: contain;
   }
   .mobile-top-logo .logo-text {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 900;
     letter-spacing: -0.5px;
     color: var(--text-charcoal);
@@ -2791,29 +2792,25 @@ body.dark-mode .chat-messages-area {
 
 /* Extra small viewport optimizations for AAA mobile feel */
 @media (max-width: 500px) {
-  .nav-item span {
-    display: none !important;
-  }
-  .nav-item i, .nav-item svg {
-    width: 22px !important;
-    height: 22px !important;
-  }
-  .app-sidebar {
-    height: 56px;
-  }
-  .app-content {
-    height: calc(100vh - 56px);
-    margin-bottom: 56px;
-  }
   .mobile-top-logo .logo-img {
-    height: 26px;
-    max-width: 30px;
+    height: 34px;
+    max-width: 38px;
   }
   .mobile-top-logo .logo-text {
-    font-size: 16px;
+    font-size: 22px;
   }
   .search-bar {
     width: 100px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .mobile-top-logo .logo-img {
+    height: 30px;
+    max-width: 34px;
+  }
+  .mobile-top-logo .logo-text {
+    font-size: 19px;
   }
 }
 
@@ -2854,4 +2851,158 @@ body.dark-mode .chat-messages-area {
     right: auto;
     left: 55%;
   }
+}
+
+/* Onboarding Welcome Modal */
+.welcome-modal-overlay {
+  display: flex !important;
+  opacity: 0;
+  pointer-events: none;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 9999 !important; /* Above everything */
+  align-items: center;
+  justify-content: center;
+}
+
+.welcome-modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.welcome-modal-content {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  max-width: 520px;
+  width: 90%;
+  transform: scale(0.95);
+  opacity: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.welcome-modal-overlay.active .welcome-modal-content {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.welcome-modal-overlay.fading {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.welcome-modal-overlay.fading .welcome-modal-content {
+  transform: scale(0.95) !important;
+  opacity: 0 !important;
+}
+
+.welcome-modal-header {
+  border-bottom: 1px solid var(--border-color);
+  padding: 20px 24px;
+}
+
+.welcome-header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.welcome-logo-img {
+  height: 36px;
+  object-fit: contain;
+}
+
+.welcome-header-title h2 {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--text-charcoal);
+}
+
+.welcome-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.welcome-intro {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.welcome-features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.welcome-feature-item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.welcome-feature-icon {
+  background-color: var(--bg-active);
+  color: var(--accent-green);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.welcome-feature-icon i, .welcome-feature-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--accent-green);
+}
+
+.welcome-feature-desc h4 {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-charcoal);
+}
+
+.welcome-feature-desc p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted-text);
+}
+
+.welcome-modal-footer {
+  border-top: 1px solid var(--border-color);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.welcome-btn {
+  width: 100%;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 700;
+  justify-content: center;
+  background-color: var(--accent-green) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.welcome-btn:hover {
+  opacity: 0.9;
 }
