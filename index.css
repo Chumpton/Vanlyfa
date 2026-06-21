@@ -1797,57 +1797,89 @@ body {
 
 @media (max-width: 768px) {
   .app-container {
-    flex-direction: column-reverse; /* Navigation at the bottom for mobile */
+    flex-direction: column;
   }
   
-  .app-sidebar {
+  .sidebar-backdrop {
     position: fixed;
-    bottom: 0;
+    top: 0;
     left: 0;
     right: 0;
-    width: 100vw;
-    height: 64px;
-    flex-direction: row;
-    padding: 0 8px;
-    align-items: center;
-    justify-content: space-around;
-    border-right: none;
-    border-top: 1px solid var(--border-color);
-    z-index: 1000;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 1080;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .sidebar-backdrop.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .app-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 280px;
+    height: 100vh;
+    flex-direction: column;
+    padding: 24px 16px;
+    align-items: stretch;
+    justify-content: flex-start;
+    border-right: 1px solid var(--border-color);
+    border-top: none;
+    z-index: 1100;
     background-color: var(--card-bg);
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .app-sidebar.sidebar-open {
+    transform: translateX(0);
   }
   
-  .logo-container {
-    display: none; /* Hide logo text/img on mobile navigation bar to save space */
+  .app-sidebar .logo-container {
+    display: flex !important;
+    margin-bottom: 24px;
+  }
+
+  .app-sidebar .logo-container .logo-text {
+    color: var(--text-charcoal);
+  }
+
+  .app-sidebar .logo-container .logo-accent {
+    color: var(--accent-green);
   }
   
   .nav-menu {
-    flex-direction: row;
+    flex-direction: column;
     width: 100%;
-    justify-content: space-around;
-    gap: 0;
-    margin-bottom: 0;
+    gap: 8px;
+    margin-bottom: auto;
   }
   
   .nav-item {
-    flex-direction: column;
-    gap: 4px;
-    padding: 6px 4px;
-    font-size: 10px;
-    border-radius: var(--radius-sm);
-    justify-content: center;
+    flex-direction: row;
+    gap: 12px;
+    padding: 12px 16px;
+    font-size: 14px;
+    border-radius: var(--radius-md);
+    justify-content: flex-start;
     align-items: center;
-    flex-grow: 1;
+    width: 100%;
     background: transparent !important;
     color: var(--muted-text);
     border: none !important;
   }
   
   .nav-item:hover {
-    background: transparent;
+    background-color: var(--bg-hover) !important;
   }
   
   .nav-item.active {
+    background-color: var(--bg-active) !important;
     color: var(--accent-green) !important;
   }
   
@@ -1857,18 +1889,21 @@ body {
   }
   
   .nav-item span {
-    display: block; /* Show name under icon */
-    font-size: 9px;
-    font-weight: 600;
+    display: block; /* Show label next to icon */
+    font-size: 14px;
+    font-weight: 500;
   }
   
   .sidebar-profile {
-    display: none; /* Handled inside app views if needed, or compact */
+    display: flex !important;
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
   }
   
   .app-content {
-    height: calc(100vh - 64px);
-    margin-bottom: 64px; /* Offset fixed navigation bar height */
+    height: 100vh;
+    margin-bottom: 0; /* Remove offset */
   }
   
   .top-bar {
@@ -1885,6 +1920,28 @@ body {
     pointer-events: none;
   }
 
+  .mobile-menu-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-charcoal);
+    cursor: pointer;
+    padding: 8px;
+    margin-right: 8px;
+    border-radius: var(--radius-md);
+    transition: background-color 0.2s;
+  }
+  .mobile-menu-btn:hover {
+    background-color: var(--bg-hover);
+  }
+  .mobile-menu-btn i, .mobile-menu-btn svg {
+    width: 24px;
+    height: 24px;
+    stroke: var(--text-charcoal);
+  }
+
   /* Show VanLyfa logo in mobile top bar */
   .mobile-top-logo {
     display: flex !important;
@@ -1892,6 +1949,8 @@ body {
     gap: 8px;
     text-decoration: none;
     flex-shrink: 0;
+    margin-bottom: 0;
+    cursor: pointer;
   }
   .mobile-top-logo .logo-img {
     height: 32px;
@@ -1902,7 +1961,11 @@ body {
     font-size: 20px;
     font-weight: 900;
     letter-spacing: -0.5px;
-    color: var(--text-primary);
+    color: var(--text-charcoal);
+    text-transform: uppercase;
+  }
+  .mobile-top-logo .logo-accent {
+    color: var(--accent-green);
   }
   .page-title {
     display: none; /* Replace with logo on mobile */
@@ -1997,26 +2060,47 @@ body {
     border-bottom: none;
   }
 
-  .chat-windows-container {
+  .chat-backdrop {
+    position: fixed;
     top: 0;
-    bottom: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 1060;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .chat-backdrop.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .chat-windows-container {
+    position: fixed;
+    top: auto;
+    bottom: 0;
     right: 0;
     left: 0;
     width: 100vw;
-    height: 100vh;
-    max-width: none;
-    z-index: 2100;
+    height: auto;
+    max-height: 85vh;
+    z-index: 1070;
     display: flex;
     flex-direction: column;
+    justify-content: flex-end;
     pointer-events: none;
   }
 
   .chat-window {
     width: 100vw !important;
-    height: 100% !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
+    height: 85vh !important;
+    border-radius: 16px 16px 0 0 !important;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15) !important;
     pointer-events: auto;
+    border: 1px solid var(--border-color);
+    border-bottom: none;
   }
   
   .chat-window.minimized {

@@ -65,14 +65,19 @@
         </div>
       </div>
     </aside>
+    <div id="sidebar-backdrop" class="sidebar-backdrop" style="display: none;"></div>
+    <div id="chat-backdrop" class="chat-backdrop" style="display: none;"></div>
 
     <!-- Main Content Container -->
     <main class="app-content">
       
       <!-- Top Utility/Action Bar -->
       <header class="top-bar">
+        <button id="mobile-menu-btn" class="mobile-menu-btn" style="display: none;">
+          <i data-lucide="menu"></i>
+        </button>
         <h1 class="page-title" id="page-display-title">Dashboard</h1>
-        <a href="#" class="logo-container mobile-top-logo" style="display: none;">
+        <a href="javascript:void(0)" class="logo-container mobile-top-logo" style="display: none;" onclick="switchTab('dashboard')">
           <img src="VLLOGO.png" alt="Vanlyfa Logo" class="logo-img" onerror="this.style.visibility='hidden';">
           <span class="logo-text">Van<span class="logo-accent">lyfa</span></span>
         </a>

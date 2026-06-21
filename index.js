@@ -613,8 +613,33 @@ function initApp() {
         State.activeProfileName = null;
       }
       switchTab(tab);
+      closeMobileSidebar();
     });
   });
+
+function toggleMobileSidebar(open) {
+  const sidebar = document.querySelector('.app-sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (!sidebar || !backdrop) return;
+  if (open) {
+    sidebar.classList.add('sidebar-open');
+    backdrop.classList.add('active');
+    backdrop.style.display = 'block';
+    history.pushState({ sidebar: true }, '');
+  } else {
+    sidebar.classList.remove('sidebar-open');
+    backdrop.classList.remove('active');
+    setTimeout(() => {
+      if (!sidebar.classList.contains('sidebar-open')) {
+        backdrop.style.display = 'none';
+      }
+    }, 300);
+  }
+}
+
+function closeMobileSidebar() {
+  toggleMobileSidebar(false);
+}
   
   // Set up modal open/close handlers
   setupModalHandlers();
@@ -753,10 +778,26 @@ function initApp() {
     document.getElementById('contacts-sidebar').classList.remove('open');
   });
 
+  // Mobile Hamburger Sidebar Toggle
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  if (mobileMenuBtn) {
+    mobileMenuBtn.addEventListener('click', () => {
+      toggleMobileSidebar(true);
+    });
+  }
+
+  const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+  if (sidebarBackdrop) {
+    sidebarBackdrop.addEventListener('click', () => {
+      toggleMobileSidebar(false);
+    });
+  }
+
   // Sidebar profile click goes to profile tab
   document.getElementById('sidebar-profile-btn').addEventListener('click', () => {
     State.activeProfileName = null;
     switchTab('profile');
+    closeMobileSidebar();
   });
   
   // Initial render
@@ -799,6 +840,53 @@ function initApp() {
       }
     });
   }
+
+  // Setup baseline history state
+  history.replaceState({ tab: 'dashboard' }, '');
+
+  // Popstate event handler for Android back swipe/gestures
+  window.addEventListener('popstate', (event) => {
+    // 1. If mobile sidebar is open, close it
+    const sidebar = document.querySelector('.app-sidebar');
+    if (sidebar && sidebar.classList.contains('sidebar-open')) {
+      sidebar.classList.remove('sidebar-open');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (backdrop) {
+        backdrop.classList.remove('active');
+        setTimeout(() => { backdrop.style.display = 'none'; }, 300);
+      }
+      return;
+    }
+    
+    // 2. If DMs are open on mobile, close them
+    if (window.innerWidth <= 768 && State.activeChats && State.activeChats.length > 0) {
+      State.activeChats = [];
+      State.minimizedChats = [];
+      saveStateToStorage();
+      renderActiveChats();
+      renderContactsSidebar();
+      return;
+    }
+    
+    // 3. Otherwise switch tab based on history state
+    if (event.state && event.state.tab) {
+      switchTab(event.state.tab, true);
+    } else {
+      switchTab('dashboard', true);
+    }
+  });
+
+  // Chat Backdrop click to close chats
+  const chatBackdrop = document.getElementById('chat-backdrop');
+  if (chatBackdrop) {
+    chatBackdrop.addEventListener('click', () => {
+      State.activeChats = [];
+      State.minimizedChats = [];
+      saveStateToStorage();
+      renderActiveChats();
+      renderContactsSidebar();
+    });
+  }
 }
 
 function updateThemeToggleUI() {
@@ -826,7 +914,7 @@ function updateSidebarProfileWidget() {
 }
 
 // Tab view switcher
-function switchTab(tabName) {
+function switchTab(tabName, isPopState = false) {
   State.activeTab = tabName;
   State.activeThreadId = null; // Reset forum viewing state
   
@@ -891,6 +979,15 @@ function switchTab(tabName) {
     setTimeout(() => {
       State.profileMap.invalidateSize();
     }, 100);
+  }
+
+  // Manage History API state for back buttons
+  if (!isPopState) {
+    if (tabName === 'dashboard') {
+      history.replaceState({ tab: 'dashboard' }, '');
+    } else {
+      history.pushState({ tab: tabName }, '');
+    }
   }
 }
 
@@ -2664,6 +2761,9 @@ function openDirectChat(username) {
       State.activeChats.shift();
     }
     State.activeChats.push(username);
+    if (isMobile) {
+      history.pushState({ chat: true }, '');
+    }
   }
   
   State.minimizedChats = State.minimizedChats.filter(name => name !== username);
@@ -2708,6 +2808,23 @@ function closeDirectChat(username, event) {
 function renderActiveChats() {
   const container = document.getElementById('chat-windows-container');
   if (!container) return;
+
+  const isMobile = window.innerWidth <= 768;
+  const chatBackdrop = document.getElementById('chat-backdrop');
+  if (chatBackdrop) {
+    const hasActiveOpenChat = isMobile && State.activeChats.length > 0 && !State.minimizedChats.includes(State.activeChats[State.activeChats.length - 1]);
+    if (hasActiveOpenChat) {
+      chatBackdrop.classList.add('active');
+      chatBackdrop.style.display = 'block';
+    } else {
+      chatBackdrop.classList.remove('active');
+      setTimeout(() => {
+        if (!chatBackdrop.classList.contains('active')) {
+          chatBackdrop.style.display = 'none';
+        }
+      }, 300);
+    }
+  }
   
   container.innerHTML = '';
   if (State.activeChats.length === 0) {
