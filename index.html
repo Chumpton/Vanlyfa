@@ -645,13 +645,24 @@
           <textarea id="list-desc" placeholder="Describe the usage history, specifications, and if you are willing to deliver along your route."></textarea>
         </div>
         <div class="form-group">
-          <label for="list-img-select">Item Image Mockup</label>
-          <select id="list-img-select">
-            <option value="solar">Renogy Solar Panel Panel</option>
-            <option value="campervan">Finished Sprinter Rig</option>
-            <option value="gear">Premium Camping Stove</option>
-            <option value="parts">MaxxFan Roof Ventilator</option>
-          </select>
+          <label>Item Photo</label>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <select id="list-img-select" style="flex: 1;">
+              <option value="solar">Renogy Solar Panel</option>
+              <option value="campervan">Finished Sprinter Rig</option>
+              <option value="gear">Premium Camping Stove</option>
+              <option value="parts">MaxxFan Roof Ventilator</option>
+              <option value="custom">Custom Uploaded Photo</option>
+            </select>
+            <label class="btn btn-sm" style="flex-shrink: 0; margin-bottom: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+              <i data-lucide="upload" style="width: 14px; height: 14px;"></i>
+              <span>Upload Photo</span>
+              <input type="file" id="list-photo-upload" accept="image/*" style="display: none;">
+            </label>
+          </div>
+          <div id="list-photo-preview-container" style="display: none; margin-top: 10px; text-align: center;">
+            <img id="list-photo-preview" src="" alt="Listing Preview" style="max-height: 120px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); object-fit: cover;">
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -795,7 +806,7 @@
   </button>
 
   <!-- Mobile Floating Feed FAB -->
-  <button class="mobile-feed-fab" id="mobile-feed-fab" title="Go to Feed" onclick="switchTab('feed')">
+  <button class="mobile-feed-fab" id="mobile-feed-fab" title="Go to Feed" onclick="toggleMobileFeedTab()">
     <i data-lucide="rss"></i>
     <span class="nav-unread-badge" id="mobile-feed-unread-badge" style="display: none;">0</span>
   </button>

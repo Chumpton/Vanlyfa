@@ -589,6 +589,172 @@ function showToast(message, type = 'success') {
   }, 3000);
 }
 
+/**
+ * Unified Backend Client Simulator
+ * This helper isolates and abstracts all DDL/DML data layer mutations.
+ * To integrate with a real database (e.g. Supabase, Firebase, Node/Express REST API),
+ * simply swap out the fetch/save local implementations here with database fetches.
+ */
+const Backend = {
+  // --- SPOTS/MAPS API ---
+  async fetchSpots() {
+    return Promise.resolve(State.spots || []);
+  },
+  async saveSpot(spot) {
+    if (!State.spots) State.spots = [];
+    State.spots.push(spot);
+    saveStateToStorage();
+    return Promise.resolve(spot);
+  },
+  async vouchForSpot(spotId, username) {
+    const spot = State.spots.find(s => s.id === spotId);
+    if (spot) {
+      if (!spot.vouchedBy) spot.vouchedBy = [];
+      if (!spot.vouchedBy.includes(username)) {
+        spot.vouchedBy.push(username);
+      } else {
+        spot.vouchedBy = spot.vouchedBy.filter(u => u !== username);
+      }
+      saveStateToStorage();
+    }
+    return Promise.resolve(spot);
+  },
+
+  // --- SOCIAL FEED API ---
+  async fetchFeedPosts() {
+    return Promise.resolve(State.feedPosts || []);
+  },
+  async createPost(post) {
+    if (!State.feedPosts) State.feedPosts = [];
+    State.feedPosts.unshift(post);
+    saveStateToStorage();
+    return Promise.resolve(post);
+  },
+  async toggleLikePost(postId, username) {
+    const post = State.feedPosts.find(p => p.id === postId);
+    if (post) {
+      if (!post.likes) post.likes = [];
+      if (post.likes.includes(username)) {
+        post.likes = post.likes.filter(u => u !== username);
+      } else {
+        post.likes.push(username);
+      }
+      saveStateToStorage();
+    }
+    return Promise.resolve(post);
+  },
+  async addComment(postId, comment) {
+    const post = State.feedPosts.find(p => p.id === postId);
+    if (post) {
+      if (!post.comments) post.comments = [];
+      post.comments.push(comment);
+      saveStateToStorage();
+    }
+    return Promise.resolve(post);
+  },
+
+  // --- MARKETPLACE API ---
+  async fetchListings() {
+    return Promise.resolve(State.marketplace || []);
+  },
+  async createListing(listing) {
+    if (!State.marketplace) State.marketplace = [];
+    State.marketplace.unshift(listing);
+    saveStateToStorage();
+    return Promise.resolve(listing);
+  },
+
+  // --- DISCUSSION FORUM API ---
+  async fetchForumThreads() {
+    return Promise.resolve(State.forumThreads || []);
+  },
+  async createThread(thread) {
+    if (!State.forumThreads) State.forumThreads = [];
+    State.forumThreads.unshift(thread);
+    saveStateToStorage();
+    return Promise.resolve(thread);
+  },
+  async addReplyToThread(threadId, reply) {
+    const thread = State.forumThreads.find(t => t.id === threadId);
+    if (thread) {
+      if (!thread.replies) thread.replies = [];
+      thread.replies.push(reply);
+      thread.repliesCount = thread.replies.length;
+      thread.lastReply = {
+        user: reply.author.name,
+        avatar: reply.author.avatar,
+        time: reply.time
+      };
+      saveStateToStorage();
+    }
+    return Promise.resolve(thread);
+  },
+
+  // --- DIRECT MESSAGING (DM) API ---
+  async fetchChatHistory(username) {
+    if (!State.chats) State.chats = {};
+    return Promise.resolve(State.chats[username] || []);
+  },
+  async sendMessage(recipient, message) {
+    if (!State.chats) State.chats = {};
+    if (!State.chats[recipient]) State.chats[recipient] = [];
+    State.chats[recipient].push(message);
+    saveStateToStorage();
+    return Promise.resolve(message);
+  },
+
+  // --- USER PROFILE & RELATIONSHIPS ---
+  async updateProfile(profileDetails) {
+    Object.assign(State.currentUser, profileDetails);
+    const userInDb = State.users.find(u => u.name === State.currentUser.name);
+    if (userInDb) {
+      Object.assign(userInDb, profileDetails);
+    }
+    saveStateToStorage();
+    return Promise.resolve(State.currentUser);
+  },
+  async toggleFriendship(targetUser) {
+    const currentName = State.currentUser.name;
+    const target = State.users.find(u => u.name === targetUser);
+    const self = State.users.find(u => u.name === currentName);
+    
+    if (target && self) {
+      if (!self.friends) self.friends = [];
+      if (!target.friends) target.friends = [];
+      
+      const isFriend = self.friends.includes(targetUser);
+      if (isFriend) {
+        self.friends = self.friends.filter(name => name !== targetUser);
+        target.friends = target.friends.filter(name => name !== currentName);
+      } else {
+        self.friends.push(targetUser);
+        target.friends.push(currentName);
+      }
+      State.currentUser.friends = self.friends;
+      saveStateToStorage();
+    }
+    return Promise.resolve();
+  },
+  async toggleReputationScore(targetUser) {
+    const currentName = State.currentUser.name;
+    const target = State.users.find(u => u.name === targetUser);
+    
+    if (target && currentName !== targetUser) {
+      if (!State.currentUser.givenRepTo) State.currentUser.givenRepTo = [];
+      const hasGiven = State.currentUser.givenRepTo.includes(targetUser);
+      if (hasGiven) {
+        State.currentUser.givenRepTo = State.currentUser.givenRepTo.filter(name => name !== targetUser);
+        target.reputation = Math.max(0, (target.reputation || 0) - 1);
+      } else {
+        State.currentUser.givenRepTo.push(targetUser);
+        target.reputation = (target.reputation || 0) + 1;
+      }
+      saveStateToStorage();
+    }
+    return Promise.resolve();
+  }
+};
+
 // App Initialization
 function initApp() {
   // Load saved state
@@ -766,6 +932,26 @@ function closeMobileSidebar() {
   const rigPhotoUpload = document.getElementById('profile-rig-photo-upload');
   if (rigPhotoUpload) {
     rigPhotoUpload.addEventListener('change', handleRigPhotoUpload);
+  }
+
+  const listingPhotoUpload = document.getElementById('list-photo-upload');
+  if (listingPhotoUpload) {
+    listingPhotoUpload.addEventListener('change', handleListingPhotoUpload);
+  }
+
+  const listImgSelect = document.getElementById('list-img-select');
+  if (listImgSelect) {
+    listImgSelect.addEventListener('change', (e) => {
+      const container = document.getElementById('list-photo-preview-container');
+      if (e.target.value !== 'custom') {
+        if (container) container.style.display = 'none';
+      } else {
+        const preview = document.getElementById('list-photo-preview');
+        if (preview && preview.src && preview.src.startsWith('data:') && container) {
+          container.style.display = 'block';
+        }
+      }
+    });
   }
 
   // Contacts Sidebar Drawer Event Listeners
@@ -1001,6 +1187,14 @@ function switchTab(tabName, isPopState = false) {
     } else {
       history.pushState({ tab: tabName }, '');
     }
+  }
+}
+
+function toggleMobileFeedTab() {
+  if (State.activeTab === 'feed') {
+    switchTab('dashboard');
+  } else {
+    switchTab('feed');
   }
 }
 
@@ -2091,6 +2285,27 @@ function handleRigPhotoUpload(e) {
   reader.readAsDataURL(file);
 }
 
+function handleListingPhotoUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const dataUrl = evt.target.result;
+    const preview = document.getElementById('list-photo-preview');
+    const container = document.getElementById('list-photo-preview-container');
+    const select = document.getElementById('list-img-select');
+    
+    if (preview && container && select) {
+      preview.src = dataUrl;
+      container.style.display = 'block';
+      select.value = 'custom';
+      showToast("Listing photo loaded successfully!", "success");
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
 window.viewSpotFromProfile = function(spotId) {
   const spot = State.spots.find(s => s.id === spotId);
   if (spot) {
@@ -2473,7 +2688,6 @@ function saveNewListing() {
   const title = document.getElementById('list-title').value.trim();
   const priceVal = document.getElementById('list-price').value.trim();
   const category = document.getElementById('list-category').value;
-  const isService = category === 'services-offer' || category === 'services-want';
   const price = priceVal === '' ? 0 : parseInt(priceVal);
   const location = document.getElementById('list-location').value.trim();
   const zip = document.getElementById('list-zip').value.trim();
@@ -2483,6 +2697,17 @@ function saveNewListing() {
   if (!title || isNaN(price) || !location || !zip || !description) {
     showToast("Please fill out all listing fields, including Zip Code.", "error");
     return;
+  }
+  
+  let finalImage = `item_${imgVal}`;
+  if (imgVal === 'custom') {
+    const preview = document.getElementById('list-photo-preview');
+    if (preview && preview.src && preview.src.startsWith('data:')) {
+      finalImage = preview.src;
+    } else {
+      showToast("Please upload a custom photo first, or choose a mockup template.", "error");
+      return;
+    }
   }
   
   const coords = resolveZipCoordinates(zip) || { lat: 39.0, lng: -105.0 };
@@ -2502,22 +2727,31 @@ function saveNewListing() {
     condition,
     description,
     seller: { name: State.currentUser.name, avatar: State.currentUser.avatar },
-    image: `item_${imgVal}`
+    image: finalImage
   };
   
-  State.marketplace.unshift(newListing);
-  saveStateToStorage();
-  
-  // Clean inputs
-  document.getElementById('list-title').value = '';
-  document.getElementById('list-price').value = '';
-  document.getElementById('list-location').value = '';
-  document.getElementById('list-zip').value = '';
-  document.getElementById('list-desc').value = '';
-  
-  closeModal('modal-add-listing');
-  renderMarketplaceListings();
-  showToast("Marketplace listing published!", "success");
+  // Save listing using Backend Client Simulator
+  Backend.createListing(newListing).then(() => {
+    // Clean inputs
+    document.getElementById('list-title').value = '';
+    document.getElementById('list-price').value = '';
+    document.getElementById('list-location').value = '';
+    document.getElementById('list-zip').value = '';
+    document.getElementById('list-desc').value = '';
+    
+    const preview = document.getElementById('list-photo-preview');
+    if (preview) preview.src = '';
+    const container = document.getElementById('list-photo-preview-container');
+    if (container) container.style.display = 'none';
+    const fileInput = document.getElementById('list-photo-upload');
+    if (fileInput) fileInput.value = '';
+    const select = document.getElementById('list-img-select');
+    if (select) select.value = 'solar';
+    
+    closeModal('modal-add-listing');
+    renderMarketplaceListings();
+    showToast("Marketplace listing published!", "success");
+  });
 }
 
 

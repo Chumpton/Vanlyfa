@@ -3038,6 +3038,7 @@ body.dark-mode .chat-messages-area {
     width: 24px;
     height: 24px;
     stroke: white;
+    transform: scaleX(-1);
   }
   .mobile-feed-fab .nav-unread-badge {
     position: absolute;
