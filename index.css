@@ -2455,14 +2455,13 @@ body {
 
   .chat-windows-container {
     position: fixed !important;
-    top: 0 !important;
-    bottom: 0 !important;
+    top: 0;
+    bottom: 0;
     left: 0 !important;
     right: 0 !important;
     width: 100vw !important;
     max-width: none !important;
-    height: 100vh !important;
-    height: 100dvh !important;
+    height: 100vh;
     z-index: 2500 !important;
     background-color: var(--card-bg) !important;
     display: none !important;
