@@ -1884,6 +1884,29 @@ body {
     margin-top: -64px;
     pointer-events: none;
   }
+
+  /* Show VanLyfa logo in mobile top bar */
+  .mobile-top-logo {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .mobile-top-logo .logo-img {
+    height: 32px;
+    max-width: 36px;
+    object-fit: contain;
+  }
+  .mobile-top-logo .logo-text {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    color: var(--text-primary);
+  }
+  .page-title {
+    display: none; /* Replace with logo on mobile */
+  }
   
   .search-bar {
     width: 150px;
@@ -2016,12 +2039,19 @@ body {
   }
   
   .chat-header-control-btn {
-    padding: 8px !important;
+    padding: 10px !important;
+    min-width: 44px;
+    min-height: 44px;
   }
   
   .chat-header-control-btn svg {
-    width: 20px !important;
-    height: 20px !important;
+    width: 22px !important;
+    height: 22px !important;
+  }
+  
+  .chat-close-btn svg {
+    width: 26px !important;
+    height: 26px !important;
   }
   
   .chat-footer-action-btn {
@@ -2453,12 +2483,29 @@ body.dark-mode #leaflet-map, body.dark-mode #profile-map {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px;
-  transition: color var(--transition-fast);
+  padding: 6px;
+  border-radius: 50%;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.chat-header-control-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.chat-close-btn svg {
+  width: 20px;
+  height: 20px;
 }
 
 .chat-header-control-btn:hover {
   color: var(--text-charcoal);
+  background-color: var(--bg-sand);
+}
+
+.chat-close-btn:hover {
+  color: #D55E00;
+  background-color: rgba(213, 94, 0, 0.1);
 }
 
 /* Chat Messages Scrolling Area */
@@ -2598,8 +2645,16 @@ body.dark-mode .chat-messages-area {
 }
 
 .chat-footer-action-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
+}
+
+.chat-send-btn {
+  color: var(--accent-green);
+}
+.chat-send-btn:hover {
+  color: var(--accent-green);
+  transform: scale(1.15);
 }
 
 /* Text Input Wrapper */
@@ -2615,8 +2670,8 @@ body.dark-mode .chat-messages-area {
   background-color: var(--bg-sand);
   border: 1px solid var(--border-color);
   border-radius: 20px;
-  padding: 6px 36px 6px 14px;
-  font-size: 12px;
+  padding: 8px 36px 8px 14px;
+  font-size: 13px;
   outline: none;
   font-family: inherit;
   color: var(--text-charcoal);
@@ -2665,6 +2720,16 @@ body.dark-mode .chat-messages-area {
   .app-content {
     height: calc(100vh - 56px);
     margin-bottom: 56px;
+  }
+  .mobile-top-logo .logo-img {
+    height: 26px;
+    max-width: 30px;
+  }
+  .mobile-top-logo .logo-text {
+    font-size: 16px;
+  }
+  .search-bar {
+    width: 100px !important;
   }
 }
 

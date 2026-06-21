@@ -2766,10 +2766,8 @@ function renderActiveChats() {
           </div>
         </div>
         <div class="chat-header-controls">
-          <button class="chat-header-control-btn" title="Phone Call" onclick="event.stopPropagation(); showToast('Voice call setup not available in this build.', 'info')"><i data-lucide="phone" style="width:12px; height:12px;"></i></button>
-          <button class="chat-header-control-btn" title="Video Call" onclick="event.stopPropagation(); showToast('Video call setup not available in this build.', 'info')"><i data-lucide="video" style="width:12px; height:12px;"></i></button>
-          <button class="chat-header-control-btn" title="Minimize" onclick="toggleChatMinimize('${username}', event)"><i data-lucide="minus" style="width:12px; height:12px;"></i></button>
-          <button class="chat-header-control-btn" title="Close" onclick="closeDirectChat('${username}', event)"><i data-lucide="x" style="width:12px; height:12px;"></i></button>
+          <button class="chat-header-control-btn" title="Minimize" onclick="toggleChatMinimize('${username}', event)"><i data-lucide="minus"></i></button>
+          <button class="chat-header-control-btn chat-close-btn" title="Close" onclick="closeDirectChat('${username}', event)"><i data-lucide="x"></i></button>
         </div>
       </div>
       
@@ -2779,7 +2777,6 @@ function renderActiveChats() {
       
       <div class="chat-footer">
         <div class="chat-footer-top">
-          <button class="chat-footer-action-btn" title="Mic" onclick="showToast('Voice message recording not supported.', 'info')"><i data-lucide="mic"></i></button>
           <button class="chat-footer-action-btn" title="Photos" onclick="showToast('Media attachment not supported in chat.', 'info')"><i data-lucide="image"></i></button>
           <button class="chat-footer-action-btn" title="Stickers" onclick="showToast('Stickers not loaded.', 'info')"><i data-lucide="smile"></i></button>
           <button class="chat-footer-action-btn" title="GIF" onclick="showToast('GIF search not loaded.', 'info')"><i data-lucide="image-play"></i></button>
@@ -2791,7 +2788,7 @@ function renderActiveChats() {
             </button>
           </div>
           
-          <button class="chat-footer-action-btn" title="Plant Sticker" onclick="sendPlantSticker('${username}')"><i data-lucide="flower"></i></button>
+          <button class="chat-footer-action-btn chat-send-btn" title="Like" onclick="sendPlantSticker('${username}')"><i data-lucide="thumbs-up"></i></button>
         </div>
       </div>
     `;
