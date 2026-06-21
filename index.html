@@ -57,12 +57,17 @@
       </nav>
       
       <!-- Current User Profile Widget -->
-      <div class="sidebar-profile" id="sidebar-profile-btn">
-        <img src="" alt="User Avatar" class="profile-avatar" id="sidebar-user-avatar">
-        <div class="profile-info">
-          <span class="profile-name" id="sidebar-user-name">Loading...</span>
-          <span class="profile-handle" id="sidebar-user-handle">@loading</span>
+      <div class="sidebar-profile" id="sidebar-profile-btn" style="position: relative; display: flex; align-items: center; gap: 10px; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 0;">
+          <img src="" alt="User Avatar" class="profile-avatar" id="sidebar-user-avatar">
+          <div class="profile-info" style="min-width: 0; flex-grow: 1;">
+            <span class="profile-name" id="sidebar-user-name">Loading...</span>
+            <span class="profile-handle" id="sidebar-user-handle">@loading</span>
+          </div>
         </div>
+        <button id="sidebar-auth-btn" style="background: transparent; border: none; color: var(--muted-text); cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; transition: color 0.2s;" title="Sign Out">
+          <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+        </button>
       </div>
     </aside>
     <div id="sidebar-backdrop" class="sidebar-backdrop" style="display: none;"></div>
@@ -160,6 +165,34 @@
                     <span style="display: flex; align-items: center; gap: 6px;">
                       <span style="width: 10px; height: 10px; background-color: rgba(16, 185, 129, 0.3); border: 1.5px solid #10b981; border-radius: 2px;"></span>
                       <span>USFS Land (Green)</span>
+                    </span>
+                  </label>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <div style="font-size: 10px; font-weight: 600; color: rgba(255, 255, 255, 0.5); border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 8px;">Campsite & Overnight Layers</div>
+                  
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="layer-dispersed" checked style="cursor: pointer; accent-color: #228B22;">
+                    <span style="display: flex; align-items: center; gap: 6px;">
+                      <span style="width: 10px; height: 10px; background-color: rgba(34, 139, 34, 0.4); border: 1.5px solid #228B22; border-radius: 50%;"></span>
+                      <span>USFS/BLM Dispersed</span>
+                    </span>
+                  </label>
+                  
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="layer-overnight" checked style="cursor: pointer; accent-color: #0071CE;">
+                    <span style="display: flex; align-items: center; gap: 6px;">
+                      <span style="width: 10px; height: 10px; background-color: rgba(0, 113, 206, 0.4); border: 1.5px solid #0071CE; border-radius: 50%;"></span>
+                      <span>Overnight Parking</span>
+                    </span>
+                  </label>
+                  
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="layer-services" checked style="cursor: pointer; accent-color: #F97316;">
+                    <span style="display: flex; align-items: center; gap: 6px;">
+                      <span style="width: 10px; height: 10px; background-color: rgba(249, 115, 22, 0.4); border: 1.5px solid #F97316; border-radius: 50%;"></span>
+                      <span>Water / Propane</span>
                     </span>
                   </label>
                 </div>
@@ -591,6 +624,21 @@
      MODALS SECTION
      ========================================================================== -->
 
+  <!-- Modal: Authentication Required -->
+  <div class="modal-overlay" id="modal-auth-required">
+    <div class="modal-content" style="max-width: 400px; text-align: center; padding: 24px; border-radius: 16px; border: 1px solid var(--border-color); background: var(--card-bg);">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); color: var(--accent-red); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+        <i data-lucide="shield-alert" style="width: 28px; height: 28px;"></i>
+      </div>
+      <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text-main);">Authentication Required</h3>
+      <p style="color: var(--muted-text); font-size: 14px; line-height: 1.5; margin-bottom: 24px;">You are currently browsing as a guest. Please sign in using the profile widget in the sidebar to contribute to the community, create spots, post to discussions, or chat with other nomads.</p>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button class="btn btn-cancel" style="padding: 8px 16px;">Browse as Guest</button>
+        <button class="btn btn-primary" id="modal-auth-signin-btn" style="padding: 8px 20px;">Sign In Now</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Edit Profile -->
   <div class="modal-overlay" id="modal-edit-profile">
     <div class="modal-content">
@@ -659,8 +707,13 @@
           <label for="spot-category">Spot Category</label>
           <select id="spot-category">
             <option value="wild-camping">Wild Camping (Free Dispersed)</option>
+            <option value="dispersed_campsite">Dispersed Campsite (USFS/BLM)</option>
             <option value="driveway-host">Driveway Host (Moochdocking)</option>
+            <option value="walmart">Walmart Overnight</option>
+            <option value="cracker_barrel">Cracker Barrel Overnight</option>
+            <option value="rest_area">Rest Area / Rest Stop</option>
             <option value="water-station">Water & Dumping Station</option>
+            <option value="propane">Propane Refill</option>
             <option value="service-mechanic">Trusted Van Mechanic</option>
           </select>
         </div>
@@ -1069,6 +1122,8 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Seed Data -->
+  <script src="seeds.js"></script>
   <!-- Core Logic script -->
   <script src="index.js"></script>
 </body>

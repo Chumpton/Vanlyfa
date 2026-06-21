@@ -517,6 +517,7 @@ const SVG_ASSETS = {
   avatar_forest: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#6E6A5F"/><text x="50" y="58" font-size="28" font-family="Inter,sans-serif" font-weight="700" fill="white" text-anchor="middle">FN</text></svg>`,
   avatar_solar: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#2D2D2D"/><text x="50" y="58" font-size="28" font-family="Inter,sans-serif" font-weight="700" fill="#F4F1EA" text-anchor="middle">SE</text></svg>`,
   avatar_surf: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#5C8D70"/><text x="50" y="58" font-size="28" font-family="Inter,sans-serif" font-weight="700" fill="white" text-anchor="middle">BS</text></svg>`,
+  avatar_guest: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#888888"/><text x="50" y="58" font-size="28" font-family="Inter,sans-serif" font-weight="700" fill="white" text-anchor="middle">G</text></svg>`,
   
   image_desert: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250" preserveAspectRatio="none"><rect width="100%" height="100%" fill="#EAE6DC"/><path d="M 0 250 L 100 130 L 220 200 L 350 80 L 400 150 L 400 250 Z" fill="#DCD6C5"/><circle cx="320" cy="60" r="25" fill="#3B7A57" opacity="0.15"/><text x="20" y="40" font-family="Inter,sans-serif" font-weight="700" fill="#6E6A5F" font-size="14">Utah Desert Campsite</text></svg>`,
   image_interior: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250" preserveAspectRatio="none"><rect width="100%" height="100%" fill="#FAF9F6"/><rect x="40" y="60" width="320" height="150" rx="8" fill="#E5E0D4"/><line x1="200" y1="60" x2="200" y2="210" stroke="#DCD6C5" stroke-width="2"/><text x="20" y="40" font-family="Inter,sans-serif" font-weight="700" fill="#6E6A5F" font-size="14">Rig Ceiling Tongue &amp; Groove</text></svg>`,
@@ -567,7 +568,8 @@ function saveStateToStorage() {
     chats: State.chats,
     activeChats: State.activeChats,
     minimizedChats: State.minimizedChats,
-    syncQueue: State.syncQueue
+    syncQueue: State.syncQueue,
+    isSignedIn: State.isSignedIn
   }));
 }
 
@@ -591,10 +593,32 @@ function loadStateFromStorage() {
       State.activeChats = parsed.activeChats || State.activeChats;
       State.minimizedChats = parsed.minimizedChats || State.minimizedChats;
       State.syncQueue = parsed.syncQueue || [];
+      State.isSignedIn = parsed.isSignedIn !== undefined ? parsed.isSignedIn : true;
     } catch(e) {
       console.warn("Could not load stored state, using defaults", e);
     }
+  } else {
+    State.isSignedIn = true;
   }
+  // --- Inject seed data (dispersed campsites, BLM, Walmart, etc.) ---
+  if (typeof SEED_SPOTS !== 'undefined' && SEED_SPOTS.length > 0) {
+    const existingIds = new Set(State.spots.map(s => s.id));
+    let injected = 0;
+    SEED_SPOTS.forEach(seed => {
+      if (!existingIds.has(seed.id)) {
+        seed.seeded = true;
+        State.spots.push(seed);
+        injected++;
+      }
+    });
+    if (injected > 0) console.log(`[VanLyfa] Injected ${injected} seed spots (${SEED_SPOTS.length} total in dataset)`);
+    // Initialize clustering engine
+    if (typeof ClusterEngine !== 'undefined') {
+      ClusterEngine.init(State.spots.filter(s => s.seeded));
+    }
+  }
+  // Track layer visibility state
+  State.layerFilters = { dispersed: true, overnight: true, services: true };
 }
 
 // Toast Alert System
@@ -996,9 +1020,47 @@ function initApp() {
 
   // Sidebar profile click goes to profile tab
   document.getElementById('sidebar-profile-btn').addEventListener('click', () => {
+    if (!State.isSignedIn) {
+      openModal('modal-auth-required');
+      return;
+    }
     State.activeProfileName = null;
     switchTab('profile');
   });
+
+  // Sidebar dynamic auth button toggle
+  const authBtn = document.getElementById('sidebar-auth-btn');
+  if (authBtn) {
+    authBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // Avoid triggering parent profile nav click
+      if (State.isSignedIn) {
+        State.isSignedIn = false;
+        saveStateToStorage();
+        updateSidebarProfileWidget();
+        showToast("Signed out successfully. Browsing as Guest.", "info");
+        renderCurrentTab();
+      } else {
+        State.isSignedIn = true;
+        saveStateToStorage();
+        updateSidebarProfileWidget();
+        showToast("Signed in as Nomad Bob!", "success");
+        renderCurrentTab();
+      }
+    });
+  }
+
+  // Auth Modal Sign In button
+  const modalAuthSigninBtn = document.getElementById('modal-auth-signin-btn');
+  if (modalAuthSigninBtn) {
+    modalAuthSigninBtn.addEventListener('click', () => {
+      closeModal('modal-auth-required');
+      State.isSignedIn = true;
+      saveStateToStorage();
+      updateSidebarProfileWidget();
+      showToast("Signed in as Nomad Bob!", "success");
+      renderCurrentTab();
+    });
+  }
   
   // Initial render
   switchTab('dashboard');
@@ -1210,19 +1272,60 @@ function updateThemeToggleUI() {
 }
 
 function updateSidebarProfileWidget() {
-  document.getElementById('sidebar-user-avatar').src = getAvatarSrc(State.currentUser.avatar);
-  document.getElementById('sidebar-user-name').innerText = State.currentUser.name;
-  document.getElementById('sidebar-user-handle').innerText = State.currentUser.handle;
-  
-  // Update Feed tab avatar if it exists
+  const avatarEl = document.getElementById('sidebar-user-avatar');
+  const nameEl = document.getElementById('sidebar-user-name');
+  const handleEl = document.getElementById('sidebar-user-handle');
+  const authBtn = document.getElementById('sidebar-auth-btn');
   const feedTabAvatar = document.getElementById('feed-tab-user-avatar');
-  if (feedTabAvatar) {
-    feedTabAvatar.src = getAvatarSrc(State.currentUser.avatar);
+  
+  if (State.isSignedIn) {
+    avatarEl.src = getAvatarSrc(State.currentUser.avatar);
+    nameEl.innerText = State.currentUser.name;
+    handleEl.innerText = State.currentUser.handle;
+    
+    if (authBtn) {
+      authBtn.innerHTML = `<i data-lucide="log-out" style="width: 16px; height: 16px;"></i>`;
+      authBtn.title = "Sign Out";
+      authBtn.style.color = "var(--muted-text)";
+    }
+    if (feedTabAvatar) {
+      feedTabAvatar.src = getAvatarSrc(State.currentUser.avatar);
+    }
+  } else {
+    avatarEl.src = getAvatarSrc('avatar_guest');
+    nameEl.innerText = "Guest Nomad";
+    handleEl.innerText = "Sign in to post";
+    
+    if (authBtn) {
+      authBtn.innerHTML = `<i data-lucide="log-in" style="width: 16px; height: 16px;"></i>`;
+      authBtn.title = "Sign In";
+      authBtn.style.color = "var(--accent-green)";
+    }
+    if (feedTabAvatar) {
+      feedTabAvatar.src = getAvatarSrc('avatar_guest');
+    }
+  }
+  
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function requireAuth(action) {
+  if (State.isSignedIn) {
+    if (typeof action === 'function') action();
+    return true;
+  } else {
+    openModal('modal-auth-required');
+    return false;
   }
 }
 
 // Tab view switcher
 function switchTab(tabName, isPopState = false) {
+  if (tabName === 'messages' || tabName === 'profile') {
+    if (!requireAuth()) return;
+  }
   State.activeTab = tabName;
   State.activeThreadId = null; // Reset forum viewing state
   
@@ -1348,6 +1451,7 @@ function updateHeaderActionButton() {
 }
 
 function triggerMainActionButtonModal() {
+  if (!requireAuth()) return;
   const modals = {
     dashboard: 'modal-add-spot',
     feed: 'modal-add-post',
@@ -1556,6 +1660,7 @@ function renderFeedTabPosts() {
 }
 
 function toggleLike(postId) {
+  if (!requireAuth()) return;
   const post = State.posts.find(p => p.id === postId);
   if (post) {
     if (post.likedByUser) {
@@ -1578,6 +1683,7 @@ function focusCommentInput(postId) {
 
 function submitComment(e, postId) {
   e.preventDefault();
+  if (!requireAuth()) return;
   const input = document.getElementById(`comment-input-${postId}`);
   if (input && input.value.trim() !== '') {
     const post = State.posts.find(p => p.id === postId);
@@ -1905,6 +2011,7 @@ function renderTribeHubHeader(tribeId) {
 }
 
 function toggleTribeHubMembership(tribeId) {
+  if (!requireAuth()) return;
   const tribe = State.tribes.find(t => t.id === tribeId);
   if (tribe) {
     if (tribe.joined) {
@@ -2126,6 +2233,7 @@ function renderTribeHubForum(tribeId) {
 
 function submitTribeThreadReply(e, tribeId, threadId) {
   e.preventDefault();
+  if (!requireAuth()) return;
   const input = e.target.querySelector('input');
   if (!input || input.value.trim() === '') return;
   
@@ -2144,6 +2252,7 @@ function submitTribeThreadReply(e, tribeId, threadId) {
 }
 
 function openTribeNewThreadModal() {
+  if (!requireAuth()) return;
   const title = prompt("Enter Discussion Title:");
   if (!title || title.trim() === '') return;
   const question = prompt("Enter Question or Message:");
@@ -2178,6 +2287,7 @@ window.submitTribeThreadReply = submitTribeThreadReply;
 window.openTribeNewThreadModal = openTribeNewThreadModal;
 
 function toggleTribeMembership(tribeId) {
+  if (!requireAuth()) return;
   const tribe = State.tribes.find(t => t.id === tribeId);
   if (tribe) {
     if (tribe.joined) {
@@ -2914,6 +3024,11 @@ function initLeafletMap() {
   
   renderLeafletMarkers();
   initMapLayers();
+  
+  // Re-render markers on map pan/zoom (for clustering)
+  State.leafletMap.on('moveend', () => {
+    renderLeafletMarkers();
+  });
 }
 
 function initMapLayers() {
@@ -2938,9 +3053,9 @@ function initMapLayers() {
     usfs: L.layerGroup()
   };
 
-  // Populate Cellular Layers (Verizon, AT&T, T-Mobile) based on spots locations
-  const spots = State.spots;
-  spots.forEach((spot, idx) => {
+  // Populate Cellular Layers (Verizon, AT&T, T-Mobile) based on non-seeded spots only
+  const userSpots = State.spots.filter(s => !s.seeded);
+  userSpots.forEach((spot, idx) => {
     // Verizon (Red) - wide coverage
     L.circle([spot.lat, spot.lng], {
       color: '#ef4444',
@@ -3045,6 +3160,47 @@ function initMapLayers() {
       });
     }
   });
+  
+  // Bind Campsite & Overnight layer filters
+  const layerFilterConfig = [
+    { id: 'layer-dispersed', key: 'dispersed' },
+    { id: 'layer-overnight', key: 'overnight' },
+    { id: 'layer-services', key: 'services' }
+  ];
+  layerFilterConfig.forEach(conf => {
+    const el = document.getElementById(conf.id);
+    if (el) {
+      el.addEventListener('change', (e) => {
+        State.layerFilters[conf.key] = e.target.checked;
+        renderLeafletMarkers();
+      });
+    }
+  });
+}
+
+function getMarkerMeta(pin) {
+  let markerColor = '#3B7A57';
+  let typeName = 'Wild Camping';
+  if (pin.category === 'dispersed_campsite') { markerColor = '#228B22'; typeName = 'Dispersed Campsite'; }
+  else if (pin.category === 'driveway-host') { markerColor = '#6E6A5F'; typeName = 'Driveway Host'; }
+  else if (pin.category === 'water-station') { markerColor = '#A2BEA9'; typeName = 'Water Station'; }
+  else if (pin.category === 'service-mechanic') { markerColor = '#2D2D2D'; typeName = 'Van Mechanic'; }
+  else if (pin.category === 'walmart') { markerColor = '#0071CE'; typeName = 'Walmart Overnight'; }
+  else if (pin.category === 'cracker_barrel') { markerColor = '#8B4513'; typeName = 'Cracker Barrel'; }
+  else if (pin.category === 'rest_area') { markerColor = '#6B7280'; typeName = 'Rest Area'; }
+  else if (pin.category === 'propane') { markerColor = '#F97316'; typeName = 'Propane Refill'; }
+  else if (pin.category === 'cluster') { markerColor = '#8B5CF6'; typeName = 'Cluster'; }
+  else if (!pin.category) { markerColor = '#D55E00'; typeName = 'Nomad Meetup'; }
+  return { markerColor, typeName };
+}
+
+function shouldShowByLayerFilter(pin) {
+  if (!State.layerFilters) return true;
+  const cat = pin.category;
+  if (cat === 'dispersed_campsite' || cat === 'wild-camping') return State.layerFilters.dispersed;
+  if (cat === 'walmart' || cat === 'cracker_barrel' || cat === 'rest_area') return State.layerFilters.overnight;
+  if (cat === 'water-station' || cat === 'propane') return State.layerFilters.services;
+  return true; // meetups, mechanics, driveway hosts always show
 }
 
 function renderLeafletMarkers() {
@@ -3054,39 +3210,63 @@ function renderLeafletMarkers() {
   State.mapMarkers.forEach(m => State.leafletMap.removeLayer(m));
   State.mapMarkers = [];
   
-  const pins = [...State.spots, ...State.meetups];
+  const zoom = State.leafletMap.getZoom();
+  const bounds = State.leafletMap.getBounds();
+  
+  // Use ClusterEngine for seed spots (zoom-aware)
+  let visibleSeeded = [];
+  if (typeof ClusterEngine !== 'undefined' && ClusterEngine.allSpots.length > 0) {
+    visibleSeeded = ClusterEngine.getVisibleSpots(bounds, zoom);
+  }
+  
+  // Combine user-created spots (non-seeded) + meetups + clustered seed spots
+  const userSpots = State.spots.filter(s => !s.seeded);
+  const pins = [...userSpots, ...visibleSeeded, ...State.meetups];
+  
+  // De-duplicate by id
+  const seen = new Set();
   
   pins.forEach(pin => {
+    if (seen.has(pin.id)) return;
+    seen.add(pin.id);
+    
+    // Layer filter check
+    if (!shouldShowByLayerFilter(pin)) return;
+    
     // Check if pins match global search query
     const query = State.searchQuery;
     const matchesQuery = pin.title.toLowerCase().includes(query) || 
                          (pin.description && pin.description.toLowerCase().includes(query));
     if (!matchesQuery) return;
     
-    // Choose marker color
-    let markerColor = '#3B7A57'; // Camp spots
-    let typeName = 'Wild Camping';
+    const { markerColor, typeName } = getMarkerMeta(pin);
     
-    if (pin.category === 'driveway-host') {
-      markerColor = '#6E6A5F';
-      typeName = 'Driveway Host';
-    } else if (pin.category === 'water-station') {
-      markerColor = '#A2BEA9';
-      typeName = 'Water Station';
-    } else if (pin.category === 'service-mechanic') {
-      markerColor = '#2D2D2D';
-      typeName = 'Van Mechanic';
-    } else if (!pin.category) {
-      markerColor = '#D55E00'; // Meetup
-      typeName = 'Nomad Meetup';
+    // Cluster marker (larger, with count)
+    if (pin._isCluster) {
+      const count = pin._clusterCount;
+      const size = Math.min(18 + Math.log2(count) * 6, 44);
+      const customIcon = L.divIcon({
+        html: `<div style="background:linear-gradient(135deg, #228B22, #10b981); width:${size}px; height:${size}px; border-radius:50%; border:2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; color:white; font-weight:800; font-size:${Math.max(10, size/3.2)}px; font-family:Inter,sans-serif;">${count}</div>`,
+        className: 'custom-map-icon cluster-icon',
+        iconSize: [size, size],
+        iconAnchor: [size/2, size/2]
+      });
+      const marker = L.marker([pin.lat, pin.lng], { icon: customIcon }).addTo(State.leafletMap);
+      marker.on('click', () => {
+        State.leafletMap.setView([pin.lat, pin.lng], zoom + 2);
+      });
+      State.mapMarkers.push(marker);
+      return;
     }
     
-    // Custom DIV icon for nice vector aesthetics matching Inter typography
+    // Standard single-spot marker
     const borderStyle = pin.pendingSync ? '2px dashed var(--accent-red)' : '2px solid white';
     const opacityStyle = pin.pendingSync ? '0.7' : '1.0';
+    const verifiedDot = pin.verified ? '<div style="position:absolute;top:-2px;right:-2px;width:7px;height:7px;background:#10b981;border-radius:50%;border:1px solid white;"></div>' : '';
     const customIcon = L.divIcon({
-      html: `<div style="background-color:${markerColor}; width:20px; height:20px; border-radius:50%; border:${borderStyle}; opacity:${opacityStyle}; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center;">
+      html: `<div style="position:relative;background-color:${markerColor}; width:20px; height:20px; border-radius:50%; border:${borderStyle}; opacity:${opacityStyle}; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center;">
               <div style="background-color:white; width:6px; height:6px; border-radius:50%;"></div>
+              ${verifiedDot}
              </div>`,
       className: 'custom-map-icon',
       iconSize: [20, 20],
@@ -3098,7 +3278,7 @@ function renderLeafletMarkers() {
     // Custom popup
     const popupHtml = `
       <div class="custom-map-popup-badge" style="background:${markerColor}1A; color:${markerColor};">${typeName}</div>
-      <div class="custom-map-popup-header">${pin.title}${pin.pendingSync ? ' <span style="font-size:9px; color:var(--accent-red); font-weight:bold; margin-left:4px;">(Syncing...)</span>' : ''}</div>
+      <div class="custom-map-popup-header">${pin.title}${pin.pendingSync ? ' <span style="font-size:9px; color:var(--accent-red); font-weight:bold; margin-left:4px;">(Syncing...)</span>' : ''}${pin.verified ? ' <span style="color:#10b981;font-size:11px;" title="Verified">✓</span>' : ''}</div>
       <div class="custom-map-popup-desc">${pin.description ? pin.description.substring(0, 70) : 'Gathering at campsite details...'}...</div>
       <div class="custom-map-popup-footer">
         <span class="custom-map-popup-user">
@@ -3135,12 +3315,9 @@ window.triggerInfoDrawerFromMap = function(pinId) {
 function openInfoDrawerForSpot(pin) {
   const drawer = document.getElementById('map-info-drawer');
   
-  let typeName = 'Wild Camping';
-  let categoryColor = 'var(--accent-green)';
-  if (pin.category === 'driveway-host') { typeName = 'Driveway Host'; categoryColor = 'var(--muted-text)'; }
-  if (pin.category === 'water-station') { typeName = 'Water Station'; categoryColor = '#5C8D70'; }
-  if (pin.category === 'service-mechanic') { typeName = 'Van Mechanic'; categoryColor = 'var(--text-charcoal)'; }
-  if (!pin.category) { typeName = 'Nomad Meetup'; categoryColor = '#D55E00'; }
+  const { markerColor, typeName: typeLabel } = getMarkerMeta(pin);
+  let typeName = typeLabel;
+  let categoryColor = markerColor;
   
   document.getElementById('drawer-category').innerText = typeName;
   document.getElementById('drawer-category').style.color = categoryColor;
@@ -3163,10 +3340,39 @@ function openInfoDrawerForSpot(pin) {
   document.getElementById('drawer-description').innerText = pin.description;
   document.getElementById('drawer-coords').innerText = `${pin.lat.toFixed(4)}, ${pin.lng.toFixed(4)}`;
   
+  // Extended metadata for seed data (land_manager, overnight_rule, verified)
+  let metaEl = document.getElementById('drawer-extended-meta');
+  if (!metaEl) {
+    metaEl = document.createElement('div');
+    metaEl.id = 'drawer-extended-meta';
+    metaEl.style.cssText = 'margin-top:8px;display:flex;flex-direction:column;gap:4px;';
+    const coordsEl = document.getElementById('drawer-coords');
+    if (coordsEl && coordsEl.parentNode) coordsEl.parentNode.insertBefore(metaEl, coordsEl.nextSibling);
+  }
+  if (pin.land_manager || pin.overnight_rule || pin.verified !== undefined) {
+    let metaHtml = '';
+    if (pin.verified) {
+      metaHtml += `<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;"><span style="display:inline-flex;align-items:center;gap:3px;background:rgba(16,185,129,0.15);color:#10b981;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:0.5px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> VERIFIED SOURCE</span></div>`;
+    }
+    if (pin.land_manager) {
+      metaHtml += `<div style="font-size:11px;color:var(--muted-text);"><strong style="color:var(--text-main);font-weight:600;">Manager:</strong> ${pin.land_manager}</div>`;
+    }
+    if (pin.overnight_rule) {
+      const ruleColor = pin.overnight_rule === 'Allowed' ? '#10b981' : pin.overnight_rule === '14-day limit' ? '#f59e0b' : 'var(--muted-text)';
+      metaHtml += `<div style="font-size:11px;color:var(--muted-text);"><strong style="color:var(--text-main);font-weight:600;">Overnight:</strong> <span style="color:${ruleColor};font-weight:600;">${pin.overnight_rule}</span></div>`;
+    }
+    metaEl.innerHTML = metaHtml;
+    metaEl.style.display = 'flex';
+  } else {
+    metaEl.innerHTML = '';
+    metaEl.style.display = 'none';
+  }
+  
   if (!pin.category) {
     document.getElementById('drawer-vouch-count').innerText = `${pin.attendeesCount} Nomads Going`;
   } else {
-    document.getElementById('drawer-vouch-count').innerText = `${pin.vouches} Vanlifers Vouched`;
+    const dataSource = pin.seeded ? ' (from Public Lands Database)' : ' (Community Contributed)';
+    document.getElementById('drawer-vouch-count').innerText = `${pin.vouches} Vanlifers Vouched${dataSource}`;
   }
   
   State.currentViewedSpotId = pin.id;
@@ -3371,6 +3577,7 @@ function saveNewSpot() {
 
 // 3. Add Post
 function saveNewPost() {
+  if (!requireAuth()) return;
   const content = document.getElementById('post-text').value.trim();
   const imgVal = document.getElementById('post-img-select').value;
   
@@ -3404,6 +3611,7 @@ function saveNewPost() {
 
 // 4. Add Listing
 function saveNewListing() {
+  if (!requireAuth()) return;
   const title = document.getElementById('list-title').value.trim();
   const priceVal = document.getElementById('list-price').value.trim();
   const category = document.getElementById('list-category').value;
@@ -3477,6 +3685,7 @@ function saveNewListing() {
 
 // 6. Form Tribe
 function saveNewTribe() {
+  if (!requireAuth()) return;
   const title = document.getElementById('tribe-name-input').value.trim();
   const iconLetter = document.getElementById('tribe-icon-input').value.trim().toUpperCase();
   const banner = document.getElementById('tribe-banner-select').value;
@@ -3512,6 +3721,7 @@ function saveNewTribe() {
 
 // 7. Host Meetup
 function saveNewMeetup() {
+  if (!requireAuth()) return;
   const title = document.getElementById('meetup-title-input').value.trim();
   const date = document.getElementById('meetup-date-input').value;
   const time = document.getElementById('meetup-time-input').value.trim();
@@ -3722,6 +3932,7 @@ function renderContactsSidebar() {
 }
 
 function openDirectChat(username) {
+  if (!requireAuth()) return;
   const sidebar = document.getElementById('contacts-sidebar');
   if (sidebar) sidebar.classList.remove('open');
   
@@ -3956,6 +4167,7 @@ function handleChatKeyPress(e, username) {
 }
 
 function sendChatMessage(username, text) {
+  if (!requireAuth()) return;
   if (!State.chats[username]) State.chats[username] = [];
   
   const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
