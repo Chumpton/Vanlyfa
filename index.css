@@ -28,6 +28,23 @@
   
   --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Spacing Tokens */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+  --spacing-3xl: 32px;
+
+  /* Font Sizing Tokens */
+  --font-xs: 11px;
+  --font-sm: 13px;
+  --font-md: 14px;
+  --font-lg: 16px;
+  --font-xl: 18px;
+  --font-2xl: 22px;
 }
 
 body.dark-mode {
@@ -3521,6 +3538,7 @@ body.dark-mode .chat-messages-area {
   
   .feed-post-card {
     padding: 16px 16px !important;
+  }
 }
 
 /* Tribe Hub Styling */
@@ -3660,4 +3678,120 @@ body.dark-mode .chat-messages-area {
     display: none !important;
   }
 }
+
+/* ==========================================================================
+   DESIGN SYSTEM UTILITY CLASSES (Tailwind-like tokens)
+   ========================================================================== */
+.w-full { width: 100% !important; }
+.h-full { height: 100% !important; }
+.flex { display: flex !important; }
+.inline-flex { display: inline-flex !important; }
+.flex-col { flex-direction: column !important; }
+.flex-row { flex-direction: row !important; }
+.flex-wrap { flex-wrap: wrap !important; }
+.flex-1 { flex: 1 1 0% !important; }
+.flex-grow { flex-grow: 1 !important; }
+.flex-shrink-0 { flex-shrink: 0 !important; }
+.relative { position: relative !important; }
+.absolute { position: absolute !important; }
+
+/* Align & Justify */
+.items-center { align-items: center !important; }
+.items-start { align-items: flex-start !important; }
+.items-stretch { align-items: stretch !important; }
+.justify-between { justify-content: space-between !important; }
+.justify-center { justify-content: center !important; }
+.justify-start { justify-content: flex-start !important; }
+.justify-end { justify-content: flex-end !important; }
+
+/* Gaps */
+.gap-xs { gap: var(--spacing-xs) !important; }
+.gap-sm { gap: var(--spacing-sm) !important; }
+.gap-md { gap: var(--spacing-md) !important; }
+.gap-lg { gap: var(--spacing-lg) !important; }
+.gap-xl { gap: var(--spacing-xl) !important; }
+
+/* Padding */
+.p-xs { padding: var(--spacing-xs) !important; }
+.p-sm { padding: var(--spacing-sm) !important; }
+.p-md { padding: var(--spacing-md) !important; }
+.p-lg { padding: var(--spacing-lg) !important; }
+.p-xl { padding: var(--spacing-xl) !important; }
+.p-2xl { padding: var(--spacing-2xl) !important; }
+.p-0 { padding: 0 !important; }
+
+/* Margin */
+.m-xs { margin: var(--spacing-xs) !important; }
+.m-sm { margin: var(--spacing-sm) !important; }
+.m-md { margin: var(--spacing-md) !important; }
+.m-lg { margin: var(--spacing-lg) !important; }
+.m-xl { margin: var(--spacing-xl) !important; }
+.m-0 { margin: 0 !important; }
+.m-t-sm { margin-top: var(--spacing-sm) !important; }
+.m-t-md { margin-top: var(--spacing-md) !important; }
+.m-t-lg { margin-top: var(--spacing-lg) !important; }
+.m-b-xs { margin-bottom: var(--spacing-xs) !important; }
+.m-b-sm { margin-bottom: var(--spacing-sm) !important; }
+.m-b-md { margin-bottom: var(--spacing-md) !important; }
+
+/* Borders & Styles */
+.border-main { border: 1px solid var(--border-color) !important; }
+.border-b-main { border-bottom: 1px solid var(--border-color) !important; }
+.border-t-main { border-top: 1px solid var(--border-color) !important; }
+.bg-card { background-color: var(--card-bg) !important; }
+.bg-sand { background-color: var(--bg-sand) !important; }
+.text-main { color: var(--text-charcoal) !important; }
+.text-muted { color: var(--muted-text) !important; }
+.rounded-sm { border-radius: var(--radius-sm) !important; }
+.rounded-md { border-radius: var(--radius-md) !important; }
+.rounded-lg { border-radius: var(--radius-lg) !important; }
+.cursor-pointer { cursor: pointer !important; }
+
+/* Font Weights & Sizes */
+.font-semibold { font-weight: 600 !important; }
+.font-bold { font-weight: 700 !important; }
+.font-medium { font-weight: 500 !important; }
+.text-xs { font-size: var(--font-xs) !important; }
+.text-sm { font-size: var(--font-sm) !important; }
+.text-md { font-size: var(--font-md) !important; }
+.text-lg { font-size: var(--font-lg) !important; }
+.text-xl { font-size: var(--font-xl) !important; }
+
+/* Semantic Auth Modal Styles */
+.auth-modal-content {
+  max-width: 440px !important;
+}
+.auth-modal-header {
+  padding: 0 0 var(--spacing-md) 0 !important;
+}
+.auth-tabs-container {
+  background: var(--bg-sand) !important;
+  border-radius: 20px !important;
+  padding: 2px !important;
+}
+.auth-tab-btn-active {
+  border-radius: 18px !important;
+  border: none !important;
+  background: var(--card-bg) !important;
+  color: var(--text-charcoal) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+.auth-tab-btn-inactive {
+  border-radius: 18px !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--muted-text) !important;
+}
+.auth-modal-body {
+  padding: var(--spacing-lg) 0 0 0 !important;
+  overflow: visible !important;
+}
+.auth-input {
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-md) !important;
+  background: var(--bg-card) !important;
+  color: var(--text-charcoal) !important;
+}
+
+
 

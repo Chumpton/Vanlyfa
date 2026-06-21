@@ -136,6 +136,11 @@
                 <i data-lucide="locate" style="width: 16px; height: 16px;"></i>
               </button>
 
+              <!-- Floating Zoom Out / Show All Button -->
+              <button class="btn" id="map-show-all-btn" title="Show Entire US Map" style="position: absolute; top: 16px; left: 136px; z-index: 1000; box-shadow: var(--shadow-md); padding: 8px; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer;">
+                <i data-lucide="globe" style="width: 16px; height: 16px;"></i>
+              </button>
+
               <!-- Floating Map Overlays Panel (Collapsible) -->
               <div id="map-layers-panel" style="position: absolute; top: 60px; left: 56px; z-index: 1000; background: rgba(30, 30, 30, 0.9); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 12px; width: 220px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); color: white; display: none; flex-direction: column; transition: all 0.3s ease;">
                 <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; color: var(--accent-green); display: flex; align-items: center; gap: 6px;">
@@ -185,6 +190,11 @@
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                   <div style="font-size: 10px; font-weight: 600; color: rgba(255, 255, 255, 0.5); border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 8px;">Campsite & Overnight Layers</div>
                   
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; user-select: none; font-weight: 700; color: var(--accent-green);">
+                    <input type="checkbox" id="layer-toggle-all-categories" checked style="cursor: pointer; accent-color: var(--accent-green);">
+                    <span>Show All Categories</span>
+                  </label>
+                  
                   <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; user-select: none;">
                     <input type="checkbox" id="layer-dispersed" checked style="cursor: pointer; accent-color: #228B22;">
                     <span style="display: flex; align-items: center; gap: 6px;">
@@ -231,6 +241,30 @@
                       <span style="width: 10px; height: 10px; background-color: rgba(213, 94, 0, 0.4); border: 1.5px solid #D55E00; border-radius: 50%;"></span>
                       <span>Caravan Meetups</span>
                     </span>
+                  </label>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                  <div style="font-size: 10px; font-weight: 600; color: rgba(255, 255, 255, 0.5); border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 8px;">My Travel Log Filters</div>
+                  
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="layer-visited" style="cursor: pointer; accent-color: var(--accent-green);">
+                    <span>Places I've Gone</span>
+                  </label>
+                  
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="layer-favorites" style="cursor: pointer; accent-color: var(--accent-green);">
+                    <span>Favorite / Vouched Spots</span>
+                  </label>
+                  
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="layer-saved" style="cursor: pointer; accent-color: var(--accent-green);">
+                    <span>Saved / Wishlist Spots</span>
+                  </label>
+                  
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="layer-togo" style="cursor: pointer; accent-color: var(--accent-green);">
+                    <span>To-Go To Spots</span>
                   </label>
                 </div>
               </div>
@@ -796,59 +830,55 @@
 
   <!-- Modal: Authentication Required / Login & Signup -->
   <div class="modal-overlay" id="modal-auth-required">
-    <div class="modal-content" style="max-width: 440px; padding: 24px; border-radius: var(--radius-lg); background: var(--card-bg); border: 1px solid var(--border-color);">
-      <div class="modal-header" style="padding: 0 0 12px 0; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: stretch; gap: 12px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-          <h3 style="font-size: 18px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; margin: 0;">
+    <div class="modal-content auth-modal-content p-2xl rounded-lg bg-card border-main">
+      <div class="modal-header auth-modal-header border-b-main flex flex-col items-stretch gap-md">
+        <div class="flex items-center justify-between w-full">
+          <h3 class="font-bold text-lg text-main flex items-center gap-sm m-0">
             <i data-lucide="shield-check" style="color: var(--accent-green); width: 20px; height: 20px;"></i>
             <span>Join the Community</span>
           </h3>
           <button class="modal-close-btn" onclick="closeModal('modal-auth-required')"><i data-lucide="x"></i></button>
         </div>
         <!-- Auth Tabs -->
-        <div style="display: flex; background: var(--bg-sand); border-radius: 20px; padding: 2px; border: 1px solid var(--border-color);">
-          <button class="btn tab-btn active" id="auth-tab-signin" style="flex: 1; border-radius: 18px; border: none; background: var(--card-bg); color: var(--text-main); padding: 6px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-sm);" onclick="switchAuthTab('signin')">Sign In</button>
-          <button class="btn tab-btn" id="auth-tab-signup" style="flex: 1; border-radius: 18px; border: none; background: transparent; color: var(--muted-text); padding: 6px; font-size: 13px; font-weight: 600; cursor: pointer;" onclick="switchAuthTab('signup')">Sign Up</button>
+        <div class="auth-tabs-container flex border-main">
+          <button class="btn tab-btn active auth-tab-btn-active text-sm font-semibold cursor-pointer p-xs" id="auth-tab-signin" style="flex: 1;" onclick="switchAuthTab('signin')">Sign In</button>
+          <button class="btn tab-btn auth-tab-btn-inactive text-sm font-semibold cursor-pointer p-xs" id="auth-tab-signup" style="flex: 1;" onclick="switchAuthTab('signup')">Sign Up</button>
         </div>
       </div>
       
-      <div class="modal-body" style="padding: 16px 0 0 0; overflow: visible;">
+      <div class="modal-body auth-modal-body">
         <!-- Form: Sign In -->
-        <form id="auth-form-signin" onsubmit="handleAuthSignIn(event)" style="display: flex; flex-direction: column; gap: 12px;">
+        <form id="auth-form-signin" onsubmit="handleAuthSignIn(event)" class="flex flex-col gap-md">
           <div class="form-group">
             <label for="signin-email">Username or Email</label>
-            <input type="text" id="signin-email" placeholder="e.g. nomad_bob" required style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);">
+            <input type="text" id="signin-email" placeholder="e.g. nomad_bob" required class="auth-input w-full p-sm">
           </div>
           <div class="form-group">
             <label for="signin-password">Password</label>
-            <input type="password" id="signin-password" placeholder="••••••••" required style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);">
+            <input type="password" id="signin-password" placeholder="••••••••" required class="auth-input w-full p-sm">
           </div>
-          <button type="submit" class="btn btn-primary" style="margin-top: 12px; width: 100%; justify-content: center; padding: 10px;">Sign In</button>
+          <button type="submit" class="btn btn-primary m-t-sm w-full justify-center p-sm">Sign In</button>
         </form>
         
         <!-- Form: Sign Up -->
-        <form id="auth-form-signup" onsubmit="handleAuthSignUp(event)" style="display: none; flex-direction: column; gap: 12px;">
+        <form id="auth-form-signup" onsubmit="handleAuthSignUp(event)" style="display: none;" class="flex flex-col gap-md">
           <div class="form-group">
             <label for="signup-username">Username</label>
-            <input type="text" id="signup-username" placeholder="e.g. wanderlust_wanderer" required style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);">
+            <input type="text" id="signup-username" placeholder="e.g. wanderlust_wanderer" required class="auth-input w-full p-sm">
           </div>
           <div class="form-group">
             <label for="signup-email">Email</label>
-            <input type="email" id="signup-email" placeholder="e.g. wanderer@road.com" required style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);">
+            <input type="email" id="signup-email" placeholder="e.g. wanderer@road.com" required class="auth-input w-full p-sm">
           </div>
           <div class="form-group">
             <label for="signup-password">Password</label>
-            <input type="password" id="signup-password" placeholder="••••••••" required style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);">
-          </div>
-          <div class="form-group">
-            <label for="signup-badge-tag">Badge Tag</label>
-            <input type="text" id="signup-badge-tag" placeholder="e.g. Solo Camper, Mechanic, Driveway Host" style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);">
+            <input type="password" id="signup-password" placeholder="••••••••" required class="auth-input w-full p-sm">
           </div>
           <div class="form-group">
             <label for="signup-bio">Bio</label>
-            <textarea id="signup-bio" placeholder="Tell the community about yourself..." style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main); height: 60px; resize: none;"></textarea>
+            <textarea id="signup-bio" placeholder="Tell the community about yourself..." class="auth-input w-full p-sm" style="height: 60px; resize: none;"></textarea>
           </div>
-          <button type="submit" class="btn btn-primary" style="margin-top: 12px; width: 100%; justify-content: center; padding: 10px;">Create Account</button>
+          <button type="submit" class="btn btn-primary m-t-sm w-full justify-center p-sm">Create Account</button>
         </form>
       </div>
     </div>
@@ -865,16 +895,12 @@
         <button class="modal-close-btn" onclick="closeModal('modal-gps-input')"><i data-lucide="x"></i></button>
       </div>
       <div class="modal-body" style="padding: 16px 0 0 0; display: flex; flex-direction: column; gap: 12px; overflow: visible;">
-        <p style="font-size: 13px; color: var(--muted-text); margin: 0; line-height: 1.4;">Geolocation is unavailable or blocked. Enter coordinates manually to center the map and drop your location marker.</p>
+        <p style="font-size: 13px; color: var(--muted-text); margin: 0; line-height: 1.4;">Geolocation is unavailable or blocked. Search for a popular road trip city or enter a zip code below to center the map.</p>
         
         <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
-          <label for="gps-input-lat" style="font-size: 12px; font-weight: 600; color: var(--text-main);">Latitude</label>
-          <input type="number" id="gps-input-lat" step="any" placeholder="e.g. 35.1983" value="35.1983" style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);">
-        </div>
-        
-        <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
-          <label for="gps-input-lng" style="font-size: 12px; font-weight: 600; color: var(--text-main);">Longitude</label>
-          <input type="number" id="gps-input-lng" step="any" placeholder="e.g. -111.6513" value="-111.6513" style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);">
+          <label for="gps-city-search" style="font-size: 12px; font-weight: 600; color: var(--text-main);">Search City, National Park, or Zip</label>
+          <input type="text" id="gps-city-search" list="gps-cities-list" placeholder="e.g. Moab, UT or 97701" style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);" autocomplete="off">
+          <datalist id="gps-cities-list"></datalist>
         </div>
         
         <button class="btn btn-primary" id="gps-submit-btn" style="margin-top: 12px; width: 100%; justify-content: center; padding: 10px;">Set Location</button>
@@ -1425,8 +1451,8 @@
       <div class="mobile-drawer-profile" onclick="if (!State.isSignedIn) { openModal('modal-auth-required'); } else { switchTab('profile'); } closeMobileDrawer();">
         <img src="" alt="User Avatar" class="profile-avatar" id="mobile-drawer-user-avatar">
         <div class="profile-info" style="display: flex; flex-direction: column; gap: 2px;">
-          <span class="profile-name" id="mobile-drawer-user-name" style="font-size: 14px; font-weight: 700; color: var(--text-charcoal);">Nomad Bob</span>
-          <span class="profile-handle" id="mobile-drawer-user-handle" style="font-size: 11px; color: var(--muted-text);">@nomad_bob</span>
+          <span class="profile-name" id="mobile-drawer-user-name" style="font-size: 14px; font-weight: 700; color: var(--text-charcoal);">Guest Nomad</span>
+          <span class="profile-handle" id="mobile-drawer-user-handle" style="font-size: 11px; color: var(--muted-text);">Sign in to post</span>
         </div>
       </div>
     </div>
@@ -1534,7 +1560,13 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Seed Data -->
   <script src="seeds.js"></script>
-  <!-- Core Logic script -->
+  <!-- App Configuration & Constants -->
+  <script src="config.js"></script>
+  <!-- State Management & Business Logic -->
+  <script src="logic.js"></script>
+  <!-- Rendering & UI Components -->
+  <script src="view.js"></script>
+  <!-- Main Controller & Initialization -->
   <script src="index.js"></script>
 </body>
 </html>
