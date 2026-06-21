@@ -114,13 +114,25 @@ body {
 .logo-text {
   font-size: 32px;
   font-weight: 900;
-  letter-spacing: -1px;
+  letter-spacing: -0.5px;
   color: var(--text-charcoal);
   text-transform: uppercase;
+  text-shadow: 
+    -1px -1px 0 rgba(0, 0, 0, 0.8),  
+     1px -1px 0 rgba(0, 0, 0, 0.8),
+    -1px  1px 0 rgba(0, 0, 0, 0.8),
+     1px  1px 0 rgba(0, 0, 0, 0.8),
+     1px  2px 3px rgba(0, 0, 0, 0.6);
 }
 
 .logo-accent {
   color: var(--accent-green);
+  text-shadow: 
+    -1px -1px 0 rgba(0, 0, 0, 0.8),  
+     1px -1px 0 rgba(0, 0, 0, 0.8),
+    -1px  1px 0 rgba(0, 0, 0, 0.8),
+     1px  1px 0 rgba(0, 0, 0, 0.8),
+     1px  2px 3px rgba(0, 0, 0, 0.6);
 }
 
 .nav-menu {
@@ -2093,7 +2105,6 @@ body {
   }
 
   /* Limit bottom nav to primary targets on mobile */
-  .app-sidebar .nav-item[data-tab="meetups"],
   .app-sidebar .nav-item[data-tab="forum"],
   .app-sidebar .nav-item[data-tab="profile"] {
     display: none !important;
@@ -3273,27 +3284,30 @@ body.dark-mode .chat-messages-area {
 
 .nav-unread-badge {
   position: absolute;
-  top: 2px;
-  right: 12px;
-  background-color: #D55E00;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  background-color: #EF4444; /* pure vibrant red */
   color: white;
-  font-size: 9px;
-  font-weight: 700;
-  min-width: 16px;
-  height: 16px;
+  font-size: 10px;
+  font-weight: 800;
+  min-width: 18px;
+  height: 18px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1.5px solid var(--card-bg);
   z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 @media (max-width: 768px) {
   .nav-unread-badge {
     top: 2px;
     right: auto;
-    left: 55%;
+    left: 50%;
+    transform: translateX(8px) translateY(0);
   }
 }
 
@@ -3540,4 +3554,33 @@ body.dark-mode .chat-messages-area {
 }
 .tribe-hub-tabs .tab-btn:hover {
   color: var(--accent-green) !important;
+}
+
+/* ==========================================================================
+   DESKTOP OVERLAP PREVENTION RULES
+   ========================================================================== */
+@media (min-width: 769px) {
+  /* Shift chat container and toggle button to the left if split feed is active */
+  body.dashboard-feed-active #chat-windows-container {
+    right: 444px !important;
+  }
+  body.dashboard-feed-active #contacts-toggle-btn {
+    right: 444px !important;
+  }
+
+  /* Sibling selectors for contacts sidebar open state */
+  #contacts-sidebar.open ~ #chat-windows-container {
+    right: 320px;
+  }
+  #contacts-sidebar.open ~ #contacts-toggle-btn {
+    right: 320px;
+  }
+
+  /* If both are active, shift chat container to the larger offset to clear the feed */
+  body.dashboard-feed-active #contacts-sidebar.open ~ #chat-windows-container {
+    right: 444px !important;
+  }
+  body.dashboard-feed-active #contacts-sidebar.open ~ #contacts-toggle-btn {
+    right: 444px !important;
+  }
 }

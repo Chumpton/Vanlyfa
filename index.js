@@ -11,6 +11,35 @@ document.addEventListener('DOMContentLoaded', () => {
 let State = {
   isOffline: false,
   syncQueue: [],
+  bookings: [],
+  jobs: [
+    {
+      id: "job-1",
+      title: "Permaculture Farm Assistant",
+      location: "Florence, OR",
+      duration: "2-4 weeks",
+      labor: "15 hours/week",
+      comp: "Free campsite + organic meals",
+      description: "Help with composting, seeding, and building raised beds on our off-grid permaculture farm near Florence. We have room for a rig up to 30ft, 15A solar dump, and hot showers available. Organic farm-to-table meals provided on work days.",
+      host: { name: "Clara Outdoors", avatar: "avatar_clara" },
+      date: "2026-06-20"
+    },
+    {
+      id: "job-2",
+      title: "Tiny Home Builder & Carpenter Helper",
+      location: "Flagstaff, AZ",
+      duration: "1-2 weeks",
+      labor: "20 hours/week",
+      comp: "Driveway parking + $150/week stipend",
+      description: "Looking for someone with carpentry or basic power tool experience to help frame a tiny home on wheels. Standard 30A RV hookup on site, water fill, and firewood provided. Beautiful ponderosa pine views and hiking trails nearby.",
+      host: { name: "Forest Nomad", avatar: "avatar_forest" },
+      date: "2026-06-18"
+    }
+  ],
+  notifications: [
+    { id: "notif-1", title: "New Meetup Added", text: "Clara Outdoors posted a new meetup: Oregon Dunes Caravan!", time: "1 hour ago", unread: true },
+    { id: "notif-2", title: "Campsite Vouched", text: "Nomad Bob vouched for Cedar Ridge Overlook near Flagstaff", time: "2 hours ago", unread: false }
+  ],
   currentUser: {
     name: "Nomad Bob",
     handle: "@nomad_bob",
@@ -180,7 +209,11 @@ let State = {
       description: "Annual desert gathering. Share rig build hacks, swap stories, and enjoy a massive bonfire. Bring your own chair and firewood.",
       host: { name: "Nomad Bob", avatar: "avatar_bob" },
       attendees: ["avatar_bob", "avatar_clara", "avatar_forest", "avatar_solar", "avatar_surf"],
-      attendeesCount: 42
+      attendeesCount: 42,
+      comments: [
+        { id: "mc-1", author: "Clara Outdoors", avatar: "avatar_clara", text: "I'll bring some firewood and folding chairs!", time: "1 day ago" },
+        { id: "mc-2", author: "Forest Nomad", avatar: "avatar_forest", text: "Anyone driving from Phoenix? Can caravan together.", time: "12 hours ago" }
+      ]
     },
     {
       id: "meetup-2",
@@ -193,7 +226,11 @@ let State = {
       description: "Caravan along the dunes. Testing solar capacity and enjoying coastal hikes. High-clearance AWD rigs only for beach driving.",
       host: { name: "Clara Outdoors", avatar: "avatar_clara" },
       attendees: ["avatar_clara", "avatar_forest", "avatar_solar"],
-      attendeesCount: 18
+      attendeesCount: 18,
+      comments: [
+        { id: "mc-3", author: "Nomad Bob", avatar: "avatar_bob", text: "Is it okay for a 2WD Sprinter if I stay on the paved lots?", time: "2 days ago" },
+        { id: "mc-4", author: "Clara Outdoors", avatar: "avatar_clara", text: "@Nomad Bob yes, the paved day-use area is totally fine. Just don't go on the sand!", time: "1 day ago" }
+      ]
     },
     {
       id: "meetup-3",
@@ -206,7 +243,8 @@ let State = {
       description: "Park directly on the water. Kayaking, paddle boarding, surfing, and local tacos. Families and pets welcome.",
       host: { name: "Baja Surfer", avatar: "avatar_surf" },
       attendees: ["avatar_surf", "avatar_bob", "avatar_solar"],
-      attendeesCount: 25
+      attendeesCount: 25,
+      comments: []
     }
   ],
   posts: [
@@ -368,7 +406,10 @@ let State = {
       banner: "forest",
       iconLetter: "SS",
       description: "For the nomads who value deep silence, off-grid battery capability, and parking miles away from the nearest rig.",
-      joined: true
+      joined: true,
+      category: "Interest",
+      state: "UT",
+      ideal: "Off-grid / Boondocking"
     },
     {
       id: "tribe-2",
@@ -377,7 +418,10 @@ let State = {
       banner: "desert",
       iconLetter: "BC",
       description: "Nomads traveling down the peninsula in search of empty point breaks, warm beaches, and local campfires.",
-      joined: false
+      joined: false,
+      category: "Regional",
+      state: "CA",
+      ideal: "Surfing & Beaching"
     },
     {
       id: "tribe-3",
@@ -386,7 +430,10 @@ let State = {
       banner: "ocean",
       iconLetter: "OE",
       description: "Electrical, mechanical, and software nomads. Swapping schematics, 12V engineering hacks, and coding from the pine trees.",
-      joined: true
+      joined: true,
+      category: "Skill-Share",
+      state: "OR",
+      ideal: "Technical / Engineering"
     },
     {
       id: "tribe-4",
@@ -395,7 +442,10 @@ let State = {
       banner: "mountain",
       iconLetter: "SN",
       description: "A community for Sprinter van owners. Exchanging tips on maintenance, parts, limp-mode diagnosis, and diesel mechanics.",
-      joined: false
+      joined: false,
+      category: "Brand-Circle",
+      state: "AZ",
+      ideal: "Maintenance & Repairs"
     }
   ],
   tribeChats: {
@@ -569,7 +619,10 @@ function saveStateToStorage() {
     activeChats: State.activeChats,
     minimizedChats: State.minimizedChats,
     syncQueue: State.syncQueue,
-    isSignedIn: State.isSignedIn
+    isSignedIn: State.isSignedIn,
+    bookings: State.bookings,
+    notifications: State.notifications,
+    jobs: State.jobs
   }));
 }
 
@@ -594,6 +647,9 @@ function loadStateFromStorage() {
       State.minimizedChats = parsed.minimizedChats || State.minimizedChats;
       State.syncQueue = parsed.syncQueue || [];
       State.isSignedIn = parsed.isSignedIn !== undefined ? parsed.isSignedIn : true;
+      State.bookings = parsed.bookings || [];
+      State.notifications = parsed.notifications || State.notifications;
+      State.jobs = parsed.jobs || State.jobs;
     } catch(e) {
       console.warn("Could not load stored state, using defaults", e);
     }
@@ -619,6 +675,28 @@ function loadStateFromStorage() {
   }
   // Track layer visibility state
   State.layerFilters = { dispersed: true, overnight: true, services: true };
+
+  // Seed reviews for default spots if not already present
+  State.spots.forEach(spot => {
+    if (!spot.reviews) {
+      if (spot.id === 'spot-1') {
+        spot.reviews = [
+          { author: { name: "Nomad Bob", avatar: "avatar_bob" }, rating: 5, text: "Absolutely stunning sunrise view. High clearance definitely needed for the washboard road at the end.", time: "2026-06-19" },
+          { author: { name: "Forest Nomad", avatar: "avatar_forest" }, rating: 4, text: "Good cell signal, Verizon has 3 bars LTE. Very quiet, level spots.", time: "2026-06-20" }
+        ];
+      } else if (spot.id === 'spot-2') {
+        spot.reviews = [
+          { author: { name: "Baja Surfer", avatar: "avatar_surf" }, rating: 5, text: "Directly on the cliff. Waking up to ocean waves is unmatched.", time: "2026-06-15" }
+        ];
+      } else if (spot.id === 'spot-5') {
+        spot.reviews = [
+          { author: { name: "Clara Outdoors", avatar: "avatar_clara" }, rating: 4, text: "Bob is an excellent host, driveway is level and electrical hookup was perfect.", time: "2026-06-18" }
+        ];
+      } else {
+        spot.reviews = [];
+      }
+    }
+  });
 }
 
 // Toast Alert System
@@ -1040,25 +1118,8 @@ function initApp() {
         showToast("Signed out successfully. Browsing as Guest.", "info");
         renderCurrentTab();
       } else {
-        State.isSignedIn = true;
-        saveStateToStorage();
-        updateSidebarProfileWidget();
-        showToast("Signed in as Nomad Bob!", "success");
-        renderCurrentTab();
+        openModal('modal-auth-required');
       }
-    });
-  }
-
-  // Auth Modal Sign In button
-  const modalAuthSigninBtn = document.getElementById('modal-auth-signin-btn');
-  if (modalAuthSigninBtn) {
-    modalAuthSigninBtn.addEventListener('click', () => {
-      closeModal('modal-auth-required');
-      State.isSignedIn = true;
-      saveStateToStorage();
-      updateSidebarProfileWidget();
-      showToast("Signed in as Nomad Bob!", "success");
-      renderCurrentTab();
     });
   }
   
@@ -1066,6 +1127,31 @@ function initApp() {
   switchTab('dashboard');
   renderContactsSidebar();
   renderActiveChats();
+
+  // Parse query parameters for spot or meetup sharing
+  const params = new URLSearchParams(window.location.search);
+  const sharedSpotId = params.get('spot');
+  if (sharedSpotId) {
+    const spot = State.spots.find(s => s.id === sharedSpotId);
+    if (spot) {
+      setTimeout(() => {
+        openInfoDrawerForSpot(spot);
+      }, 600);
+    }
+  }
+  const sharedMeetupId = params.get('meetup');
+  if (sharedMeetupId) {
+    setTimeout(() => {
+      switchTab('meetups');
+      setTimeout(() => {
+        const card = document.getElementById(`meetup-card-${sharedMeetupId}`);
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth' });
+          card.style.border = '2px solid var(--accent-green)';
+        }
+      }, 400);
+    }, 600);
+  }
 
   // Onboarding Welcome Modal Dismiss
   const welcomeDismissBtn = document.getElementById('welcome-dismiss-btn');
@@ -1121,6 +1207,20 @@ function initApp() {
 
   // Popstate event handler for Android back swipe/gestures
   window.addEventListener('popstate', (event) => {
+    // If about modal is open, close it
+    const aboutModal = document.getElementById('modal-about');
+    if (aboutModal && aboutModal.classList.contains('open')) {
+      closeModal('modal-about');
+      return;
+    }
+
+    // If auth modal is open, close it
+    const authModal = document.getElementById('modal-auth-required');
+    if (authModal && authModal.classList.contains('open')) {
+      closeModal('modal-auth-required');
+      return;
+    }
+
     // 1. If mobile drawer is open, close it
     const drawer = document.getElementById('mobile-drawer');
     if (drawer && drawer.classList.contains('open')) {
@@ -1359,7 +1459,8 @@ function switchTab(tabName, isPopState = false) {
     meetups: "Meetups",
     forum: "Forum Board",
     messages: "Direct Messages",
-    profile: "Rig Profile"
+    profile: "Rig Profile",
+    jobs: "Work & Stay"
   };
   document.getElementById('page-display-title').innerText = titles[tabName] || "Vanlyfa";
   
@@ -1372,7 +1473,8 @@ function switchTab(tabName, isPopState = false) {
     meetups: "Search fireside gatherings...",
     forum: "Search discussion topics...",
     messages: "Search direct messages...",
-    profile: "Search profile specs..."
+    profile: "Search profile specs...",
+    jobs: "Search farm help, camp hosts, carpentry..."
   };
   document.getElementById('global-search').placeholder = placeholders[tabName] || "Search...";
   
@@ -1404,12 +1506,15 @@ function switchTab(tabName, isPopState = false) {
   // Disappear mobile action FAB on Feed or Marketplace type tabs
   const mobileActionFab = document.getElementById('mobile-action-fab');
   if (mobileActionFab) {
-    if (['feed', 'marketplace', 'tribes', 'meetups', 'forum'].includes(tabName)) {
+    if (['feed', 'marketplace', 'tribes', 'meetups', 'forum', 'jobs'].includes(tabName)) {
       mobileActionFab.classList.add('hide-fab');
     } else {
       mobileActionFab.classList.remove('hide-fab');
     }
   }
+  
+  // Prevent overlaps on desktop
+  updateDesktopChatContainerLayout();
 }
 
 function toggleMobileFeedTab() {
@@ -1440,7 +1545,8 @@ function updateHeaderActionButton() {
     marketplace: { text: "Add Listing", icon: "plus" },
     tribes: { text: "Form Tribe", icon: "users" },
     meetups: { text: "Host Meetup", icon: "calendar" },
-    forum: { text: "New Thread", icon: "plus" }
+    forum: { text: "New Thread", icon: "plus" },
+    jobs: { text: "Host Work & Stay", icon: "briefcase" }
   };
   
   const conf = configs[State.activeTab];
@@ -1458,7 +1564,8 @@ function triggerMainActionButtonModal() {
     marketplace: 'modal-add-listing',
     tribes: 'modal-add-tribe',
     meetups: 'modal-add-meetup',
-    forum: 'modal-add-thread'
+    forum: 'modal-add-thread',
+    jobs: 'modal-add-job'
   };
   const modalId = modals[State.activeTab];
   if (modalId) openModal(modalId);
@@ -1493,6 +1600,9 @@ function renderCurrentTab() {
       break;
     case "profile":
       renderUserProfile();
+      break;
+    case "jobs":
+      renderJobsList();
       break;
   }
 }
@@ -1546,7 +1656,7 @@ function renderSocialFeed(containerId, isSidebar = false) {
                 <img src="${getAvatarSrc(avatar)}" alt="${c.user}" class="reply-avatar" onclick="viewUserProfile('${c.user}')">
                 <div class="reply-content-box">
                   <div class="reply-user-meta">
-                    <span class="reply-username" onclick="viewUserProfile('${c.user}')">${c.user}${getUserReputationBadge(c.user)}</span>
+                    <span class="reply-username" onclick="viewUserProfile('${c.user}')">${getUserRoleMarkup(c.user)}</span>
                     <span class="reply-time">1h</span>
                   </div>
                   <p class="reply-text">${c.text}</p>
@@ -1573,7 +1683,7 @@ function renderSocialFeed(containerId, isSidebar = false) {
         <div class="thread-right-col">
           <div class="thread-header">
             <div class="thread-user-meta">
-              <span class="thread-author-name" onclick="viewUserProfile('${post.author.name}')">${post.author.name}${getUserReputationBadge(post.author.name)}</span>
+              <span class="thread-author-name" onclick="viewUserProfile('${post.author.name}')">${getUserRoleMarkup(post.author.name)}</span>
               ${post.author.name === 'Solar Explorer' || post.author.name === 'Nomad Bob' ? '<i data-lucide="badge-check" class="verified-badge" style="width:14px; height:14px; color:#1D9BF0; fill:#1D9BF0; display:inline-block; margin-left:2px; vertical-align:middle;"></i>' : ''}
               <span class="thread-dot">•</span>
               <span class="thread-time">${post.time}</span>
@@ -1820,7 +1930,7 @@ function renderMarketplaceListings() {
         <div class="market-footer">
           <div class="market-seller" onclick="viewUserProfile('${item.seller.name}')" style="cursor:pointer;">
             <img src="${getAvatarSrc(item.seller.avatar)}" alt="${item.seller.name}">
-            <span>By ${item.seller.name}${getUserReputationBadge(item.seller.name)}</span>
+            <span>By ${getUserRoleMarkup(item.seller.name)}</span>
           </div>
           <button class="btn btn-sm btn-primary" onclick="contactSeller('${item.seller.name}', '${item.title}')">Message</button>
         </div>
@@ -1873,10 +1983,18 @@ function renderTribesList() {
   grid.innerHTML = '';
   if (yourGrid) yourGrid.innerHTML = '';
   
+  const catFilter = document.getElementById('tribe-filter-category')?.value || 'all';
+  const stateFilter = document.getElementById('tribe-filter-state')?.value || 'all';
+  const idealFilter = document.getElementById('tribe-filter-ideal')?.value || 'all';
+  
   const query = State.searchQuery;
   const filtered = State.tribes.filter(t => {
-    return t.title.toLowerCase().includes(query) || 
-           t.description.toLowerCase().includes(query);
+    const matchesQuery = t.title.toLowerCase().includes(query) || 
+                         t.description.toLowerCase().includes(query);
+    const matchesCat = catFilter === 'all' || t.category === catFilter;
+    const matchesState = stateFilter === 'all' || t.state === stateFilter;
+    const matchesIdeal = idealFilter === 'all' || t.ideal === idealFilter;
+    return matchesQuery && matchesCat && matchesState && matchesIdeal;
   });
   
   const bannerColors = {
@@ -1938,11 +2056,13 @@ function renderTribesList() {
       </div>
       <div class="tribe-details">
         <h3 class="tribe-title" style="margin-top: 12px;">${tribe.title}</h3>
-        <div class="tribe-meta">
+        <div class="tribe-meta" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <span>${tribe.membersCount} Members</span>
+          <span style="font-size:10px; font-weight:600; color:var(--muted-text); background:var(--bg-sand); padding:2px 6px; border-radius:4px;">${tribe.state} • ${tribe.category}</span>
         </div>
         <p class="tribe-description">${tribe.description}</p>
-        <div class="tribe-footer">
+        <div class="tribe-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top: 12px;">
+          <span style="font-size:10px; color:var(--muted-text); font-style:italic;">Ideal: ${tribe.ideal}</span>
           <button class="btn btn-sm ${tribe.joined ? '' : 'btn-primary'}" onclick="toggleTribeMembership('${tribe.id}')">
             ${tribe.joined ? 'Leave Tribe' : 'Join Tribe'}
           </button>
@@ -2101,7 +2221,7 @@ function renderTribeHubChat(tribeId) {
     msgDiv.innerHTML = `
       <div style="font-size:10px; color:var(--muted-text); font-weight:600; display:flex; align-items:center; gap:4px;">
         ${!isMe ? `<img src="${getAvatarSrc(avatar)}" style="width:14px; height:14px; border-radius:50%; object-fit:cover;" />` : ''}
-        <span>${msg.sender}</span>
+        <span>${getUserRoleMarkup(msg.sender)}</span>
         <span style="font-size:8px;">${msg.time}</span>
       </div>
       <div style="max-width:70%; padding:8px 12px; font-size:13px; line-height:1.4; border-radius:16px; background-color:${isMe ? 'var(--accent-green)' : 'var(--card-bg)'}; color:${isMe ? 'white' : 'var(--text-charcoal)'}; border:${isMe ? 'none' : '1px solid var(--border-light)'}; margin-top:2px;">
@@ -2333,13 +2453,18 @@ function renderMeetupsList() {
     
     const card = document.createElement('div');
     card.className = 'meetup-card';
+    card.id = `meetup-card-${meetup.id}`;
     card.innerHTML = `
       <div class="meetup-date-badge">
         <span class="meetup-date-month">${month}</span>
         <span class="meetup-date-day">${day}</span>
       </div>
-      <div class="meetup-info">
+      <div class="meetup-info" style="flex-grow: 1;">
         <h3 class="meetup-title">${meetup.title}</h3>
+        <div style="display:flex; align-items:center; gap:6px; margin: 4px 0 8px 0;">
+          <img src="${getAvatarSrc(meetup.host.avatar)}" style="width:20px; height:20px; border-radius:50%; object-fit:cover;" />
+          <span style="font-size:11px; font-weight:600; color:var(--text-charcoal);">${getUserRoleMarkup(meetup.host.name)}</span>
+        </div>
         <div class="meetup-meta-items">
           <div class="meetup-meta-item">
             <i data-lucide="map-pin"></i>
@@ -2351,16 +2476,52 @@ function renderMeetupsList() {
           </div>
         </div>
         <p class="meetup-description">${meetup.description}</p>
+        
+        <!-- Comments Section for Meetup -->
+        <div class="meetup-comments-section" style="margin-top: 12px; border-top: 1px dashed var(--border-color); padding-top: 12px; width: 100%;">
+          <div style="font-size: 11px; font-weight: 700; color: var(--text-charcoal); margin-bottom: 8px;">Comments</div>
+          <div class="meetup-comments-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 120px; overflow-y: auto; margin-bottom: 8px;">
+            ${(!meetup.comments || meetup.comments.length === 0) ? `
+              <div style="font-size: 10px; color: var(--muted-text); font-style: italic;">No comments yet.</div>
+            ` : meetup.comments.map(c => `
+              <div style="display: flex; gap: 8px; align-items: flex-start; background: var(--bg-sand); padding: 6px; border-radius: var(--radius-sm);">
+                <img src="${getAvatarSrc(c.avatar)}" style="width: 16px; height: 16px; border-radius: 50%; object-fit: cover;" />
+                <div style="display: flex; flex-direction: column; gap: 1px; width: 100%;">
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 600;">
+                    <span>${getUserRoleMarkup(c.author)}</span>
+                    <span style="font-size: 8px; color: var(--muted-text);">${c.time}</span>
+                  </div>
+                  <div style="font-size: 10px; color: var(--text-main); line-height: 1.3;">${c.text}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          <form onsubmit="saveMeetupComment(event, '${meetup.id}')" style="display: flex; gap: 6px; margin-top: 6px;">
+            <input type="text" id="meetup-comment-input-${meetup.id}" placeholder="Ask a question or comment..." required style="flex-grow: 1; font-size: 11px; border: 1px solid var(--border-color); border-radius: 4px; padding: 4px 8px; background: var(--bg-card); color: var(--text-main); outline: none;" />
+            <button type="submit" class="btn btn-sm btn-primary" style="padding: 2px 8px; font-size: 10px; height: auto;">Comment</button>
+          </form>
+        </div>
       </div>
-      <div class="meetup-actions">
-        <div class="meetup-attendees">
+      <div class="meetup-actions" style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px; width: 100%; flex-wrap: wrap; gap: 8px;">
+        <div class="meetup-attendees" style="display: flex; align-items: center;">
           ${meetup.attendees.slice(0, 4).map(a => `<img src="${getAvatarSrc(a)}" alt="Attendee" class="attendee-img">`).join('')}
           ${meetup.attendees.length > 4 ? `<div class="attendee-img" style="background:#6E6A5F; color:white; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700;">+${meetup.attendees.length - 4}</div>` : ''}
           <span class="attendee-count">${meetup.attendeesCount} RSVP'd</span>
         </div>
-        <button class="btn btn-sm ${hasRsvped ? '' : 'btn-primary'}" onclick="toggleMeetupRsvp('${meetup.id}')">
-          ${hasRsvped ? 'Going' : 'RSVP'}
-        </button>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <button class="btn btn-sm" onclick="shareMeetup('${meetup.id}')" title="Share Meetup" style="padding: 6px 10px; display: inline-flex; align-items: center; justify-content: center;">
+            <i data-lucide="share-2" style="width: 14px; height: 14px;"></i>
+          </button>
+          ${meetup.host.name !== State.currentUser.name ? `
+            <button class="btn btn-sm" onclick="contactHost('${meetup.host.name}', 'Caravan Meetup: ${meetup.title}')" style="padding: 6px 10px; display: inline-flex; align-items: center; gap: 4px;">
+              <i data-lucide="message-square" style="width: 14px; height: 14px;"></i>
+              <span>Host</span>
+            </button>
+          ` : ''}
+          <button class="btn btn-sm ${hasRsvped ? '' : 'btn-primary'}" onclick="toggleMeetupRsvp('${meetup.id}')">
+            ${hasRsvped ? 'Going' : 'RSVP'}
+          </button>
+        </div>
       </div>
     `;
     container.appendChild(card);
@@ -2485,11 +2646,11 @@ function renderThreadsList() {
       viewThreadDetail(thread.id);
     });
     
-    let lastPostMarkup = `<div class="thread-last-post"><span class="thread-last-user" onclick="event.stopPropagation(); viewUserProfile('${thread.author.name}')" style="cursor:pointer;">${thread.author.name}${getUserReputationBadge(thread.author.name)}</span><span style="font-size:9px;">OP</span></div>`;
+    let lastPostMarkup = `<div class="thread-last-post"><span class="thread-last-user" onclick="event.stopPropagation(); viewUserProfile('${thread.author.name}')" style="cursor:pointer;">${getUserRoleMarkup(thread.author.name)}</span><span style="font-size:9px;">OP</span></div>`;
     if (lastReply) {
       lastPostMarkup = `
         <div class="thread-last-post">
-          <span class="thread-last-user" onclick="event.stopPropagation(); viewUserProfile('${lastReply.author.name}')" style="cursor:pointer;">${lastReply.author.name}${getUserReputationBadge(lastReply.author.name)}</span>
+          <span class="thread-last-user" onclick="event.stopPropagation(); viewUserProfile('${lastReply.author.name}')" style="cursor:pointer;">${getUserRoleMarkup(lastReply.author.name)}</span>
           <span style="font-size:9px;">Yesterday</span>
         </div>
       `;
@@ -2499,7 +2660,7 @@ function renderThreadsList() {
       <div class="thread-main">
         <h3 class="thread-title">${thread.title}${thread.pendingSync ? ' <span class="sync-badge pending" style="font-size:10px; padding:2px 6px; border-radius:10px; background:rgba(239,68,68,0.1); color:#ef4444; margin-left:8px; font-weight:600; vertical-align:middle;">Pending Sync</span>' : ''}</h3>
         <div class="thread-meta">
-          <span>Started by <strong onclick="event.stopPropagation(); viewUserProfile('${thread.author.name}')" style="cursor:pointer; hover:underline;">${thread.author.name}${getUserReputationBadge(thread.author.name)}</strong></span>
+          <span>Started by <strong onclick="event.stopPropagation(); viewUserProfile('${thread.author.name}')" style="cursor:pointer; hover:underline;">${getUserRoleMarkup(thread.author.name)}</strong></span>
           <span>•</span>
           <span style="text-transform: capitalize; color:var(--accent-green); font-weight:600;">${thread.category}</span>
         </div>
@@ -2542,7 +2703,7 @@ function renderThreadDetail() {
     <div class="post-user-info">
       <img src="${getAvatarSrc(thread.author.avatar)}" alt="${thread.author.name}" onclick="viewUserProfile('${thread.author.name}')" style="cursor:pointer;">
       <div class="post-meta">
-        <span class="post-username" onclick="viewUserProfile('${thread.author.name}')" style="cursor:pointer;">${thread.author.name}${getUserReputationBadge(thread.author.name)}</span>
+        <span class="post-username" onclick="viewUserProfile('${thread.author.name}')" style="cursor:pointer;">${getUserRoleMarkup(thread.author.name)}</span>
         <span class="post-time">${thread.date}</span>
       </div>
     </div>
@@ -2562,7 +2723,7 @@ function renderThreadDetail() {
         <div class="post-user-info">
           <img src="${getAvatarSrc(reply.author.avatar)}" alt="${reply.author.name}" onclick="viewUserProfile('${reply.author.name}')" style="cursor:pointer;">
           <div class="post-meta">
-            <span class="post-username" onclick="viewUserProfile('${reply.author.name}')" style="cursor:pointer;">${reply.author.name}${getUserReputationBadge(reply.author.name)}</span>
+            <span class="post-username" onclick="viewUserProfile('${reply.author.name}')" style="cursor:pointer;">${getUserRoleMarkup(reply.author.name)}</span>
             <span class="post-time">${reply.date}${reply.pendingSync ? ' <span class="sync-badge pending" style="font-size:9px; padding:1px 4px; border-radius:10px; background:rgba(239,68,68,0.1); color:#ef4444; margin-left:6px; font-weight:600;">Pending Sync</span>' : ''}</span>
           </div>
         </div>
@@ -2755,6 +2916,36 @@ function renderUserProfile() {
         `;
         visitedList.appendChild(row);
       });
+    }
+  }
+  
+  // Render Bookings (Owner only)
+  const bookingsSection = document.getElementById('profile-bookings-section');
+  const bookingsList = document.getElementById('profile-bookings-list');
+  if (bookingsSection && bookingsList) {
+    if (isOwner) {
+      bookingsSection.style.display = 'block';
+      bookingsList.innerHTML = '';
+      
+      const bookings = State.bookings || [];
+      if (bookings.length === 0) {
+        bookingsList.innerHTML = `<div style="font-size:12px; color:var(--muted-text); font-style:italic;">No active driveway bookings.</div>`;
+      } else {
+        bookings.forEach(booking => {
+          const row = document.createElement('div');
+          row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg-sand); border:1px solid var(--border-color); border-radius:var(--radius-sm); font-size:12px; margin-bottom:6px;";
+          row.innerHTML = `
+            <div>
+              <strong style="color:var(--text-charcoal); cursor:pointer;" onclick="viewSpotFromProfile('${booking.spotId}')">${booking.spotTitle}</strong>
+              <div style="font-size:10px; color:var(--muted-text); margin-top:2px;">Host: ${booking.hostName} • Date: ${booking.checkInDate} (${booking.nights} night${booking.nights > 1 ? 's' : ''})</div>
+            </div>
+            <span style="font-weight:700; color:var(--accent-green);">$${booking.totalCost.toFixed(2)}</span>
+          `;
+          bookingsList.appendChild(row);
+        });
+      }
+    } else {
+      bookingsSection.style.display = 'none';
     }
   }
   
@@ -3388,6 +3579,127 @@ function openInfoDrawerForSpot(pin) {
       btn.classList.add('btn-primary');
     }
   }
+
+  // --- Map Coordinates Actions ---
+  document.getElementById('btn-coords-copy').onclick = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(`${pin.lat.toFixed(6)}, ${pin.lng.toFixed(6)}`);
+    showToast("Coordinates copied to clipboard!", "success");
+  };
+  document.getElementById('btn-coords-export').onclick = (e) => {
+    e.stopPropagation();
+    window.open(`https://www.google.com/maps/search/?api=1&query=${pin.lat},${pin.lng}`, '_blank');
+  };
+
+  // --- Action Button Group ---
+  document.getElementById('drawer-directions-btn').onclick = () => {
+    plotRouteToSpot(pin);
+  };
+  document.getElementById('drawer-share-btn').onclick = () => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?spot=${pin.id}`;
+    navigator.clipboard.writeText(shareUrl);
+    showToast("Share link copied to clipboard!", "success");
+  };
+
+  // --- Star Ratings & Reviews Render ---
+  const ratingContainer = document.getElementById('drawer-rating-container');
+  const reviewsSection = document.getElementById('drawer-reviews-section');
+  const reviewForm = document.getElementById('review-composer');
+  
+  if (reviewForm) reviewForm.style.display = 'none'; // reset form display
+
+  if (pin.category && pin.category !== 'service-mechanic') {
+    ratingContainer.style.display = 'flex';
+    reviewsSection.style.display = 'block';
+    
+    // Wire Write Review button toggle
+    document.getElementById('btn-write-review').onclick = () => {
+      if (!requireAuth()) return;
+      reviewForm.style.display = reviewForm.style.display === 'none' ? 'flex' : 'none';
+    };
+    
+    // Render review items
+    const reviewsList = document.getElementById('drawer-reviews-list');
+    reviewsList.innerHTML = '';
+    const reviews = pin.reviews || [];
+    
+    if (reviews.length > 0) {
+      let totalRating = 0;
+      reviews.forEach(r => {
+        totalRating += Number(r.rating);
+        const reviewEl = document.createElement('div');
+        reviewEl.style.cssText = 'padding:8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-sm);font-size:11px;';
+        
+        let starsHtml = '';
+        for (let i = 1; i <= 5; i++) {
+          starsHtml += i <= r.rating ? '★' : '☆';
+        }
+        
+        reviewEl.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <strong style="color:var(--text-main);">${r.author.name}</strong>
+            <span style="color:#F59E0B;font-weight:700;">${starsHtml}</span>
+          </div>
+          <p style="margin:2px 0 0 0;color:var(--text-charcoal);line-height:1.3;">${r.text}</p>
+          <span style="font-size:9px;color:var(--muted-text);display:block;margin-top:4px;text-align:right;">${r.time}</span>
+        `;
+        reviewsList.appendChild(reviewEl);
+      });
+      
+      const avg = (totalRating / reviews.length).toFixed(1);
+      let avgStars = '';
+      for (let i = 1; i <= 5; i++) {
+        avgStars += i <= Math.round(avg) ? '★' : '☆';
+      }
+      
+      document.getElementById('drawer-stars').innerText = avgStars;
+      document.getElementById('drawer-stars').style.color = '#F59E0B';
+      document.getElementById('drawer-rating-text').innerText = `${avg} (${reviews.length} review${reviews.length > 1 ? 's' : ''})`;
+    } else {
+      document.getElementById('drawer-stars').innerText = '☆☆☆☆☆';
+      document.getElementById('drawer-stars').style.color = 'var(--muted-text)';
+      document.getElementById('drawer-rating-text').innerText = 'No reviews yet';
+      reviewsList.innerHTML = `<div style="font-size:11px;color:var(--muted-text);text-align:center;padding:12px 0;">Be the first to review this spot!</div>`;
+    }
+  } else {
+    if (ratingContainer) ratingContainer.style.display = 'none';
+    if (reviewsSection) reviewsSection.style.display = 'none';
+  }
+
+  // --- Driveway Booking Section Render ---
+  const bookingSection = document.getElementById('drawer-booking-section');
+  if (pin.category === 'driveway-host') {
+    bookingSection.style.display = 'block';
+    const price = pin.price || 15;
+    document.getElementById('drawer-driveway-price').innerText = `$${price} / night`;
+    
+    // Parse amenities
+    let amenitiesStr = '';
+    if (pin.amenities) {
+      if (pin.amenities.power) amenitiesStr += '⚡ Power ';
+      if (pin.amenities.water) amenitiesStr += '💧 Water ';
+      if (pin.amenities.wifi) amenitiesStr += '📶 WiFi ';
+      if (pin.amenities.pets) amenitiesStr += '🐾 Pets ';
+    }
+    if (!amenitiesStr) amenitiesStr = 'Driveway Access only';
+    document.getElementById('drawer-driveway-amenities').innerText = amenitiesStr;
+    
+    // Wire book button
+    document.getElementById('btn-book-driveway').onclick = () => {
+      if (!requireAuth()) return;
+      
+      document.getElementById('book-driveway-title').innerText = pin.title;
+      document.getElementById('book-driveway-rate').innerText = `Rate: $${price}/night`;
+      document.getElementById('book-nights').value = 1;
+      
+      // Calculate initial cost
+      document.getElementById('book-total-cost').innerText = `$${price}.00`;
+      
+      openModal('modal-book-driveway');
+    };
+  } else {
+    if (bookingSection) bookingSection.style.display = 'none';
+  }
   
   // Pan map to clicked pin (with vertical offset on mobile to center above bottom sheet)
   if (State.leafletMap) {
@@ -3547,8 +3859,19 @@ function saveNewSpot() {
     lng,
     description,
     author: { name: State.currentUser.name, avatar: State.currentUser.avatar },
-    vouches: 1
+    vouches: 1,
+    reviews: []
   };
+  
+  if (category === 'driveway-host') {
+    newSpot.price = parseFloat(document.getElementById('spot-fee').value) || 15;
+    newSpot.amenities = {
+      power: document.getElementById('amenity-power').checked,
+      water: document.getElementById('amenity-water').checked,
+      wifi: document.getElementById('amenity-wifi').checked,
+      pets: document.getElementById('amenity-pets').checked
+    };
+  }
   
   if (State.isOffline) {
     newSpot.pendingSync = true;
@@ -3571,6 +3894,12 @@ function saveNewSpot() {
   document.getElementById('spot-lat').value = '';
   document.getElementById('spot-lng').value = '';
   document.getElementById('spot-desc').value = '';
+  document.getElementById('spot-fee').value = '0';
+  document.getElementById('amenity-power').checked = false;
+  document.getElementById('amenity-water').checked = false;
+  document.getElementById('amenity-wifi').checked = false;
+  document.getElementById('amenity-pets').checked = false;
+  document.getElementById('spot-moochdocking-fields').style.display = 'none';
   
   closeModal('modal-add-spot');
 }
@@ -3821,6 +4150,9 @@ function toggleFeedShelf(shelf) {
   const layout = document.querySelector('.dashboard-layout');
   if (layout) {
     layout.classList.toggle('feed-shelved', shelf);
+    
+    // Prevent overlaps on desktop
+    updateDesktopChatContainerLayout();
     
     // Invalidate map size so it redraws to fill the new container width
     if (State.leafletMap) {
@@ -4082,7 +4414,7 @@ function renderActiveChats() {
           <div class="chat-header-info">
             <img src="${getAvatarSrc(contact.avatar)}" alt="${contact.name}" class="chat-header-avatar" onclick="event.stopPropagation(); viewUserProfile('${contact.name}')" style="cursor:pointer;">
             <div class="chat-header-meta">
-              <span class="chat-header-name">${contact.name}</span>
+              <span class="chat-header-name">${getUserRoleMarkup(contact.name)}</span>
               <span class="chat-header-status">${statusText}</span>
             </div>
           </div>
@@ -4327,8 +4659,566 @@ function closeMobileActionMenu() {
   }
 }
 
+function updateDesktopChatContainerLayout() {
+  const isDashboard = State.activeTab === 'dashboard';
+  const layout = document.querySelector('.dashboard-layout');
+  const isFeedShelved = layout && layout.classList.contains('feed-shelved');
+  
+  if (isDashboard && !isFeedShelved) {
+    document.body.classList.add('dashboard-feed-active');
+  } else {
+    document.body.classList.remove('dashboard-feed-active');
+  }
+}
+
 window.openMobileDrawer = openMobileDrawer;
 window.closeMobileDrawer = closeMobileDrawer;
 window.openMobileActionMenu = openMobileActionMenu;
 window.closeMobileActionMenu = closeMobileActionMenu;
 window.toggleMobileFeedTab = toggleMobileFeedTab;
+window.updateDesktopChatContainerLayout = updateDesktopChatContainerLayout;
+
+/* ==========================================================================
+   ADVANCED AUTHENTICATION & ABOUT HANDLERS
+   ========================================================================== */
+function switchAuthTab(tab) {
+  const btnSignin = document.getElementById('auth-tab-signin');
+  const btnSignup = document.getElementById('auth-tab-signup');
+  const formSignin = document.getElementById('auth-form-signin');
+  const formSignup = document.getElementById('auth-form-signup');
+  
+  if (!btnSignin || !btnSignup || !formSignin || !formSignup) return;
+  
+  if (tab === 'signin') {
+    btnSignin.classList.add('active');
+    btnSignin.style.background = 'var(--card-bg)';
+    btnSignin.style.color = 'var(--text-main)';
+    btnSignin.style.boxShadow = 'var(--shadow-sm)';
+    
+    btnSignup.classList.remove('active');
+    btnSignup.style.background = 'transparent';
+    btnSignup.style.color = 'var(--muted-text)';
+    btnSignup.style.boxShadow = 'none';
+    
+    formSignin.style.display = 'flex';
+    formSignup.style.display = 'none';
+  } else {
+    btnSignup.classList.add('active');
+    btnSignup.style.background = 'var(--card-bg)';
+    btnSignup.style.color = 'var(--text-main)';
+    btnSignup.style.boxShadow = 'var(--shadow-sm)';
+    
+    btnSignin.classList.remove('active');
+    btnSignin.style.background = 'transparent';
+    btnSignin.style.color = 'var(--muted-text)';
+    btnSignin.style.boxShadow = 'none';
+    
+    formSignup.style.display = 'flex';
+    formSignin.style.display = 'none';
+  }
+}
+
+function handleAuthSignIn(event) {
+  event.preventDefault();
+  const inputVal = document.getElementById('signin-email').value.trim();
+  
+  if (!inputVal) return;
+  
+  // Find user in database simulator
+  const user = State.users.find(u => u.name.toLowerCase() === inputVal.toLowerCase() || 
+                                      u.handle.toLowerCase() === inputVal.toLowerCase() ||
+                                      u.handle.toLowerCase() === `@${inputVal.toLowerCase()}`);
+  
+  if (user) {
+    State.currentUser = {
+      name: user.name,
+      handle: user.handle,
+      avatar: user.avatar,
+      bio: user.bio || "",
+      rig: user.rig || "",
+      solar: user.solar || "",
+      power: user.power || "",
+      water: user.water || "",
+      reputation: user.reputation || 0,
+      givenRepTo: user.givenRepTo || []
+    };
+    State.isSignedIn = true;
+    saveStateToStorage();
+    updateSidebarProfileWidget();
+    closeModal('modal-auth-required');
+    showToast(`Signed in as ${user.name}!`, "success");
+    renderCurrentTab();
+  } else {
+    // Autocreate account for convenience in mockup
+    const newUsername = inputVal;
+    const newHandle = `@${inputVal.replace(/\s+/g, '_').toLowerCase()}`;
+    const newUser = {
+      name: newUsername,
+      handle: newHandle,
+      avatar: "avatar_bob",
+      bio: "Living the dream on four wheels.",
+      rig: "Camper Rig",
+      solar: "200W Solar",
+      power: "100Ah Lithium",
+      water: "15 Gal Fresh",
+      gallery: [],
+      visitedSpots: [],
+      friends: [],
+      reputation: 3,
+      givenRepTo: []
+    };
+    State.users.push(newUser);
+    State.currentUser = { ...newUser };
+    State.isSignedIn = true;
+    saveStateToStorage();
+    updateSidebarProfileWidget();
+    closeModal('modal-auth-required');
+    showToast(`Signed up and logged in as ${newUsername}!`, "success");
+    renderCurrentTab();
+  }
+}
+
+function handleAuthSignUp(event) {
+  event.preventDefault();
+  const username = document.getElementById('signup-username').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const rig = document.getElementById('signup-rig').value.trim() || "Standard Campervan";
+  const avatar = document.getElementById('signup-avatar').value;
+  const bio = document.getElementById('signup-bio').value.trim() || "New nomad on the road.";
+  
+  if (!username) return;
+  const handle = `@${username.replace(/\s+/g, '_').toLowerCase()}`;
+  
+  const existingUser = State.users.find(u => u.name.toLowerCase() === username.toLowerCase());
+  if (existingUser) {
+    showToast("Username already exists. Signed in to existing account.", "info");
+    State.currentUser = { ...existingUser };
+    State.isSignedIn = true;
+    saveStateToStorage();
+    updateSidebarProfileWidget();
+    closeModal('modal-auth-required');
+    renderCurrentTab();
+    return;
+  }
+  
+  const newUser = {
+    name: username,
+    handle: handle,
+    avatar: avatar,
+    bio: bio,
+    rig: rig,
+    solar: "200W Solar",
+    power: "100Ah AGM",
+    water: "15 Gal Fresh",
+    gallery: [],
+    visitedSpots: [],
+    friends: [],
+    reputation: 5,
+    givenRepTo: []
+  };
+  
+  State.users.push(newUser);
+  State.currentUser = { ...newUser };
+  State.isSignedIn = true;
+  saveStateToStorage();
+  updateSidebarProfileWidget();
+  closeModal('modal-auth-required');
+  showToast(`Welcome aboard, ${username}!`, "success");
+  renderCurrentTab();
+}
+
+function openAboutModal() {
+  openModal('modal-about');
+  history.pushState({ modal: 'about' }, '');
+}
+
+window.switchAuthTab = switchAuthTab;
+window.handleAuthSignIn = handleAuthSignIn;
+window.handleAuthSignUp = handleAuthSignUp;
+window.openAboutModal = openAboutModal;
+
+/* --- Spot Moochdocking & Reviews Helpers --- */
+function toggleSpotMoochdockingFields() {
+  const category = document.getElementById('spot-category').value;
+  const moochFields = document.getElementById('spot-moochdocking-fields');
+  if (moochFields) {
+    moochFields.style.display = category === 'driveway-host' ? 'flex' : 'none';
+  }
+}
+
+function saveSpotReview(event) {
+  event.preventDefault();
+  if (!requireAuth()) return;
+  const ratingVal = document.getElementById('review-rating').value;
+  const textVal = document.getElementById('review-text').value.trim();
+  
+  if (!textVal) return;
+  
+  const spot = State.spots.find(s => s.id === State.currentViewedSpotId);
+  if (spot) {
+    if (!spot.reviews) spot.reviews = [];
+    
+    const newReview = {
+      author: { name: State.currentUser.name, avatar: State.currentUser.avatar },
+      rating: Number(ratingVal),
+      text: textVal,
+      time: new Date().toISOString().split('T')[0]
+    };
+    
+    spot.reviews.push(newReview);
+    saveStateToStorage();
+    showToast("Review submitted successfully!", "success");
+    
+    // Reset inputs
+    document.getElementById('review-text').value = '';
+    document.getElementById('review-composer').style.display = 'none';
+    
+    // Refresh view
+    openInfoDrawerForSpot(spot);
+  }
+}
+
+let activeRoutePolyline = null;
+function plotRouteToSpot(spot) {
+  if (activeRoutePolyline && State.leafletMap) {
+    State.leafletMap.removeLayer(activeRoutePolyline);
+    activeRoutePolyline = null;
+  }
+  
+  // Remove existing directions card
+  const oldCard = document.getElementById('directions-info-card');
+  if (oldCard) oldCard.remove();
+  
+  if (!State.leafletMap) return;
+  
+  // Create a realistic path starting ~12 miles away
+  const startLat = spot.lat + 0.082;
+  const startLng = spot.lng - 0.095;
+  
+  const points = [
+    [startLat, startLng],
+    [startLat - 0.02, startLng + 0.015],
+    [startLat - 0.04, startLng + 0.05],
+    [startLat - 0.065, startLng + 0.07],
+    [startLat - 0.075, spot.lng - 0.01],
+    [spot.lat, spot.lng]
+  ];
+  
+  activeRoutePolyline = L.polyline(points, {
+    color: '#3B82F6',
+    weight: 5,
+    opacity: 0.9,
+    dashArray: '8, 8',
+    lineCap: 'round'
+  }).addTo(State.leafletMap);
+  
+  State.leafletMap.fitBounds(activeRoutePolyline.getBounds(), { padding: [40, 40] });
+  showToast("Simulated GPS path drawn!", "info");
+  
+  // Append a directions directions box inside the map drawer
+  const drawer = document.getElementById('map-info-drawer');
+  if (drawer) {
+    const card = document.createElement('div');
+    card.id = 'directions-info-card';
+    card.style.cssText = 'margin-top:16px;background:var(--bg-sand);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:10px;font-size:11px;';
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;border-bottom:1px solid var(--border-color);padding-bottom:4px;">
+        <strong style="color:var(--accent-green);display:flex;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg> GPS Routing Steps</strong>
+        <button class="btn btn-sm" onclick="clearActiveMapRoute()" style="padding:0;background:transparent;border:none;color:var(--muted-text);font-weight:700;cursor:pointer;">Clear</button>
+      </div>
+      <ol style="margin:0;padding-left:14px;color:var(--text-charcoal);line-height:1.4;display:flex;flex-direction:column;gap:3px;">
+        <li>Head South toward main access road (4.5 mi)</li>
+        <li>Turn left onto forest service unpaved wash (2.8 mi - high clearance)</li>
+        <li>Arrive at spot coordinates on the right.</li>
+      </ol>
+    `;
+    drawer.appendChild(card);
+  }
+}
+
+function clearActiveMapRoute() {
+  if (activeRoutePolyline && State.leafletMap) {
+    State.leafletMap.removeLayer(activeRoutePolyline);
+    activeRoutePolyline = null;
+  }
+  const oldCard = document.getElementById('directions-info-card');
+  if (oldCard) oldCard.remove();
+  showToast("Route cleared.", "info");
+}
+
+function calculateBookingTotal() {
+  const nights = Number(document.getElementById('book-nights').value) || 1;
+  const spot = State.spots.find(s => s.id === State.currentViewedSpotId);
+  if (spot) {
+    const price = spot.price || 15;
+    const total = price * nights;
+    document.getElementById('book-total-cost').innerText = `$${total.toFixed(2)}`;
+  }
+}
+
+function handleCompleteDrivewayBooking(event) {
+  event.preventDefault();
+  if (!requireAuth()) return;
+  
+  const spot = State.spots.find(s => s.id === State.currentViewedSpotId);
+  if (!spot) return;
+  
+  const dateVal = document.getElementById('book-date').value;
+  const nightsVal = Number(document.getElementById('book-nights').value) || 1;
+  const price = spot.price || 15;
+  const total = price * nightsVal;
+  
+  showToast("Processing simulated card payment...", "info");
+  
+  setTimeout(() => {
+    const newBooking = {
+      id: `booking-${Date.now()}`,
+      spotId: spot.id,
+      spotTitle: spot.title,
+      hostName: spot.author ? spot.author.name : "Driveway Host",
+      checkInDate: dateVal,
+      nights: nightsVal,
+      totalCost: total,
+      timestamp: new Date().toISOString().split('T')[0]
+    };
+    
+    State.bookings.push(newBooking);
+    saveStateToStorage();
+    
+    closeModal('modal-book-driveway');
+    showToast("Booking confirmed! Saved to your profile.", "success");
+    
+    // Clear inputs
+    document.getElementById('card-number').value = '';
+    document.getElementById('card-expiry').value = '';
+    document.getElementById('card-cvv').value = '';
+    document.getElementById('book-date').value = '';
+    document.getElementById('book-nights').value = '1';
+    
+    if (State.activeTab === 'profile') {
+      renderUserProfile();
+    }
+  }, 1200);
+}
+
+window.toggleSpotMoochdockingFields = toggleSpotMoochdockingFields;
+window.saveSpotReview = saveSpotReview;
+window.plotRouteToSpot = plotRouteToSpot;
+window.clearActiveMapRoute = clearActiveMapRoute;
+window.calculateBookingTotal = calculateBookingTotal;
+window.handleCompleteDrivewayBooking = handleCompleteDrivewayBooking;
+
+/* --- Work & Stay Board, Meetups comments, and User Role decorators --- */
+function getUserRoleMarkup(username) {
+  if (!username) return '';
+  const cleanName = username.trim();
+  
+  // Official check
+  const isOfficial = cleanName.includes("USFS") || 
+                     cleanName.includes("BLM") || 
+                     cleanName.includes("Forest Service") || 
+                     cleanName.includes("Land Management") || 
+                     cleanName === "Official Source";
+                     
+  if (isOfficial) {
+    return `<span class="role-name-official" style="color: #10B981; font-weight: 700;">${cleanName}</span><span class="role-badge-official" style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid #10B981; border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 700; margin-left: 4px; vertical-align: middle;">OFFICIAL</span>`;
+  }
+  
+  // Find reputation
+  let rep = 0;
+  let user = State.users.find(u => u.name === cleanName);
+  if (!user && State.currentUser && State.currentUser.name === cleanName) {
+    user = State.currentUser;
+  }
+  if (user) {
+    rep = user.reputation || 0;
+  }
+  
+  if (rep >= 30) {
+    return `<span class="role-name-elite" style="color: #F59E0B; font-weight: 700; text-shadow: 0 0 2px rgba(245, 158, 11, 0.2);">${cleanName}</span><span class="role-badge-elite" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid #F59E0B; border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 700; margin-left: 4px; vertical-align: middle;">★ ELITE</span>`;
+  } else if (rep >= 20) {
+    return `<span class="role-name-veteran" style="color: #F97316; font-weight: 700;">${cleanName}</span><span class="role-badge-veteran" style="background: rgba(249, 115, 22, 0.15); color: #F97316; border: 1px solid #F97316; border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 700; margin-left: 4px; vertical-align: middle;">VET</span>`;
+  } else if (rep >= 10) {
+    return `<span class="role-name-explorer" style="color: #3B82F6; font-weight: 600;">${cleanName}</span><span class="role-badge-explorer" style="background: rgba(59, 130, 246, 0.15); color: #3B82F6; border: 1px solid #3B82F6; border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 600; margin-left: 4px; vertical-align: middle;">EXPLORER</span>`;
+  } else {
+    return `<span class="role-name-nomad" style="color: var(--text-main); font-weight: 500;">${cleanName}</span><span class="role-badge-nomad" style="background: rgba(120, 120, 120, 0.1); color: var(--muted-text); border: 1px solid rgba(120, 120, 120, 0.2); border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 500; margin-left: 4px; vertical-align: middle;">NOMAD</span>`;
+  }
+}
+
+function renderJobsList() {
+  const grid = document.getElementById('jobs-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const durationFilter = document.getElementById('job-filter-duration').value;
+  const locationFilter = document.getElementById('job-filter-location').value.trim().toLowerCase();
+  const query = State.searchQuery;
+
+  if (!State.jobs) State.jobs = [];
+
+  const filtered = State.jobs.filter(job => {
+    const matchesQuery = job.title.toLowerCase().includes(query) || 
+                         job.description.toLowerCase().includes(query) ||
+                         job.location.toLowerCase().includes(query);
+    const matchesDuration = durationFilter === 'all' || job.duration.toLowerCase().includes(durationFilter.toLowerCase().replace('short term (', '').replace('medium term (', '').replace('long term (', '').replace(')', ''));
+    const matchesLocation = !locationFilter || job.location.toLowerCase().includes(locationFilter);
+
+    return matchesQuery && matchesDuration && matchesLocation;
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div style="grid-column: span 3; text-align:center; padding:64px; color:var(--muted-text);">No work & stay opportunities found.</div>`;
+    return;
+  }
+
+  filtered.forEach(job => {
+    const card = document.createElement('div');
+    card.className = 'market-card job-card';
+    card.style.display = 'flex';
+    card.style.flexDirection = 'column';
+    card.style.justifyContent = 'space-between';
+    card.style.height = '100%';
+    card.innerHTML = `
+      <div class="market-details" style="padding: 16px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+            <span class="market-badge" style="position: static; background: rgba(34, 139, 34, 0.15); color: #228B22; border: 1px solid #228B22; border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: 700;">${job.duration}</span>
+            <span style="font-size: 11px; font-weight: 600; color: var(--muted-text);">${job.location}</span>
+          </div>
+          <h3 class="market-title" style="margin-bottom: 6px; font-size: 14px; font-weight: 700;">${job.title}</h3>
+          <p style="font-size: 12px; color: var(--text-main); line-height: 1.4; margin-bottom: 12px;">${job.description}</p>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px; font-size: 11px;">
+          <div style="display: flex; justify-content: space-between;"><span style="color: var(--muted-text);">Labor Required:</span> <strong style="color: var(--text-main);">${job.labor}</strong></div>
+          <div style="display: flex; justify-content: space-between;"><span style="color: var(--muted-text);">Compensation:</span> <strong style="color: var(--accent-green);">${job.comp}</strong></div>
+        </div>
+      </div>
+      <div class="market-footer" style="padding: 12px; border-top: 1px solid var(--border-color); background: var(--bg-sand); display: flex; justify-content: space-between; align-items: center; border-bottom-left-radius: var(--radius-md); border-bottom-right-radius: var(--radius-md);">
+        <div class="market-seller" onclick="viewUserProfile('${job.host.name}')" style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          <img src="${getAvatarSrc(job.host.avatar)}" alt="${job.host.name}" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;" />
+          <span style="font-size: 10px; font-weight: 600; color: var(--text-main);">${getUserRoleMarkup(job.host.name)}</span>
+        </div>
+        ${job.host.name !== State.currentUser.name ? `
+          <button class="btn btn-sm btn-primary" onclick="contactHost('${job.host.name}', 'Work & Stay: ${job.title}')" style="padding: 4px 8px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+            <i data-lucide="message-square" style="width: 12px; height: 12px;"></i>
+            <span>Message</span>
+          </button>
+        ` : ''}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  lucide.createIcons();
+}
+
+function saveNewJobListing(event) {
+  event.preventDefault();
+  if (!requireAuth()) return;
+
+  const title = document.getElementById('job-title').value.trim();
+  const location = document.getElementById('job-location').value.trim();
+  const duration = document.getElementById('job-duration').value.trim();
+  const labor = document.getElementById('job-labor').value.trim();
+  const comp = document.getElementById('job-comp').value.trim();
+  const description = document.getElementById('job-desc').value.trim();
+
+  if (!title || !location || !duration || !labor || !comp || !description) {
+    showToast("Please fill all fields.", "error");
+    return;
+  }
+
+  const newJob = {
+    id: `job-${Date.now()}`,
+    title: title,
+    location: location,
+    duration: duration,
+    labor: labor,
+    comp: comp,
+    description: description,
+    host: {
+      name: State.currentUser.name,
+      avatar: State.currentUser.avatar || 'avatar_bob'
+    },
+    date: new Date().toISOString().split('T')[0]
+  };
+
+  State.jobs.push(newJob);
+  saveStateToStorage();
+  closeModal('modal-add-job');
+  
+  // reset form
+  document.getElementById('add-job-form').reset();
+  
+  if (State.activeTab === 'jobs') {
+    renderJobsList();
+  }
+  showToast("Work & Stay opportunity posted successfully!", "success");
+}
+
+function saveMeetupComment(event, meetupId) {
+  event.preventDefault();
+  const input = document.getElementById(`meetup-comment-input-${meetupId}`);
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  
+  const meetup = State.meetups.find(m => m.id === meetupId);
+  if (meetup) {
+    if (!meetup.comments) meetup.comments = [];
+    meetup.comments.push({
+      id: `comment-${Date.now()}`,
+      author: State.currentUser.name,
+      avatar: State.currentUser.avatar || 'avatar_bob',
+      text: text,
+      time: "Just now"
+    });
+    input.value = '';
+    saveStateToStorage();
+    renderMeetupsList();
+    showToast("Comment posted!");
+  }
+}
+
+function shareMeetup(meetupId) {
+  const url = `${window.location.origin}${window.location.pathname}?meetup=${meetupId}`;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast("Meetup sharing link copied to clipboard!", "success");
+  }).catch(() => {
+    showToast("Failed to copy link.", "error");
+  });
+}
+
+function contactHost(hostName, meetupOrJobTitle) {
+  openDirectChat(hostName);
+  if (meetupOrJobTitle) {
+    setTimeout(() => {
+      const chatKey = hostName;
+      if (State.chats) {
+        if (!State.chats[chatKey]) State.chats[chatKey] = [];
+        const alreadyAsked = State.chats[chatKey].some(m => m.text.includes(meetupOrJobTitle));
+        if (!alreadyAsked) {
+          const newMsg = {
+            id: `msg-${Date.now()}`,
+            sender: State.currentUser.name,
+            text: `Hi ${hostName}! I'm interested in: "${meetupOrJobTitle}". Can we chat?`,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            reaction: false
+          };
+          State.chats[chatKey].push(newMsg);
+          saveStateToStorage();
+          renderActiveChats();
+          renderContactsSidebar();
+        }
+      }
+    }, 100);
+  }
+}
+
+window.getUserRoleMarkup = getUserRoleMarkup;
+window.renderJobsList = renderJobsList;
+window.saveNewJobListing = saveNewJobListing;
+window.saveMeetupComment = saveMeetupComment;
+window.shareMeetup = shareMeetup;
+window.contactHost = contactHost;
