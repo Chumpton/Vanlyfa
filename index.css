@@ -936,6 +936,16 @@ body {
   text-transform: uppercase;
 }
 
+.badge-service-offer {
+  background-color: #3B7A57 !important;
+  color: white !important;
+}
+
+.badge-service-want {
+  background-color: #D55E00 !important;
+  color: white !important;
+}
+
 .market-details {
   padding: 20px;
   display: flex;
@@ -1865,6 +1875,14 @@ body {
     padding: 0 16px;
     position: sticky;
     top: 0;
+    z-index: 999;
+    transition: transform 0.3s ease, margin-top 0.3s ease;
+  }
+  
+  .top-bar.hide-top-bar {
+    transform: translateY(-100%);
+    margin-top: -64px;
+    pointer-events: none;
   }
   
   .search-bar {
@@ -1917,6 +1935,66 @@ body {
   .thread-last-post {
     border-left: none;
     padding-left: 0;
+  }
+
+  .dashboard-feed-container {
+    height: 320px;
+  }
+  
+  #main-action-btn span {
+    display: none;
+  }
+  #main-action-btn {
+    min-width: 38px;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .contacts-toggle-btn {
+    bottom: 80px;
+    left: 20px;
+    right: auto;
+  }
+
+  .map-info-drawer {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: 50vh;
+    border-radius: 16px 16px 0 0;
+    z-index: 1001;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  .chat-windows-container {
+    bottom: 0 !important;
+    right: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    z-index: 2100 !important;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+  }
+
+  .chat-window {
+    width: 100vw !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    pointer-events: auto;
+  }
+  
+  .chat-window.minimized {
+    height: 48px !important;
   }
 }
 
@@ -2504,16 +2582,40 @@ body.dark-mode .chat-messages-area {
   height: 16px;
 }
 
-/* Chat Mobile Layout overrides */
-@media (max-width: 576px) {
-  .chat-windows-container {
-    right: 16px;
-    left: 16px;
-    max-width: none;
-    bottom: 74px; /* Offset mobile nav bar */
+/* Mobile view search-bar override */
+@media (max-width: 600px) {
+  .search-bar {
+    display: none !important;
   }
+}
 
-  .chat-window {
-    width: 100% !important;
+/* Extra small viewport optimizations for AAA mobile feel */
+@media (max-width: 500px) {
+  .nav-item span {
+    display: none !important;
+  }
+  .nav-item i, .nav-item svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+  .app-sidebar {
+    height: 56px;
+  }
+  .app-content {
+    height: calc(100vh - 56px);
+    margin-bottom: 56px;
+  }
+}
+
+@media (max-width: 480px) {
+  .rig-details-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+  .rig-detail-box {
+    padding: 8px 10px !important;
+  }
+  .rig-detail-value {
+    font-size: 12px !important;
   }
 }

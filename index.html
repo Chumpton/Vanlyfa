@@ -33,10 +33,6 @@
           <i data-lucide="shopping-bag"></i>
           <span>Marketplace</span>
         </div>
-        <div class="nav-item" data-tab="skilltrade">
-          <i data-lucide="wrench"></i>
-          <span>Skill Trade</span>
-        </div>
         <div class="nav-item" data-tab="tribes">
           <i data-lucide="users"></i>
           <span>Tribes</span>
@@ -213,6 +209,8 @@
             <option value="electrical">Solar & Electrical</option>
             <option value="parts">Rig Parts & Hardware</option>
             <option value="gear">Camping Gear</option>
+            <option value="services-offer">Services Offered</option>
+            <option value="services-want">Services Wanted</option>
           </select>
           <input type="text" id="market-filter-zip" class="select-filter" style="width: 100px; text-align: center;" placeholder="Zip Code">
           <select class="select-filter" id="market-filter-radius">
@@ -231,50 +229,6 @@
         
         <div class="marketplace-grid" id="marketplace-grid">
           <!-- Dynamically populated -->
-        </div>
-      </section>
-
-      <!-- TAB: SKILL TRADE -->
-      <section class="tab-content-pane" id="pane-skilltrade">
-        <div class="section-header">
-          <div class="section-title-wrap">
-            <h2>Skill Trade Directory</h2>
-            <p>Exchange mechanical, building, electrical, or off-grid expertise with fellow nomads.</p>
-          </div>
-          <button class="btn btn-primary" id="skill-create-btn">
-            <i data-lucide="plus"></i>
-            <span>Offer / Request Skill</span>
-          </button>
-        </div>
-        
-        <div class="filter-row">
-          <select class="select-filter" id="skill-filter-type">
-            <option value="all">All Postings</option>
-            <option value="offer">Offered Skills</option>
-            <option value="want">Wanted Skills</option>
-          </select>
-          <select class="select-filter" id="skill-filter-category">
-            <option value="all">All Categories</option>
-            <option value="electrical">Solar / Electrical</option>
-            <option value="woodworking">Cabinetry & Woodworking</option>
-            <option value="mechanical">Engine & Braking</option>
-            <option value="plumbing">Plumbing & Water</option>
-            <option value="digital">Web Dev & Remote Work</option>
-          </select>
-        </div>
-        
-        <div class="skill-trade-layout">
-          <div class="skill-list" id="skill-list-container">
-            <!-- Dynamically populated -->
-          </div>
-          
-          <div class="skill-side-panel">
-            <div class="info-box">
-              <h4><i data-lucide="handshake"></i> How Skill Trade Works</h4>
-              <p style="margin-bottom: 12px;">Skill trading is the lifeblood of off-grid living. Vanlifers swap services without currency exchanging hands.</p>
-              <p>For example, trade a solar wiring repair for wood paneling assistance or mechanical diagnostics for website build advice. Tap "Message Trader" to strike up a trade plan.</p>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -386,6 +340,12 @@
             <img src="" alt="User Avatar" class="profile-large-avatar" id="profile-user-avatar">
             <h2 id="profile-user-name">Nomad Bob</h2>
             <p id="profile-user-handle" style="color:var(--muted-text); font-size:14px; margin-top:-10px;">@nomad_bob</p>
+            
+            <div id="profile-reputation-wrap" style="margin: 6px 0 12px 0; font-size: 13px; font-weight: 700; color: var(--accent-green); display: flex; align-items: center; gap: 6px; justify-content: center;">
+              <i data-lucide="award" style="width: 16px; height: 16px;"></i>
+              <span id="profile-reputation-score">Reputation: 15</span>
+            </div>
+
             <p id="profile-user-bio" style="font-size:13px; line-height:1.4;">Living full time in my build since 2024. Chasing weather patterns and solar power.</p>
             
             <!-- Owner actions (Edit Rig) -->
@@ -394,11 +354,15 @@
               <span>Edit Rig Profile</span>
             </button>
 
-            <!-- Visitor actions (Add Friend / Message) -->
+            <!-- Visitor actions (Add Friend / Message / Give Rep) -->
             <div id="profile-visitor-actions" style="display: none; width: 100%; flex-direction: column; gap: 8px;">
               <button class="btn btn-primary" style="width: 100%; justify-content:center;" id="profile-friend-btn">
                 <i data-lucide="user-plus"></i>
                 <span>Add Friend</span>
+              </button>
+              <button class="btn" style="width: 100%; justify-content:center; background-color: var(--accent-green-light); color: var(--accent-green); border: 1px solid var(--accent-green);" id="profile-rep-btn">
+                <i data-lucide="thumbs-up"></i>
+                <span>Give Reputation</span>
               </button>
               <button class="btn" style="width: 100%; justify-content:center;" id="profile-message-btn">
                 <i data-lucide="message-square"></i>
@@ -622,7 +586,7 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="list-price">Price ($)</label>
+            <label for="list-price">Price (Leave blank/0 for Barter)</label>
             <input type="number" id="list-price" placeholder="e.g. 150">
           </div>
           <div class="form-group">
@@ -632,6 +596,8 @@
               <option value="electrical">Solar & Electrical</option>
               <option value="parts">Rig Parts & Hardware</option>
               <option value="gear">Camping Gear</option>
+              <option value="services-offer">Services (Offered)</option>
+              <option value="services-want">Services (Wanted)</option>
             </select>
           </div>
         </div>
@@ -662,53 +628,6 @@
       <div class="modal-footer">
         <button class="btn btn-cancel">Cancel</button>
         <button class="btn btn-primary" id="save-listing-btn">Publish Listing</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: Offer/Request Skill -->
-  <div class="modal-overlay" id="modal-add-skill">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Create Skill Trade posting</h3>
-        <button class="modal-close-btn"><i data-lucide="x"></i></button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label for="skill-title-input">Skill Title</label>
-          <input type="text" id="skill-title-input" placeholder="e.g. Solar Electrical System Design">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="skill-type-input">Posting Type</label>
-            <select id="skill-type-input">
-              <option value="offer">Offering (Available to help)</option>
-              <option value="want">Requesting (Need assistance)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="skill-cat-input">Category</label>
-            <select id="skill-cat-input">
-              <option value="electrical">Solar / Electrical</option>
-              <option value="woodworking">Cabinetry & Woodworking</option>
-              <option value="mechanical">Engine & Braking</option>
-              <option value="plumbing">Plumbing & Water</option>
-              <option value="digital">Web Dev & Remote Work</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="skill-tags-input">Tags (comma-separated)</label>
-          <input type="text" id="skill-tags-input" placeholder="e.g. solar, lithium, wiring, multi-meter">
-        </div>
-        <div class="form-group">
-          <label for="skill-desc-input">Explain your Trade or Need</label>
-          <textarea id="skill-desc-input" placeholder="Give context about your level of skill or the exact issue you're facing. State what trades you are open to."></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-cancel">Cancel</button>
-        <button class="btn btn-primary" id="save-skill-btn">Post Trade Option</button>
       </div>
     </div>
   </div>

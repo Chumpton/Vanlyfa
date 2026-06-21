@@ -19,7 +19,9 @@ let State = {
     power: "300Ah Lithium",
     water: "25 Gal Fresh",
     spotsCount: 3,
-    listingsCount: 1
+    listingsCount: 1,
+    reputation: 15,
+    givenRepTo: ["Clara Outdoors", "Forest Nomad"]
   },
   users: [
     {
@@ -33,7 +35,9 @@ let State = {
       water: "25 Gal Fresh",
       gallery: ["item_van", "image_interior"],
       visitedSpots: ["spot-1", "spot-5"],
-      friends: ["Clara Outdoors", "Forest Nomad"]
+      friends: ["Clara Outdoors", "Forest Nomad"],
+      reputation: 15,
+      givenRepTo: ["Clara Outdoors", "Forest Nomad"]
     },
     {
       name: "Clara Outdoors",
@@ -46,7 +50,9 @@ let State = {
       water: "20 Gal Fresh",
       gallery: ["image_desert"],
       visitedSpots: ["spot-1", "spot-2", "spot-4", "spot-6"],
-      friends: ["Nomad Bob", "Forest Nomad"]
+      friends: ["Nomad Bob", "Forest Nomad"],
+      reputation: 24,
+      givenRepTo: ["Nomad Bob"]
     },
     {
       name: "Forest Nomad",
@@ -59,7 +65,9 @@ let State = {
       water: "15 Gal Fresh",
       gallery: ["image_interior"],
       visitedSpots: ["spot-2", "spot-3"],
-      friends: ["Nomad Bob", "Clara Outdoors"]
+      friends: ["Nomad Bob", "Clara Outdoors"],
+      reputation: 18,
+      givenRepTo: ["Nomad Bob"]
     },
     {
       name: "Solar Explorer",
@@ -72,7 +80,9 @@ let State = {
       water: "30 Gal Fresh",
       gallery: ["item_solar"],
       visitedSpots: ["spot-1", "spot-4"],
-      friends: ["Nomad Bob"]
+      friends: ["Nomad Bob"],
+      reputation: 32,
+      givenRepTo: []
     },
     {
       name: "Baja Surfer",
@@ -85,7 +95,9 @@ let State = {
       water: "10 Gal Fresh",
       gallery: ["image_beach"],
       visitedSpots: ["spot-3"],
-      friends: ["Nomad Bob"]
+      friends: ["Nomad Bob"],
+      reputation: 9,
+      givenRepTo: []
     }
   ],
   activeProfileName: null,
@@ -288,44 +300,62 @@ let State = {
       description: "148\" wheelbase, mid-roof, eco-boost. Fully insulated with Thinsulate. 300W Solar, 200Ah Lithium, custom birch cabinets, running water. 52,000 miles.",
       seller: { name: "Clara Outdoors", avatar: "avatar_clara" },
       image: "item_van"
-    }
-  ],
-  skills: [
+    },
     {
-      id: "skill-1",
+      id: "market-skill-1",
       title: "Off-Grid Solar System Design",
-      type: "offer",
-      category: "electrical",
-      tags: ["solar", "victron", "lithium", "wiring"],
+      category: "services-offer",
+      price: 0,
+      location: "Moab, UT",
+      zip: "84532",
+      lat: 38.5733,
+      lng: -109.5498,
+      condition: "Service Offered",
       description: "Happy to review wiring schematics, calculate solar sizing, and assist with Victron multiplus setup. Swapping for custom wood panel work.",
-      author: { name: "Solar Explorer", avatar: "avatar_solar" }
+      seller: { name: "Solar Explorer", avatar: "avatar_solar" },
+      image: "item_solar"
     },
     {
-      id: "skill-2",
+      id: "market-skill-2",
       title: "Engine Diagnostics & Alternator Checks",
-      type: "offer",
-      category: "mechanical",
-      tags: ["diesel", "diagnostics", "sprinter", "transit"],
+      category: "services-offer",
+      price: 0,
+      location: "Flagstaff, AZ",
+      zip: "86001",
+      lat: 35.1983,
+      lng: -111.6513,
+      condition: "Service Offered",
       description: "Have a heavy-duty OBD2 scanner. Can diagnose engine lights, check alternator health, and clear basic codes. Swap for sourdough bread or campfire beer.",
-      author: { name: "Nomad Bob", avatar: "avatar_bob" }
+      seller: { name: "Nomad Bob", avatar: "avatar_bob" },
+      image: "item_gear"
     },
     {
-      id: "skill-3",
+      id: "market-skill-3",
       title: "Water Plumbing & PEX Install",
-      type: "want",
-      category: "plumbing",
-      tags: ["pex", "plumbing", "shurflo", "gray-water"],
+      category: "services-want",
+      price: 0,
+      location: "Bend, OR",
+      zip: "97701",
+      lat: 44.0582,
+      lng: -121.3153,
+      condition: "Service Wanted",
       description: "Need help laying out my PEX lines, installing a Shurflo pump and accumulator tank. Have the materials, just nervous about leaks! Can trade solar help.",
-      author: { name: "Forest Nomad", avatar: "avatar_forest" }
+      seller: { name: "Forest Nomad", avatar: "avatar_forest" },
+      image: "item_fan"
     },
     {
-      id: "skill-4",
+      id: "market-skill-4",
       title: "Remote Web Design & SEO Advice",
-      type: "offer",
-      category: "digital",
-      tags: ["web-design", "seo", "remote-work", "monetize"],
+      category: "services-offer",
+      price: 0,
+      location: "Flagstaff, AZ",
+      zip: "86001",
+      lat: 35.1983,
+      lng: -111.6513,
+      condition: "Service Offered",
       description: "Offering website audits, setting up landing pages, or SEO advice for digital nomads trying to work from the road. Trade for suspension install help.",
-      author: { name: "Clara Outdoors", avatar: "avatar_clara" }
+      seller: { name: "Clara Outdoors", avatar: "avatar_clara" },
+      image: "item_van"
     }
   ],
   tribes: [
@@ -492,6 +522,12 @@ function getImageSrc(key) {
   return getSvgDataUri(svg);
 }
 
+function getUserReputationBadge(name) {
+  const user = State.users.find(u => u.name === name);
+  const rep = user ? (user.reputation || 0) : 0;
+  return ` <span class="user-rep-score" title="Reputation Points" style="color: var(--accent-green); font-weight: 700; font-size: 11px; margin-left: 2px;">★${rep}</span>`;
+}
+
 // LocalStorage Synchronization
 function saveStateToStorage() {
   localStorage.setItem('vanlyfa_state', JSON.stringify({
@@ -499,7 +535,6 @@ function saveStateToStorage() {
     meetups: State.meetups,
     posts: State.posts,
     marketplace: State.marketplace,
-    skills: State.skills,
     tribes: State.tribes,
     forum: State.forum,
     currentUser: State.currentUser,
@@ -520,7 +555,6 @@ function loadStateFromStorage() {
       State.meetups = parsed.meetups || State.meetups;
       State.posts = parsed.posts || State.posts;
       State.marketplace = parsed.marketplace || State.marketplace;
-      State.skills = parsed.skills || State.skills;
       State.tribes = parsed.tribes || State.tribes;
       State.forum = parsed.forum || State.forum;
       State.currentUser = parsed.currentUser || State.currentUser;
@@ -605,13 +639,6 @@ function initApp() {
   const marketRad = document.getElementById('market-filter-radius');
   if (marketRad) marketRad.addEventListener('change', renderMarketplaceListings);
 
-  // Skill Trade Filter Listeners
-  const skillType = document.getElementById('skill-filter-type');
-  if (skillType) skillType.addEventListener('change', renderSkillTrades);
-  
-  const skillCat = document.getElementById('skill-filter-category');
-  if (skillCat) skillCat.addEventListener('change', renderSkillTrades);
-  
   // Theme Toggle Button
   document.getElementById('theme-toggle-btn').addEventListener('click', () => {
     State.darkMode = !State.darkMode;
@@ -700,6 +727,10 @@ function initApp() {
       openDirectChat(user.name);
     });
   }
+  const profileRepBtn = document.getElementById('profile-rep-btn');
+  if (profileRepBtn) {
+    profileRepBtn.addEventListener('click', toggleReputation);
+  }
 
   // File upload inputs
   const avatarUpload = document.getElementById('edit-profile-avatar-upload');
@@ -735,6 +766,49 @@ function initApp() {
   
   // Initialize Leaflet Map
   initLeafletMap();
+
+  // Top-bar scroll disappear/re-appear listener for mobile
+  let lastScrollTop = 0;
+  document.querySelectorAll('.tab-content-pane').forEach(pane => {
+    pane.addEventListener('scroll', (e) => {
+      if (window.innerWidth <= 768) {
+        const scrollTop = e.target.scrollTop;
+        const topBar = document.querySelector('.top-bar');
+        if (!topBar) return;
+        
+        // Threshold to prevent bounce artifacts
+        if (Math.abs(lastScrollTop - scrollTop) <= 5) return;
+        
+        if (scrollTop > lastScrollTop && scrollTop > 64) {
+          // Scroll Down - hide top-bar
+          topBar.classList.add('hide-top-bar');
+        } else {
+          // Scroll Up - show top-bar
+          topBar.classList.remove('hide-top-bar');
+        }
+        lastScrollTop = scrollTop;
+      }
+    });
+  });
+
+  // Visual Viewport resize handler to support keyboard under mobile chat box
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+      if (window.innerWidth <= 768) {
+        const container = document.getElementById('chat-windows-container');
+        if (container && container.childNodes.length > 0) {
+          // Resize container height dynamically to match visual viewport
+          container.style.height = `${window.visualViewport.height}px`;
+          
+          // Scroll active chat messages to bottom
+          const activeMsgArea = container.querySelector('.chat-messages-area');
+          if (activeMsgArea) {
+            activeMsgArea.scrollTop = activeMsgArea.scrollHeight;
+          }
+        }
+      }
+    });
+  }
 }
 
 function updateThemeToggleUI() {
@@ -766,6 +840,10 @@ function switchTab(tabName) {
   State.activeTab = tabName;
   State.activeThreadId = null; // Reset forum viewing state
   
+  // Reset top-bar scroll hide class
+  const topBar = document.querySelector('.top-bar');
+  if (topBar) topBar.classList.remove('hide-top-bar');
+  
   // Update sidebar active class
   document.querySelectorAll('.nav-menu .nav-item').forEach(item => {
     if (item.getAttribute('data-tab') === tabName) {
@@ -788,7 +866,6 @@ function switchTab(tabName) {
     dashboard: "Dashboard",
     feed: "Community Feed",
     marketplace: "Marketplace",
-    skilltrade: "Skill Trade",
     tribes: "Tribes",
     meetups: "Meetups",
     forum: "Forum Board",
@@ -800,8 +877,7 @@ function switchTab(tabName) {
   const placeholders = {
     dashboard: "Search vouched spots or posts...",
     feed: "Search feed posts...",
-    marketplace: "Search rigs, solar panels, items...",
-    skilltrade: "Search mechanical, woodwork help...",
+    marketplace: "Search rigs, items, services...",
     tribes: "Search caravaneer groups...",
     meetups: "Search fireside gatherings...",
     forum: "Search discussion topics...",
@@ -844,7 +920,6 @@ function updateHeaderActionButton() {
     dashboard: { text: "Add Spot", icon: "plus" },
     feed: { text: "Share Update", icon: "edit-3" },
     marketplace: { text: "Add Listing", icon: "plus" },
-    skilltrade: { text: "Trade Skill", icon: "share-2" },
     tribes: { text: "Form Tribe", icon: "users" },
     meetups: { text: "Host Meetup", icon: "calendar" },
     forum: { text: "New Thread", icon: "plus" }
@@ -862,7 +937,6 @@ function triggerMainActionButtonModal() {
     dashboard: 'modal-add-spot',
     feed: 'modal-add-post',
     marketplace: 'modal-add-listing',
-    skilltrade: 'modal-add-skill',
     tribes: 'modal-add-tribe',
     meetups: 'modal-add-meetup',
     forum: 'modal-add-thread'
@@ -885,9 +959,6 @@ function renderCurrentTab() {
       break;
     case "marketplace":
       renderMarketplaceListings();
-      break;
-    case "skilltrade":
-      renderSkillTrades();
       break;
     case "tribes":
       renderTribesList();
@@ -946,7 +1017,7 @@ function renderSocialFeed(containerId, isSidebar = false) {
         <div class="post-comments">
           ${post.comments.map(c => `
             <div class="comment-item">
-              <span class="comment-user" onclick="viewUserProfile('${c.user}')" style="cursor:pointer;">${c.user}</span>
+              <span class="comment-user" onclick="viewUserProfile('${c.user}')" style="cursor:pointer;">${c.user}${getUserReputationBadge(c.user)}</span>
               <span class="comment-text">${c.text}</span>
             </div>
           `).join('')}
@@ -958,7 +1029,7 @@ function renderSocialFeed(containerId, isSidebar = false) {
       <div class="post-user-info">
         <img src="${getAvatarSrc(post.author.avatar)}" alt="${post.author.name}" onclick="viewUserProfile('${post.author.name}')" style="cursor:pointer;">
         <div class="post-meta">
-          <span class="post-username" onclick="viewUserProfile('${post.author.name}')" style="cursor:pointer;">${post.author.name}</span>
+          <span class="post-username" onclick="viewUserProfile('${post.author.name}')" style="cursor:pointer;">${post.author.name}${getUserReputationBadge(post.author.name)}</span>
           <span class="post-time">${post.time}</span>
         </div>
       </div>
@@ -1131,14 +1202,20 @@ function renderMarketplaceListings() {
     const distanceText = item.currentDistance !== null ? ` • ${Math.round(item.currentDistance)} mi away` : '';
     const zipText = item.zip ? ` (${item.zip})` : '';
     
+    const isService = item.category === 'services-offer' || item.category === 'services-want';
+    const displayPrice = (isService || item.price === 0) ? 'Trade / Barter' : `$${item.price}`;
+    
+    const badgeClass = item.category === 'services-offer' ? 'badge-service-offer' : 
+                       (item.category === 'services-want' ? 'badge-service-want' : '');
+    
     card.innerHTML = `
       <div class="market-img-wrapper">
         <img src="${getImageSrc(item.image)}" alt="${item.title}" class="market-img">
-        <span class="market-badge">${item.condition}</span>
+        <span class="market-badge ${badgeClass}">${item.condition}</span>
       </div>
       <div class="market-details">
         <h3 class="market-title">${item.title}</h3>
-        <div class="market-price">$${item.price}</div>
+        <div class="market-price">${displayPrice}</div>
         <div class="market-location">
           <i data-lucide="map-pin"></i>
           <span>${item.location}${zipText}${distanceText}</span>
@@ -1147,7 +1224,7 @@ function renderMarketplaceListings() {
         <div class="market-footer">
           <div class="market-seller" onclick="viewUserProfile('${item.seller.name}')" style="cursor:pointer;">
             <img src="${getAvatarSrc(item.seller.avatar)}" alt="${item.seller.name}">
-            <span>By ${item.seller.name}</span>
+            <span>By ${item.seller.name}${getUserReputationBadge(item.seller.name)}</span>
           </div>
           <button class="btn btn-sm btn-primary" onclick="contactSeller('${item.seller.name}', '${item.title}')">Message</button>
         </div>
@@ -1189,54 +1266,6 @@ function contactSeller(sellerName, itemTitle) {
   }
 }
 
-// 3. Skill Trades
-function renderSkillTrades() {
-  const container = document.getElementById('skill-list-container');
-  container.innerHTML = '';
-  
-  const typeFilter = document.getElementById('skill-filter-type').value;
-  const catFilter = document.getElementById('skill-filter-category').value;
-  const query = State.searchQuery;
-  
-  const filtered = State.skills.filter(item => {
-    const matchesType = typeFilter === 'all' || item.type === typeFilter;
-    const matchesCat = catFilter === 'all' || item.category === catFilter;
-    const matchesQuery = item.title.toLowerCase().includes(query) || 
-                         item.description.toLowerCase().includes(query) ||
-                         item.tags.some(t => t.toLowerCase().includes(query));
-    return matchesType && matchesCat && matchesQuery;
-  });
-  
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:64px; color:var(--muted-text);">No skill trade listings match your filter criteria.</div>`;
-    return;
-  }
-  
-  filtered.forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'skill-card';
-    card.innerHTML = `
-      <img src="${getAvatarSrc(item.author.avatar)}" alt="${item.author.name}" class="skill-member-avatar" onclick="viewUserProfile('${item.author.name}')" style="cursor:pointer;">
-      <div class="skill-info">
-        <div class="skill-header">
-          <span class="skill-user-name" onclick="viewUserProfile('${item.author.name}')" style="cursor:pointer;">${item.author.name}</span>
-          <span class="skill-badge ${item.type === 'offer' ? 'skill-badge-offer' : 'skill-badge-want'}">
-            ${item.type === 'offer' ? 'Offering' : 'Requesting'}
-          </span>
-        </div>
-        <h3 class="skill-title">${item.title}</h3>
-        <p class="skill-desc">${item.description}</p>
-        <div class="skill-tags">
-          ${item.tags.map(t => `<span class="skill-tag">${t}</span>`).join('')}
-        </div>
-      </div>
-      <button class="btn btn-sm" onclick="contactSeller('${item.author.name}', '${item.title}')">Message Trader</button>
-    `;
-    container.appendChild(card);
-  });
-  
-  lucide.createIcons();
-}
 
 // 4. Tribes
 function renderTribesList() {
@@ -1487,11 +1516,11 @@ function renderThreadsList() {
       viewThreadDetail(thread.id);
     });
     
-    let lastPostMarkup = `<div class="thread-last-post"><span class="thread-last-user" onclick="event.stopPropagation(); viewUserProfile('${thread.author.name}')" style="cursor:pointer;">${thread.author.name}</span><span style="font-size:9px;">OP</span></div>`;
+    let lastPostMarkup = `<div class="thread-last-post"><span class="thread-last-user" onclick="event.stopPropagation(); viewUserProfile('${thread.author.name}')" style="cursor:pointer;">${thread.author.name}${getUserReputationBadge(thread.author.name)}</span><span style="font-size:9px;">OP</span></div>`;
     if (lastReply) {
       lastPostMarkup = `
         <div class="thread-last-post">
-          <span class="thread-last-user" onclick="event.stopPropagation(); viewUserProfile('${lastReply.author.name}')" style="cursor:pointer;">${lastReply.author.name}</span>
+          <span class="thread-last-user" onclick="event.stopPropagation(); viewUserProfile('${lastReply.author.name}')" style="cursor:pointer;">${lastReply.author.name}${getUserReputationBadge(lastReply.author.name)}</span>
           <span style="font-size:9px;">Yesterday</span>
         </div>
       `;
@@ -1501,7 +1530,7 @@ function renderThreadsList() {
       <div class="thread-main">
         <h3 class="thread-title">${thread.title}</h3>
         <div class="thread-meta">
-          <span>Started by <strong onclick="event.stopPropagation(); viewUserProfile('${thread.author.name}')" style="cursor:pointer; hover:underline;">${thread.author.name}</strong></span>
+          <span>Started by <strong onclick="event.stopPropagation(); viewUserProfile('${thread.author.name}')" style="cursor:pointer; hover:underline;">${thread.author.name}${getUserReputationBadge(thread.author.name)}</strong></span>
           <span>•</span>
           <span style="text-transform: capitalize; color:var(--accent-green); font-weight:600;">${thread.category}</span>
         </div>
@@ -1544,7 +1573,7 @@ function renderThreadDetail() {
     <div class="post-user-info">
       <img src="${getAvatarSrc(thread.author.avatar)}" alt="${thread.author.name}" onclick="viewUserProfile('${thread.author.name}')" style="cursor:pointer;">
       <div class="post-meta">
-        <span class="post-username" onclick="viewUserProfile('${thread.author.name}')" style="cursor:pointer;">${thread.author.name}</span>
+        <span class="post-username" onclick="viewUserProfile('${thread.author.name}')" style="cursor:pointer;">${thread.author.name}${getUserReputationBadge(thread.author.name)}</span>
         <span class="post-time">${thread.date}</span>
       </div>
     </div>
@@ -1564,7 +1593,7 @@ function renderThreadDetail() {
         <div class="post-user-info">
           <img src="${getAvatarSrc(reply.author.avatar)}" alt="${reply.author.name}" onclick="viewUserProfile('${reply.author.name}')" style="cursor:pointer;">
           <div class="post-meta">
-            <span class="post-username" onclick="viewUserProfile('${reply.author.name}')" style="cursor:pointer;">${reply.author.name}</span>
+            <span class="post-username" onclick="viewUserProfile('${reply.author.name}')" style="cursor:pointer;">${reply.author.name}${getUserReputationBadge(reply.author.name)}</span>
             <span class="post-time">${reply.date}</span>
           </div>
         </div>
@@ -1606,12 +1635,14 @@ function renderUserProfile() {
   document.getElementById('profile-user-avatar').src = getAvatarSrc(user.avatar);
   document.getElementById('profile-user-name').innerText = user.name;
   document.getElementById('profile-user-handle').innerText = user.handle || `@${user.name.toLowerCase().replace(/\s+/g, '_')}`;
+  document.getElementById('profile-reputation-score').innerText = `Reputation: ${user.reputation || 0}`;
   document.getElementById('profile-user-bio').innerText = user.bio;
   
   // Show edit button for owner, show visitor actions for visitor
   const editBtn = document.getElementById('profile-edit-btn');
   const visitorActions = document.getElementById('profile-visitor-actions');
   const friendBtn = document.getElementById('profile-friend-btn');
+  const repBtn = document.getElementById('profile-rep-btn');
   
   if (isOwner) {
     if (editBtn) editBtn.style.display = 'inline-flex';
@@ -1630,6 +1661,20 @@ function renderUserProfile() {
       } else {
         friendBtn.innerHTML = `<i data-lucide="user-plus"></i> <span>Add Friend</span>`;
         friendBtn.classList.add('btn-primary');
+      }
+    }
+
+    // Update Reputation button text based on vote state
+    const hasGivenRep = currentUserObj && currentUserObj.givenRepTo && currentUserObj.givenRepTo.includes(user.name);
+    if (repBtn) {
+      if (hasGivenRep) {
+        repBtn.innerHTML = `<i data-lucide="thumbs-up"></i> <span>Reputation Given</span>`;
+        repBtn.style.backgroundColor = 'var(--accent-green)';
+        repBtn.style.color = 'white';
+      } else {
+        repBtn.innerHTML = `<i data-lucide="thumbs-up"></i> <span>Give Reputation</span>`;
+        repBtn.style.backgroundColor = 'var(--accent-green-light)';
+        repBtn.style.color = 'var(--accent-green)';
       }
     }
   }
@@ -1846,6 +1891,34 @@ function toggleFriend() {
   renderUserProfile();
 }
 
+function toggleReputation() {
+  const user = getActiveUser();
+  const currentUserObj = State.users.find(u => u.name === State.currentUser.name);
+  if (!currentUserObj || !user || user.name === currentUserObj.name) return;
+  
+  if (!currentUserObj.givenRepTo) currentUserObj.givenRepTo = [];
+  
+  if (currentUserObj.givenRepTo.includes(user.name)) {
+    // Remove reputation
+    currentUserObj.givenRepTo = currentUserObj.givenRepTo.filter(name => name !== user.name);
+    user.reputation = Math.max(0, (user.reputation || 0) - 1);
+    showToast(`Removed reputation point from ${user.name}`, 'info');
+  } else {
+    // Give reputation
+    currentUserObj.givenRepTo.push(user.name);
+    user.reputation = (user.reputation || 0) + 1;
+    showToast(`Gave 1 reputation point to ${user.name}!`, 'success');
+  }
+  
+  // Sync currentUser properties
+  if (currentUserObj.name === State.currentUser.name) {
+    State.currentUser.givenRepTo = currentUserObj.givenRepTo;
+  }
+  
+  saveStateToStorage();
+  renderUserProfile();
+}
+
 function markCurrentSpotAsVisited() {
   if (!State.currentViewedSpotId) return;
   
@@ -2006,10 +2079,12 @@ function renderLeafletMarkers() {
       </div>
     `;
     
-    marker.bindPopup(popupHtml, {
-      closeButton: false,
-      minWidth: 200
-    });
+    if (window.innerWidth > 768) {
+      marker.bindPopup(popupHtml, {
+        closeButton: false,
+        minWidth: 200
+      });
+    }
     
     // Drawer opener on click
     marker.on('click', () => {
@@ -2078,6 +2153,13 @@ function openInfoDrawerForSpot(pin) {
     }
   }
   
+  // Pan map to clicked pin (with vertical offset on mobile to center above bottom sheet)
+  if (State.leafletMap) {
+    const isMobile = window.innerWidth <= 768;
+    const offsetLat = isMobile ? pin.lat - 0.015 : pin.lat;
+    State.leafletMap.setView([offsetLat, pin.lng], 13);
+  }
+  
   // slide in
   drawer.classList.add('open');
   lucide.createIcons();
@@ -2109,7 +2191,6 @@ function setupModalHandlers() {
   document.getElementById('save-spot-btn').addEventListener('click', saveNewSpot);
   document.getElementById('save-post-btn').addEventListener('click', saveNewPost);
   document.getElementById('save-listing-btn').addEventListener('click', saveNewListing);
-  document.getElementById('save-skill-btn').addEventListener('click', saveNewSkillTrade);
   document.getElementById('save-tribe-btn').addEventListener('click', saveNewTribe);
   document.getElementById('save-meetup-btn').addEventListener('click', saveNewMeetup);
   document.getElementById('save-thread-btn').addEventListener('click', saveNewForumThread);
@@ -2182,9 +2263,6 @@ function saveUserProfileEdit() {
     });
     State.marketplace.forEach(m => {
       if (m.seller.name === oldName) m.seller.name = newName;
-    });
-    State.skills.forEach(s => {
-      if (s.author.name === oldName) s.author.name = newName;
     });
     State.forum.forEach(t => {
       if (t.author.name === oldName) t.author.name = newName;
@@ -2288,8 +2366,10 @@ function saveNewPost() {
 // 4. Add Listing
 function saveNewListing() {
   const title = document.getElementById('list-title').value.trim();
-  const price = parseInt(document.getElementById('list-price').value);
+  const priceVal = document.getElementById('list-price').value.trim();
   const category = document.getElementById('list-category').value;
+  const isService = category === 'services-offer' || category === 'services-want';
+  const price = priceVal === '' ? 0 : parseInt(priceVal);
   const location = document.getElementById('list-location').value.trim();
   const zip = document.getElementById('list-zip').value.trim();
   const description = document.getElementById('list-desc').value.trim();
@@ -2302,6 +2382,9 @@ function saveNewListing() {
   
   const coords = resolveZipCoordinates(zip) || { lat: 39.0, lng: -105.0 };
   
+  const condition = category === 'services-offer' ? 'Service Offered' : 
+                    (category === 'services-want' ? 'Service Wanted' : 'Good');
+  
   const newListing = {
     id: `market-${Date.now()}`,
     title,
@@ -2311,7 +2394,7 @@ function saveNewListing() {
     zip,
     lat: coords.lat,
     lng: coords.lng,
-    condition: "Good",
+    condition,
     description,
     seller: { name: State.currentUser.name, avatar: State.currentUser.avatar },
     image: `item_${imgVal}`
@@ -2332,43 +2415,7 @@ function saveNewListing() {
   showToast("Marketplace listing published!", "success");
 }
 
-// 5. Add Skill Trade
-function saveNewSkillTrade() {
-  const title = document.getElementById('skill-title-input').value.trim();
-  const type = document.getElementById('skill-type-input').value;
-  const category = document.getElementById('skill-cat-input').value;
-  const tagStr = document.getElementById('skill-tags-input').value.trim();
-  const description = document.getElementById('skill-desc-input').value.trim();
-  
-  if (!title || !description) {
-    showToast("Please provide a title and details.", "error");
-    return;
-  }
-  
-  const tags = tagStr ? tagStr.split(',').map(t => t.trim()) : [category];
-  
-  const newSkill = {
-    id: `skill-${Date.now()}`,
-    title,
-    type,
-    category,
-    tags,
-    description,
-    author: { name: State.currentUser.name, avatar: State.currentUser.avatar }
-  };
-  
-  State.skills.unshift(newSkill);
-  saveStateToStorage();
-  
-  // Clean inputs
-  document.getElementById('skill-title-input').value = '';
-  document.getElementById('skill-tags-input').value = '';
-  document.getElementById('skill-desc-input').value = '';
-  
-  closeModal('modal-add-skill');
-  renderSkillTrades();
-  showToast("Skill trade posting published!", "success");
-}
+
 
 // 6. Form Tribe
 function saveNewTribe() {
@@ -2603,7 +2650,7 @@ function openDirectChat(username) {
   }
   
   if (!State.activeChats.includes(username)) {
-    const isMobile = window.innerWidth <= 576;
+    const isMobile = window.innerWidth <= 768;
     const limit = isMobile ? 1 : 3;
     
     if (State.activeChats.length >= limit) {
@@ -2656,6 +2703,9 @@ function renderActiveChats() {
   if (!container) return;
   
   container.innerHTML = '';
+  if (State.activeChats.length === 0) {
+    container.style.height = '';
+  }
   
   State.activeChats.forEach(username => {
     const contact = State.users.find(u => u.name === username);
