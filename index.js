@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Global Application State
 let State = {
+  isOffline: false,
+  syncQueue: [],
   currentUser: {
     name: "Nomad Bob",
     handle: "@nomad_bob",
@@ -564,7 +566,8 @@ function saveStateToStorage() {
     users: State.users,
     chats: State.chats,
     activeChats: State.activeChats,
-    minimizedChats: State.minimizedChats
+    minimizedChats: State.minimizedChats,
+    syncQueue: State.syncQueue
   }));
 }
 
@@ -587,6 +590,7 @@ function loadStateFromStorage() {
       State.chats = parsed.chats || State.chats;
       State.activeChats = parsed.activeChats || State.activeChats;
       State.minimizedChats = parsed.minimizedChats || State.minimizedChats;
+      State.syncQueue = parsed.syncQueue || [];
     } catch(e) {
       console.warn("Could not load stored state, using defaults", e);
     }
@@ -1091,6 +1095,106 @@ function initApp() {
       renderContactsSidebar();
     });
   }
+
+  // Connection Status Toggler
+  const connectionBtn = document.getElementById('connection-status-btn');
+  if (connectionBtn) {
+    connectionBtn.addEventListener('click', () => {
+      State.isOffline = !State.isOffline;
+      updateConnectionUI();
+      if (!State.isOffline) {
+        processSyncQueue();
+      }
+    });
+  }
+
+  // Browser Network Events
+  window.addEventListener('online', () => {
+    State.isOffline = false;
+    updateConnectionUI();
+    processSyncQueue();
+  });
+  window.addEventListener('offline', () => {
+    State.isOffline = true;
+    updateConnectionUI();
+  });
+
+  // Load Initial Status
+  State.isOffline = !navigator.onLine;
+  updateConnectionUI();
+}
+
+function updateConnectionUI() {
+  const connectionBtn = document.getElementById('connection-status-btn');
+  if (!connectionBtn) return;
+  const dot = connectionBtn.querySelector('.status-indicator-dot');
+  const text = connectionBtn.querySelector('.status-indicator-text');
+  if (!dot || !text) return;
+
+  if (State.isOffline) {
+    dot.style.backgroundColor = '#ef4444'; // Red for offline
+    const pendingCount = State.syncQueue ? State.syncQueue.length : 0;
+    text.innerText = pendingCount > 0 ? `Offline (${pendingCount})` : 'Offline';
+    connectionBtn.title = 'Switch to Online Mode';
+    connectionBtn.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+    connectionBtn.style.background = 'rgba(239, 68, 68, 0.1)';
+  } else {
+    dot.style.backgroundColor = 'var(--accent-green)'; // Green for online
+    text.innerText = 'Online';
+    connectionBtn.title = 'Switch to Offline Mode';
+    connectionBtn.style.borderColor = 'var(--border-color)';
+    connectionBtn.style.background = 'var(--bg-card)';
+  }
+}
+
+function processSyncQueue() {
+  if (State.isOffline || !State.syncQueue || State.syncQueue.length === 0) return;
+
+  showToast(`Syncing ${State.syncQueue.length} offline action(s)...`, "info");
+  
+  const queue = [...State.syncQueue];
+  State.syncQueue = [];
+  saveStateToStorage();
+  updateConnectionUI();
+
+  queue.forEach(item => {
+    if (item.type === 'CREATE_SPOT') {
+      const tempSpot = State.spots.find(s => s.id === item.payload.id);
+      if (tempSpot) {
+        delete tempSpot.pendingSync;
+      } else {
+        State.spots.push(item.payload);
+      }
+    } else if (item.type === 'CREATE_THREAD') {
+      const tempThread = State.forum.find(t => t.id === item.payload.id);
+      if (tempThread) {
+        delete tempThread.pendingSync;
+      } else {
+        State.forum.unshift(item.payload);
+      }
+    } else if (item.type === 'CREATE_REPLY') {
+      const thread = State.forum.find(t => t.id === item.payload.threadId);
+      if (thread) {
+        const tempReply = thread.replies.find(r => r.body === item.payload.reply.body && r.pendingSync);
+        if (tempReply) {
+          delete tempReply.pendingSync;
+        } else {
+          thread.replies.push(item.payload.reply);
+          thread.repliesCount++;
+        }
+      }
+    }
+  });
+
+  saveStateToStorage();
+  
+  renderLeafletMarkers();
+  renderForumView();
+  if (State.activeThreadId) {
+    renderThreadDetail();
+  }
+
+  showToast("Offline data successfully synchronized!", "success");
 }
 
 function updateThemeToggleUI() {
@@ -2283,7 +2387,7 @@ function renderThreadsList() {
     
     card.innerHTML = `
       <div class="thread-main">
-        <h3 class="thread-title">${thread.title}</h3>
+        <h3 class="thread-title">${thread.title}${thread.pendingSync ? ' <span class="sync-badge pending" style="font-size:10px; padding:2px 6px; border-radius:10px; background:rgba(239,68,68,0.1); color:#ef4444; margin-left:8px; font-weight:600; vertical-align:middle;">Pending Sync</span>' : ''}</h3>
         <div class="thread-meta">
           <span>Started by <strong onclick="event.stopPropagation(); viewUserProfile('${thread.author.name}')" style="cursor:pointer; hover:underline;">${thread.author.name}${getUserReputationBadge(thread.author.name)}</strong></span>
           <span>•</span>
@@ -2332,7 +2436,7 @@ function renderThreadDetail() {
         <span class="post-time">${thread.date}</span>
       </div>
     </div>
-    <h3 style="font-size:18px; font-weight:800; margin-top:8px;">${thread.title}</h3>
+    <h3 style="font-size:18px; font-weight:800; margin-top:8px;">${thread.title}${thread.pendingSync ? ' <span class="sync-badge pending" style="font-size:10px; padding:2px 6px; border-radius:10px; background:rgba(239,68,68,0.1); color:#ef4444; margin-left:8px; font-weight:600; vertical-align:middle;">Pending Sync</span>' : ''}</h3>
     <p class="post-content" style="font-size:14px; line-height:1.6;">${thread.body}</p>
   `;
   
@@ -2349,7 +2453,7 @@ function renderThreadDetail() {
           <img src="${getAvatarSrc(reply.author.avatar)}" alt="${reply.author.name}" onclick="viewUserProfile('${reply.author.name}')" style="cursor:pointer;">
           <div class="post-meta">
             <span class="post-username" onclick="viewUserProfile('${reply.author.name}')" style="cursor:pointer;">${reply.author.name}${getUserReputationBadge(reply.author.name)}</span>
-            <span class="post-time">${reply.date}</span>
+            <span class="post-time">${reply.date}${reply.pendingSync ? ' <span class="sync-badge pending" style="font-size:9px; padding:1px 4px; border-radius:10px; background:rgba(239,68,68,0.1); color:#ef4444; margin-left:6px; font-weight:600;">Pending Sync</span>' : ''}</span>
           </div>
         </div>
         <p class="post-content" style="font-size:13px; line-height:1.5;">${reply.body}</p>
@@ -2368,16 +2472,32 @@ function submitForumReply() {
   
   const thread = State.forum.find(t => t.id === State.activeThreadId);
   if (thread) {
-    thread.replies.push({
+    const newReply = {
       author: { name: State.currentUser.name, avatar: State.currentUser.avatar },
       date: "Just now",
       body: body
-    });
-    thread.repliesCount++;
+    };
+
+    if (State.isOffline) {
+      newReply.pendingSync = true;
+      thread.replies.push(newReply);
+      thread.repliesCount++;
+      State.syncQueue.push({
+        type: 'CREATE_REPLY',
+        payload: { threadId: State.activeThreadId, reply: newReply }
+      });
+      saveStateToStorage();
+      updateConnectionUI();
+      showToast("Offline mode: reply queued for sync!", "warning");
+    } else {
+      thread.replies.push(newReply);
+      thread.repliesCount++;
+      saveStateToStorage();
+      showToast("Reply published!", "success");
+    }
+    
     textInput.value = '';
-    saveStateToStorage();
     renderThreadDetail();
-    showToast("Reply published!", "success");
   }
 }
 
@@ -2793,6 +2913,138 @@ function initLeafletMap() {
   }).addTo(State.leafletMap);
   
   renderLeafletMarkers();
+  initMapLayers();
+}
+
+function initMapLayers() {
+  if (!State.leafletMap) return;
+
+  // Toggle Panel Display
+  const toggleBtn = document.getElementById('map-layers-toggle-btn');
+  const panel = document.getElementById('map-layers-panel');
+  if (toggleBtn && panel) {
+    toggleBtn.addEventListener('click', () => {
+      const isVisible = panel.style.display === 'flex';
+      panel.style.display = isVisible ? 'none' : 'flex';
+    });
+  }
+
+  // Create Layer Groups
+  State.mapOverlays = {
+    verizon: L.layerGroup(),
+    att: L.layerGroup(),
+    tmobile: L.layerGroup(),
+    blm: L.layerGroup(),
+    usfs: L.layerGroup()
+  };
+
+  // Populate Cellular Layers (Verizon, AT&T, T-Mobile) based on spots locations
+  const spots = State.spots;
+  spots.forEach((spot, idx) => {
+    // Verizon (Red) - wide coverage
+    L.circle([spot.lat, spot.lng], {
+      color: '#ef4444',
+      fillColor: '#ef4444',
+      fillOpacity: 0.12,
+      weight: 1,
+      radius: 20000 + (idx * 5000)
+    }).bindPopup(`<strong>Verizon coverage</strong>: Strong LTE`).addTo(State.mapOverlays.verizon);
+
+    // AT&T (Blue) - medium coverage
+    L.circle([spot.lat + 0.02, spot.lng - 0.02], {
+      color: '#3b82f6',
+      fillColor: '#3b82f6',
+      fillOpacity: 0.12,
+      weight: 1,
+      radius: 18000 + (idx * 3000)
+    }).bindPopup(`<strong>AT&T coverage</strong>: Moderate 5G/LTE`).addTo(State.mapOverlays.att);
+
+    // T-Mobile (Pink) - dense coverage
+    L.circle([spot.lat - 0.02, spot.lng + 0.02], {
+      color: '#ec4899',
+      fillColor: '#ec4899',
+      fillOpacity: 0.12,
+      weight: 1,
+      radius: 15000 + (idx * 4000)
+    }).bindPopup(`<strong>T-Mobile coverage</strong>: Strong 5G Ultra Capacity`).addTo(State.mapOverlays.tmobile);
+  });
+
+  // Populate BLM (Yellow-Orange) land boundaries around Utah/Arizona spots
+  const blmPoly1 = L.polygon([
+    [37.30, -112.65],
+    [37.32, -112.50],
+    [37.20, -112.45],
+    [37.18, -112.60]
+  ], {
+    color: '#f59e0b',
+    fillColor: '#f59e0b',
+    fillOpacity: 0.25,
+    weight: 2
+  }).bindPopup('<strong>Bureau of Land Management (BLM)</strong><br>Public land - dispersed camping allowed up to 14 days.');
+  blmPoly1.addTo(State.mapOverlays.blm);
+
+  const blmPoly2 = L.polygon([
+    [33.75, -114.30],
+    [33.72, -114.15],
+    [33.60, -114.18],
+    [33.62, -114.35]
+  ], {
+    color: '#f59e0b',
+    fillColor: '#f59e0b',
+    fillOpacity: 0.25,
+    weight: 2
+  }).bindPopup('<strong>BLM Quartzsite Land</strong><br>LTVA permits required in designated areas, free dispersed camping in standard areas.');
+  blmPoly2.addTo(State.mapOverlays.blm);
+
+  // Populate USFS (Green) land boundaries
+  const usfsPoly1 = L.polygon([
+    [37.50, -112.30],
+    [37.60, -112.20],
+    [37.45, -112.00],
+    [37.35, -112.15]
+  ], {
+    color: '#10b981',
+    fillColor: '#10b981',
+    fillOpacity: 0.25,
+    weight: 2
+  }).bindPopup('<strong>Dixie National Forest (USFS)</strong><br>National Forest Land. Practice Leave No Trace.');
+  usfsPoly1.addTo(State.mapOverlays.usfs);
+
+  const usfsPoly2 = L.polygon([
+    [39.35, -106.40],
+    [39.38, -106.20],
+    [39.18, -106.18],
+    [39.20, -106.38]
+  ], {
+    color: '#10b981',
+    fillColor: '#10b981',
+    fillOpacity: 0.25,
+    weight: 2
+  }).bindPopup('<strong>San Isabel National Forest (USFS)</strong><br>National Forest Land. Dispersed camping permitted.');
+  usfsPoly2.addTo(State.mapOverlays.usfs);
+
+  // Bind UI Checkboxes to Leaflet Layers
+  const layersConfig = [
+    { id: 'layer-verizon', group: 'verizon' },
+    { id: 'layer-att', group: 'att' },
+    { id: 'layer-tmobile', group: 'tmobile' },
+    { id: 'layer-blm', group: 'blm' },
+    { id: 'layer-usfs', group: 'usfs' }
+  ];
+
+  layersConfig.forEach(conf => {
+    const el = document.getElementById(conf.id);
+    if (el) {
+      el.addEventListener('change', (e) => {
+        const group = State.mapOverlays[conf.group];
+        if (e.target.checked) {
+          group.addTo(State.leafletMap);
+        } else {
+          State.leafletMap.removeLayer(group);
+        }
+      });
+    }
+  });
 }
 
 function renderLeafletMarkers() {
@@ -2830,8 +3082,10 @@ function renderLeafletMarkers() {
     }
     
     // Custom DIV icon for nice vector aesthetics matching Inter typography
+    const borderStyle = pin.pendingSync ? '2px dashed var(--accent-red)' : '2px solid white';
+    const opacityStyle = pin.pendingSync ? '0.7' : '1.0';
     const customIcon = L.divIcon({
-      html: `<div style="background-color:${markerColor}; width:20px; height:20px; border-radius:50%; border:2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center;">
+      html: `<div style="background-color:${markerColor}; width:20px; height:20px; border-radius:50%; border:${borderStyle}; opacity:${opacityStyle}; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center;">
               <div style="background-color:white; width:6px; height:6px; border-radius:50%;"></div>
              </div>`,
       className: 'custom-map-icon',
@@ -2844,7 +3098,7 @@ function renderLeafletMarkers() {
     // Custom popup
     const popupHtml = `
       <div class="custom-map-popup-badge" style="background:${markerColor}1A; color:${markerColor};">${typeName}</div>
-      <div class="custom-map-popup-header">${pin.title}</div>
+      <div class="custom-map-popup-header">${pin.title}${pin.pendingSync ? ' <span style="font-size:9px; color:var(--accent-red); font-weight:bold; margin-left:4px;">(Syncing...)</span>' : ''}</div>
       <div class="custom-map-popup-desc">${pin.description ? pin.description.substring(0, 70) : 'Gathering at campsite details...'}...</div>
       <div class="custom-map-popup-footer">
         <span class="custom-map-popup-user">
@@ -2890,7 +3144,7 @@ function openInfoDrawerForSpot(pin) {
   
   document.getElementById('drawer-category').innerText = typeName;
   document.getElementById('drawer-category').style.color = categoryColor;
-  document.getElementById('drawer-title').innerText = pin.title;
+  document.getElementById('drawer-title').innerText = pin.title + (pin.pendingSync ? ' (Pending Sync)' : '');
   
   const author = pin.author || pin.host;
   document.getElementById('drawer-author-img').src = getAvatarSrc(author.avatar);
@@ -3090,8 +3344,18 @@ function saveNewSpot() {
     vouches: 1
   };
   
-  State.spots.push(newSpot);
-  saveStateToStorage();
+  if (State.isOffline) {
+    newSpot.pendingSync = true;
+    State.spots.push(newSpot);
+    State.syncQueue.push({ type: 'CREATE_SPOT', payload: newSpot });
+    saveStateToStorage();
+    updateConnectionUI();
+    showToast("Offline mode: campsite queued for sync!", "warning");
+  } else {
+    State.spots.push(newSpot);
+    saveStateToStorage();
+    showToast("Campsite vouched successfully!", "success");
+  }
   
   // Reload maps
   renderLeafletMarkers();
@@ -3103,7 +3367,6 @@ function saveNewSpot() {
   document.getElementById('spot-desc').value = '';
   
   closeModal('modal-add-spot');
-  showToast("Campsite vouched successfully!", "success");
 }
 
 // 3. Add Post
@@ -3319,9 +3582,20 @@ function saveNewForumThread() {
     replies: []
   };
   
-  State.forum.unshift(newThread);
+  if (State.isOffline) {
+    newThread.pendingSync = true;
+    State.forum.unshift(newThread);
+    State.syncQueue.push({ type: 'CREATE_THREAD', payload: newThread });
+    saveStateToStorage();
+    updateConnectionUI();
+    showToast("Offline mode: thread queued for sync!", "warning");
+  } else {
+    State.forum.unshift(newThread);
+    saveStateToStorage();
+    showToast("Thread published to discussion board!", "success");
+  }
+  
   State.activeForumCategory = 'all'; // reset to all to see the new thread
-  saveStateToStorage();
   
   // Clean inputs
   document.getElementById('thread-title-input').value = '';
@@ -3330,7 +3604,6 @@ function saveNewForumThread() {
   
   closeModal('modal-add-thread');
   renderForumView();
-  showToast("Thread published to discussion board!", "success");
 }
 
 // Feed shelving helper
