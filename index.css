@@ -1986,10 +1986,11 @@ body {
     display: flex !important;
     position: fixed;
     bottom: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 56px;
-    height: 56px;
+    right: 24px;
+    left: auto;
+    transform: none;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     background-color: var(--accent-green);
     color: white;
@@ -2002,11 +2003,11 @@ body {
     transition: transform 0.2s, background-color 0.2s;
   }
   .mobile-action-fab:active {
-    transform: translateX(-50%) scale(0.92);
+    transform: scale(0.92);
   }
   .mobile-action-fab i, .mobile-action-fab svg {
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     stroke: white;
   }
 
@@ -2247,6 +2248,10 @@ body {
     pointer-events: auto;
   }
 
+  .mobile-action-fab.hide-fab {
+    display: none !important;
+  }
+
   .chat-windows-container {
     position: fixed;
     top: auto;
@@ -2254,8 +2259,7 @@ body {
     right: 0;
     left: 0;
     width: 100vw;
-    height: auto;
-    max-height: 85vh;
+    height: 85vh;
     z-index: 1070;
     display: flex;
     flex-direction: column;
@@ -2265,7 +2269,7 @@ body {
 
   .chat-window {
     width: 100vw !important;
-    height: 85vh !important;
+    height: 100% !important;
     border-radius: 16px 16px 0 0 !important;
     box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15) !important;
     pointer-events: auto;

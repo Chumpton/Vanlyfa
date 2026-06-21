@@ -779,33 +779,8 @@ function initApp() {
         State.activeProfileName = null;
       }
       switchTab(tab);
-      closeMobileSidebar();
     });
   });
-
-function toggleMobileSidebar(open) {
-  const sidebar = document.querySelector('.app-sidebar');
-  const backdrop = document.getElementById('sidebar-backdrop');
-  if (!sidebar || !backdrop) return;
-  if (open) {
-    sidebar.classList.add('sidebar-open');
-    backdrop.classList.add('active');
-    backdrop.style.display = 'block';
-    history.pushState({ sidebar: true }, '');
-  } else {
-    sidebar.classList.remove('sidebar-open');
-    backdrop.classList.remove('active');
-    setTimeout(() => {
-      if (!sidebar.classList.contains('sidebar-open')) {
-        backdrop.style.display = 'none';
-      }
-    }, 300);
-  }
-}
-
-function closeMobileSidebar() {
-  toggleMobileSidebar(false);
-}
   
   // Set up modal open/close handlers
   setupModalHandlers();
@@ -994,7 +969,6 @@ function closeMobileSidebar() {
   document.getElementById('sidebar-profile-btn').addEventListener('click', () => {
     State.activeProfileName = null;
     switchTab('profile');
-    closeMobileSidebar();
   });
   
   // Initial render
@@ -1056,15 +1030,10 @@ function closeMobileSidebar() {
 
   // Popstate event handler for Android back swipe/gestures
   window.addEventListener('popstate', (event) => {
-    // 1. If mobile sidebar is open, close it
-    const sidebar = document.querySelector('.app-sidebar');
-    if (sidebar && sidebar.classList.contains('sidebar-open')) {
-      sidebar.classList.remove('sidebar-open');
-      const backdrop = document.getElementById('sidebar-backdrop');
-      if (backdrop) {
-        backdrop.classList.remove('active');
-        setTimeout(() => { backdrop.style.display = 'none'; }, 300);
-      }
+    // 1. If mobile drawer is open, close it
+    const drawer = document.getElementById('mobile-drawer');
+    if (drawer && drawer.classList.contains('open')) {
+      closeMobileDrawer();
       return;
     }
     
@@ -1197,6 +1166,16 @@ function switchTab(tabName, isPopState = false) {
       history.replaceState({ tab: 'dashboard' }, '');
     } else {
       history.pushState({ tab: tabName }, '');
+    }
+  }
+
+  // Disappear mobile action FAB on Feed or Marketplace type tabs
+  const mobileActionFab = document.getElementById('mobile-action-fab');
+  if (mobileActionFab) {
+    if (['feed', 'marketplace', 'tribes', 'meetups', 'forum'].includes(tabName)) {
+      mobileActionFab.classList.add('hide-fab');
+    } else {
+      mobileActionFab.classList.remove('hide-fab');
     }
   }
 }
