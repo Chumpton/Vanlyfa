@@ -1938,7 +1938,11 @@ body {
   }
 
   .dashboard-feed-container {
-    height: 320px;
+    display: none !important;
+  }
+  
+  #unshelf-feed-btn {
+    display: none !important;
   }
   
   #main-action-btn span {
@@ -1973,13 +1977,14 @@ body {
   }
 
   .chat-windows-container {
-    bottom: 0 !important;
-    right: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: none !important;
-    z-index: 2100 !important;
+    top: 0;
+    bottom: auto;
+    right: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    z-index: 2100;
     display: flex;
     flex-direction: column;
     pointer-events: none;

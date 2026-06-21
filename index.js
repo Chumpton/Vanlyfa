@@ -794,18 +794,8 @@ function initApp() {
   // Visual Viewport resize handler to support keyboard under mobile chat box
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', () => {
-      if (window.innerWidth <= 768) {
-        const container = document.getElementById('chat-windows-container');
-        if (container && container.childNodes.length > 0) {
-          // Resize container height dynamically to match visual viewport
-          container.style.height = `${window.visualViewport.height}px`;
-          
-          // Scroll active chat messages to bottom
-          const activeMsgArea = container.querySelector('.chat-messages-area');
-          if (activeMsgArea) {
-            activeMsgArea.scrollTop = activeMsgArea.scrollHeight;
-          }
-        }
+      if (typeof adjustChatContainerForVisualViewport === 'function') {
+        adjustChatContainerForVisualViewport();
       }
     });
   }
@@ -2778,7 +2768,7 @@ function renderActiveChats() {
           <button class="chat-footer-action-btn" title="GIF" onclick="showToast('GIF search not loaded.', 'info')"><i data-lucide="image-play"></i></button>
           
           <div class="chat-input-wrapper">
-            <input type="text" class="chat-input-field" placeholder="Aa" onkeypress="handleChatKeyPress(event, '${username}')">
+            <input type="text" class="chat-input-field" placeholder="Aa" onkeypress="handleChatKeyPress(event, '${username}')" onfocus="setTimeout(adjustChatContainerForVisualViewport, 300)" onblur="setTimeout(adjustChatContainerForVisualViewport, 100)">
             <button class="chat-input-emoji-btn" title="Emoji" onclick="insertSampleEmoji('${username}')">
               <i data-lucide="smile-plus"></i>
             </button>
@@ -2797,6 +2787,36 @@ function renderActiveChats() {
   });
   
   lucide.createIcons();
+  adjustChatContainerForVisualViewport();
+}
+
+function adjustChatContainerForVisualViewport() {
+  const container = document.getElementById('chat-windows-container');
+  if (!container) return;
+  
+  if (window.innerWidth <= 768) {
+    if (State.activeChats.length === 0) {
+      container.style.height = '';
+      container.style.top = '';
+      return;
+    }
+    if (window.visualViewport) {
+      container.style.top = `${window.visualViewport.offsetTop}px`;
+      container.style.height = `${window.visualViewport.height}px`;
+    } else {
+      container.style.top = '0';
+      container.style.height = '100vh';
+    }
+    
+    // Scroll active chat messages to bottom
+    const activeMsgArea = container.querySelector('.chat-messages-area');
+    if (activeMsgArea) {
+      activeMsgArea.scrollTop = activeMsgArea.scrollHeight;
+    }
+  } else {
+    container.style.height = '';
+    container.style.top = '';
+  }
 }
 
 function handleChatKeyPress(e, username) {
@@ -2917,3 +2937,4 @@ window.toggleHeartReaction = toggleHeartReaction;
 window.insertSampleEmoji = insertSampleEmoji;
 window.sendPlantSticker = sendPlantSticker;
 window.contactSeller = contactSeller;
+window.adjustChatContainerForVisualViewport = adjustChatContainerForVisualViewport;
