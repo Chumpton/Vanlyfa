@@ -3641,3 +3641,23 @@ body.dark-mode .chat-messages-area {
   }
 }
 
+/* Sidebar and bottom navigation adjustments */
+#sidebar-jobs-tab {
+  display: flex;
+}
+#sidebar-about-btn {
+  margin-top: auto !important;
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px !important;
+  margin-bottom: 8px;
+  display: flex;
+}
+@media (max-width: 768px) {
+  #sidebar-jobs-tab {
+    display: none !important;
+  }
+  #sidebar-about-btn {
+    display: none !important;
+  }
+}
+

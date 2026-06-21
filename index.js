@@ -12,34 +12,8 @@ let State = {
   isOffline: false,
   syncQueue: [],
   bookings: [],
-  jobs: [
-    {
-      id: "job-1",
-      title: "Permaculture Farm Assistant",
-      location: "Florence, OR",
-      duration: "2-4 weeks",
-      labor: "15 hours/week",
-      comp: "Free campsite + organic meals",
-      description: "Help with composting, seeding, and building raised beds on our off-grid permaculture farm near Florence. We have room for a rig up to 30ft, 15A solar dump, and hot showers available. Organic farm-to-table meals provided on work days.",
-      host: { name: "Clara Outdoors", avatar: "avatar_clara" },
-      date: "2026-06-20"
-    },
-    {
-      id: "job-2",
-      title: "Tiny Home Builder & Carpenter Helper",
-      location: "Flagstaff, AZ",
-      duration: "1-2 weeks",
-      labor: "20 hours/week",
-      comp: "Driveway parking + $150/week stipend",
-      description: "Looking for someone with carpentry or basic power tool experience to help frame a tiny home on wheels. Standard 30A RV hookup on site, water fill, and firewood provided. Beautiful ponderosa pine views and hiking trails nearby.",
-      host: { name: "Forest Nomad", avatar: "avatar_forest" },
-      date: "2026-06-18"
-    }
-  ],
-  notifications: [
-    { id: "notif-1", title: "New Meetup Added", text: "Clara Outdoors posted a new meetup: Oregon Dunes Caravan!", time: "1 hour ago", unread: true },
-    { id: "notif-2", title: "Campsite Vouched", text: "Nomad Bob vouched for Cedar Ridge Overlook near Flagstaff", time: "2 hours ago", unread: false }
-  ],
+  jobs: [],
+  notifications: [],
   currentUser: {
     name: "Nomad Bob",
     handle: "@nomad_bob",
@@ -247,296 +221,12 @@ let State = {
       comments: []
     }
   ],
-  posts: [
-    {
-      id: "post-1",
-      author: { name: "Clara Outdoors", avatar: "avatar_clara" },
-      time: "2 hours ago",
-      content: "Waking up to this in Utah! Dispersed campsite at Pine Ridge. Perfect solar gain today, battery bank already at 90% by noon.",
-      image: "image_desert",
-      likes: 12,
-      likedByUser: false,
-      comments: [
-        { user: "Nomad Bob", text: "Looks incredible Clara! How is the cell signal out there?" },
-        { user: "Clara Outdoors", text: "Pretty solid Bob. 3 bars LTE on Verizon." }
-      ]
-    },
-    {
-      id: "post-2",
-      author: { name: "Forest Nomad", avatar: "avatar_forest" },
-      time: "1 day ago",
-      content: "Just finished my custom ceiling panels. Used tongue-and-groove cedar. Added 200W more solar panels on the roof rack today.",
-      image: "image_interior",
-      likes: 34,
-      likedByUser: true,
-      comments: [
-        { user: "Solar Explorer", text: "Awesome craftsmanship! Cedar smell must be fantastic." }
-      ]
-    },
-    {
-      id: "post-3",
-      author: { name: "Baja Surfer", avatar: "avatar_surf" },
-      time: "3 days ago",
-      content: "Moored up right on the beach in San Felipe. Flat sands and warm water. Highly recommend crossing at Calexico, very smooth.",
-      image: "image_beach",
-      likes: 45,
-      likedByUser: false,
-      comments: []
-    }
-  ],
-  marketplace: [
-    {
-      id: "market-1",
-      title: "Renogy 100W Solar Panel (Portable)",
-      category: "electrical",
-      price: 120,
-      location: "Moab, UT",
-      zip: "84532",
-      lat: 38.5733,
-      lng: -109.5498,
-      condition: "Like New",
-      description: "Includes built-in kickstand and 10A charge controller. Great add-on to lay out in the sun while parked in the shade. Anderson connectors.",
-      seller: { name: "Solar Explorer", avatar: "avatar_solar" },
-      image: "item_solar"
-    },
-    {
-      id: "market-2",
-      title: "Dometic CFX3 35 L Portable Fridge",
-      category: "gear",
-      price: 450,
-      location: "Bend, OR",
-      zip: "97701",
-      lat: 44.0582,
-      lng: -121.3153,
-      condition: "Used - Good",
-      description: "Efficient compressor fridge/freezer. Runs on 12V DC or 110V AC. Minimal power draw, fits easily between front seats of Sprinter or Transit.",
-      seller: { name: "Forest Nomad", avatar: "avatar_forest" },
-      image: "item_gear"
-    },
-    {
-      id: "market-3",
-      title: "MaxxFan Deluxe 7500K Ventilator",
-      category: "parts",
-      price: 180,
-      location: "Flagstaff, AZ",
-      zip: "86001",
-      lat: 35.1983,
-      lng: -111.6513,
-      condition: "New in Box",
-      description: "Smoke lid. 10-speed motor, intake/exhaust, rain shield. Bought for a build but changed layouts. Retails for $260.",
-      seller: { name: "Nomad Bob", avatar: "avatar_bob" },
-      image: "item_fan"
-    },
-    {
-      id: "market-4",
-      title: "2018 Ford Transit Custom Rig",
-      category: "campervan",
-      price: 42000,
-      location: "Denver, CO",
-      zip: "80202",
-      lat: 39.7392,
-      lng: -104.9903,
-      condition: "Excellent",
-      description: "148\" wheelbase, mid-roof, eco-boost. Fully insulated with Thinsulate. 300W Solar, 200Ah Lithium, custom birch cabinets, running water. 52,000 miles.",
-      seller: { name: "Clara Outdoors", avatar: "avatar_clara" },
-      image: "item_van"
-    },
-    {
-      id: "market-skill-1",
-      title: "Off-Grid Solar System Design",
-      category: "services-offer",
-      price: 0,
-      location: "Moab, UT",
-      zip: "84532",
-      lat: 38.5733,
-      lng: -109.5498,
-      condition: "Service Offered",
-      description: "Happy to review wiring schematics, calculate solar sizing, and assist with Victron multiplus setup. Swapping for custom wood panel work.",
-      seller: { name: "Solar Explorer", avatar: "avatar_solar" },
-      image: "item_solar"
-    },
-    {
-      id: "market-skill-2",
-      title: "Engine Diagnostics & Alternator Checks",
-      category: "services-offer",
-      price: 0,
-      location: "Flagstaff, AZ",
-      zip: "86001",
-      lat: 35.1983,
-      lng: -111.6513,
-      condition: "Service Offered",
-      description: "Have a heavy-duty OBD2 scanner. Can diagnose engine lights, check alternator health, and clear basic codes. Swap for sourdough bread or campfire beer.",
-      seller: { name: "Nomad Bob", avatar: "avatar_bob" },
-      image: "item_gear"
-    },
-    {
-      id: "market-skill-3",
-      title: "Water Plumbing & PEX Install",
-      category: "services-want",
-      price: 0,
-      location: "Bend, OR",
-      zip: "97701",
-      lat: 44.0582,
-      lng: -121.3153,
-      condition: "Service Wanted",
-      description: "Need help laying out my PEX lines, installing a Shurflo pump and accumulator tank. Have the materials, just nervous about leaks! Can trade solar help.",
-      seller: { name: "Forest Nomad", avatar: "avatar_forest" },
-      image: "item_fan"
-    },
-    {
-      id: "market-skill-4",
-      title: "Remote Web Design & SEO Advice",
-      category: "services-offer",
-      price: 0,
-      location: "Flagstaff, AZ",
-      zip: "86001",
-      lat: 35.1983,
-      lng: -111.6513,
-      condition: "Service Offered",
-      description: "Offering website audits, setting up landing pages, or SEO advice for digital nomads trying to work from the road. Trade for suspension install help.",
-      seller: { name: "Clara Outdoors", avatar: "avatar_clara" },
-      image: "item_van"
-    }
-  ],
-  tribes: [
-    {
-      id: "tribe-1",
-      title: "Solitary Solars",
-      membersCount: 142,
-      banner: "forest",
-      iconLetter: "SS",
-      description: "For the nomads who value deep silence, off-grid battery capability, and parking miles away from the nearest rig.",
-      joined: true,
-      category: "Interest",
-      state: "UT",
-      ideal: "Off-grid / Boondocking"
-    },
-    {
-      id: "tribe-2",
-      title: "Baja Surf Caravan",
-      membersCount: 89,
-      banner: "desert",
-      iconLetter: "BC",
-      description: "Nomads traveling down the peninsula in search of empty point breaks, warm beaches, and local campfires.",
-      joined: false,
-      category: "Regional",
-      state: "CA",
-      ideal: "Surfing & Beaching"
-    },
-    {
-      id: "tribe-3",
-      title: "Off-Grid Engineers",
-      membersCount: 215,
-      banner: "ocean",
-      iconLetter: "OE",
-      description: "Electrical, mechanical, and software nomads. Swapping schematics, 12V engineering hacks, and coding from the pine trees.",
-      joined: true,
-      category: "Skill-Share",
-      state: "OR",
-      ideal: "Technical / Engineering"
-    },
-    {
-      id: "tribe-4",
-      title: "Sprinter Nomads",
-      membersCount: 310,
-      banner: "mountain",
-      iconLetter: "SN",
-      description: "A community for Sprinter van owners. Exchanging tips on maintenance, parts, limp-mode diagnosis, and diesel mechanics.",
-      joined: false,
-      category: "Brand-Circle",
-      state: "AZ",
-      ideal: "Maintenance & Repairs"
-    }
-  ],
-  tribeChats: {
-    "tribe-1": [
-      { sender: "Solar Explorer", text: "Welcome to Solitary Solars! Let's share some peaceful spots.", time: "10:14 AM" },
-      { sender: "Nomad Bob", text: "Moab coordinates 38.573, -109.549 are beautiful right now.", time: "11:22 AM" }
-    ],
-    "tribe-3": [
-      { sender: "Clara Outdoors", text: "Off-grid engineering chat is live. Anyone have tips on 24V setups?", time: "2:05 PM" }
-    ]
-  },
-  tribeThreads: {
-    "tribe-1": [
-      { id: "tthread-1", title: "Moab Off-Grid Camping with Solar", author: "Solar Explorer", body: "What are your favorite spots around Moab with zero tree obstruction?", time: "1 day ago", replies: [
-        { author: "Nomad Bob", body: "Along Willow Springs Road has perfect open exposure, though it can get crowded.", time: "12 hours ago" }
-      ]}
-    ],
-    "tribe-3": [
-      { id: "tthread-2", title: "24V vs 12V LiFePO4 Battery Systems", author: "Clara Outdoors", body: "Planning a large build. Is it worth stepping up to 24V for inverter efficiency?", time: "2 days ago", replies: [
-        { author: "Baja Surfer", body: "Absolutely! Keeps cable gauge sizes smaller and inverter runs cooler.", time: "1 day ago" }
-      ]}
-    ]
-  },
-  forum: [
-    {
-      id: "thread-1",
-      title: "Is 400W solar enough for induction cooking?",
-      category: "electrical",
-      author: { name: "Forest Nomad", avatar: "avatar_forest" },
-      repliesCount: 3,
-      viewsCount: 184,
-      date: "2 days ago",
-      body: "I am planning my electrical build. I want to avoid propane entirely. I have a 300Ah lithium bank and a 3000W inverter. Will 400W solar keep up if I cook twice a day?",
-      replies: [
-        {
-          author: { name: "Solar Explorer", avatar: "avatar_solar" },
-          date: "Yesterday",
-          body: "It depends heavily on weather. In sunny climates (UT, AZ), 400W is plenty to replenish the draw. In Oregon/PNW, you will struggle. I recommend adding a DC-DC charger to charge from your alternator while driving."
-        },
-        {
-          author: { name: "Nomad Bob", avatar: "avatar_bob" },
-          date: "Yesterday",
-          body: "Agree with Solar Explorer. Alternator charging is a must for induction. Cooking pulls about 100A at 12V. Twice a day is about 40-50Ah total. Totally doable if you have a way to charge when cloudy."
-        },
-        {
-          author: { name: "Forest Nomad", avatar: "avatar_forest" },
-          date: "12 hours ago",
-          body: "Thanks! I just ordered a 50A DC-DC charger. Appreciate the peace of mind advice."
-        }
-      ]
-    },
-    {
-      id: "thread-2",
-      title: "Campsite safety tips for remote BLM land parking",
-      category: "destinations",
-      author: { name: "Clara Outdoors", avatar: "avatar_clara" },
-      repliesCount: 2,
-      viewsCount: 325,
-      date: "4 days ago",
-      body: "Safety is a top priority when camping far off grid. Here are my main practices: 1) Always park facing out for quick exit. 2) Keep keys in the exact same spot. 3) Scout the road out first. What do you do?",
-      replies: [
-        {
-          author: { name: "Baja Surfer", avatar: "avatar_surf" },
-          date: "3 days ago",
-          body: "Also check the weather forecast for flash floods. Getting stuck in muddy BLM clay roads is no joke."
-        },
-        {
-          author: { name: "Nomad Bob", avatar: "avatar_bob" },
-          date: "2 days ago",
-          body: "Letting someone know your coordinates before you lose signal is a lifesaver. I always send my camp spots via Garmin inReach."
-        }
-      ]
-    },
-    {
-      id: "thread-3",
-      title: "T1N Sprinter limp mode - Code P2002 advice",
-      category: "builds",
-      author: { name: "Solar Explorer", avatar: "avatar_solar" },
-      repliesCount: 1,
-      viewsCount: 98,
-      date: "1 day ago",
-      body: "My 2006 Sprinter just went into limp mode on the highway. OBD reader pulled code P2002 (DPF efficiency). Has anyone cleared this or is a replacement inevitable?",
-      replies: [
-        {
-          author: { name: "Nomad Bob", avatar: "avatar_bob" },
-          date: "10 hours ago",
-          body: "Could just be a clogged DPF sensor tube. Inspect the rubber hoses going to the pressure sensor first. They rot out and cause false readings. Cleared mine last year by replacing a $5 hose!"
-        }
-      ]
-    }
-  ],
+  posts: [],
+  marketplace: [],
+  tribes: [],
+  tribeChats: {},
+  tribeThreads: {},
+  forum: [],
   activeTab: "dashboard",
   searchQuery: "",
   activeForumCategory: "all",
@@ -544,20 +234,10 @@ let State = {
   leafletMap: null,
   leafletTileLayer: null,
   mapMarkers: [],
-  darkMode: false,
+  darkMode: true,
   activeChats: [],
   minimizedChats: [],
-  chats: {
-    "Clara Outdoors": [
-      { id: "c1", sender: "Clara Outdoors", text: "Hey Bob! Are you heading to the Quartzsite gather next month?", time: "Wed 11:43 PM", reaction: true },
-      { id: "c2", sender: "Nomad Bob", text: "Hey Clara! Yes, planning to be there around the 15th.", time: "Wed 11:45 PM" },
-      { id: "c3", sender: "Clara Outdoors", text: "Awesome! Let's save a camp spot together. Off-grid is the only way 🌵", time: "Wed 11:46 PM" }
-    ],
-    "Forest Nomad": [
-      { id: "f1", sender: "Nomad Bob", text: "Hey Forest, loved your cedar tongue-and-groove ceiling build post!", time: "Yesterday" },
-      { id: "f2", sender: "Forest Nomad", text: "Thanks Bob! Took three days but the smell of cedar is worth it. 🪵", time: "Yesterday" }
-    ]
-  }
+  chats: {}
 };
 
 // SVG Assets Generator (dynamic clean SVG templates converted to Base64 at runtime)
@@ -622,7 +302,8 @@ function saveStateToStorage() {
     isSignedIn: State.isSignedIn,
     bookings: State.bookings,
     notifications: State.notifications,
-    jobs: State.jobs
+    jobs: State.jobs,
+    layerFilters: State.layerFilters
   }));
 }
 
@@ -631,6 +312,18 @@ function loadStateFromStorage() {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
+      
+      // Clear out mock items if loaded from storage
+      if (parsed.posts) parsed.posts = parsed.posts.filter(p => !p.id.startsWith('post-'));
+      if (parsed.marketplace) parsed.marketplace = parsed.marketplace.filter(m => !m.id.startsWith('market-'));
+      if (parsed.forum) parsed.forum = parsed.forum.filter(f => !f.id.startsWith('thread-'));
+      if (parsed.jobs) parsed.jobs = parsed.jobs.filter(j => !j.id.startsWith('job-'));
+      if (parsed.chats) {
+        delete parsed.chats['Clara Outdoors'];
+        delete parsed.chats['Forest Nomad'];
+      }
+      if (parsed.notifications) parsed.notifications = parsed.notifications.filter(n => !n.id.startsWith('notif-'));
+
       // Merge with default state
       State.spots = parsed.spots || State.spots;
       State.meetups = parsed.meetups || State.meetups;
@@ -646,15 +339,17 @@ function loadStateFromStorage() {
       State.activeChats = parsed.activeChats || State.activeChats;
       State.minimizedChats = parsed.minimizedChats || State.minimizedChats;
       State.syncQueue = parsed.syncQueue || [];
-      State.isSignedIn = parsed.isSignedIn !== undefined ? parsed.isSignedIn : true;
+      State.isSignedIn = parsed.isSignedIn !== undefined ? parsed.isSignedIn : false;
       State.bookings = parsed.bookings || [];
       State.notifications = parsed.notifications || State.notifications;
       State.jobs = parsed.jobs || State.jobs;
+      State.layerFilters = parsed.layerFilters || State.layerFilters;
     } catch(e) {
       console.warn("Could not load stored state, using defaults", e);
+      State.isSignedIn = false;
     }
   } else {
-    State.isSignedIn = true;
+    State.isSignedIn = false;
   }
   // --- Inject seed data (dispersed campsites, BLM, Walmart, etc.) ---
   if (typeof SEED_SPOTS !== 'undefined' && SEED_SPOTS.length > 0) {
@@ -674,7 +369,7 @@ function loadStateFromStorage() {
     }
   }
   // Track layer visibility state
-  State.layerFilters = { dispersed: true, overnight: true, services: true };
+  State.layerFilters = { dispersed: true, overnight: true, services: true, hosts: true, mechanics: true, meetups: true };
 
   // Seed reviews for default spots if not already present
   State.spots.forEach(spot => {
@@ -892,10 +587,13 @@ function initApp() {
   loadStateFromStorage();
   
   // Read saved theme
-  const savedDark = localStorage.getItem('vanlyfa_dark_mode') === 'true';
-  if (savedDark) {
+  const savedDarkVal = localStorage.getItem('vanlyfa_dark_mode');
+  if (savedDarkVal === null || savedDarkVal === 'true') {
     State.darkMode = true;
     document.body.classList.add('dark-mode');
+  } else {
+    State.darkMode = false;
+    document.body.classList.remove('dark-mode');
   }
   updateThemeToggleUI();
   
@@ -906,6 +604,7 @@ function initApp() {
   document.querySelectorAll('.nav-menu .nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
       const tab = e.currentTarget.getAttribute('data-tab');
+      if (!tab) return;
       if (tab === 'profile') {
         State.activeProfileName = null;
       }
@@ -953,6 +652,16 @@ function initApp() {
   const markVisitedBtn = document.getElementById('drawer-mark-visited-btn');
   if (markVisitedBtn) {
     markVisitedBtn.addEventListener('click', markCurrentSpotAsVisited);
+  }
+  
+  // Drawer Vouch Button
+  const vouchBtn = document.getElementById('drawer-vouch-btn');
+  if (vouchBtn) {
+    vouchBtn.addEventListener('click', () => {
+      if (State.currentViewedSpotId) {
+        toggleVouchSpot(State.currentViewedSpotId);
+      }
+    });
   }
   
   // Main header action button
@@ -1077,6 +786,12 @@ function initApp() {
       openMobileDrawer();
     });
   }
+  const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+  if (sidebarBackdrop) {
+    sidebarBackdrop.addEventListener('click', () => {
+      closeMobileDrawer();
+    });
+  }
 
   // Mobile Action Centered FAB toggle
   const mobileActionFab = document.getElementById('mobile-action-fab');
@@ -1116,7 +831,7 @@ function initApp() {
         saveStateToStorage();
         updateSidebarProfileWidget();
         showToast("Signed out successfully. Browsing as Guest.", "info");
-        renderCurrentTab();
+        switchTab('dashboard');
       } else {
         openModal('modal-auth-required');
       }
@@ -1162,6 +877,7 @@ function initApp() {
       setTimeout(() => {
         welcomeModal.classList.remove('active', 'fading');
         welcomeModal.style.display = 'none';
+        openModal('modal-auth-required');
       }, 300);
     });
   }
@@ -1454,7 +1170,7 @@ function requireAuth(action) {
 
 // Tab view switcher
 function switchTab(tabName, isPopState = false) {
-  if (tabName === 'messages' || tabName === 'profile') {
+  if (tabName !== 'dashboard') {
     if (!requireAuth()) return;
   }
   State.activeTab = tabName;
@@ -1647,26 +1363,36 @@ function renderSocialFeed(containerId, isSidebar = false) {
   const container = document.getElementById(containerId);
   if (!container) return;
   
+  const query = State.searchQuery;
+  
+  // Cache check
+  if (!State._cachedFeeds) {
+    State._cachedFeeds = {};
+  }
+  const cacheKey = `${containerId}_${query}_${State.isSignedIn}`;
+  if (State._cachedFeeds[cacheKey]) {
+    container.innerHTML = State._cachedFeeds[cacheKey];
+    lucide.createIcons();
+    return;
+  }
+  
   container.innerHTML = '';
   
-  const query = State.searchQuery;
   const filtered = State.posts.filter(p => {
     return p.content.toLowerCase().includes(query) || 
            p.author.name.toLowerCase().includes(query);
   });
   
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:32px 0; color:var(--muted-text); font-size:13px;">No posts match your search.</div>`;
+    const emptyMarkup = `<div style="text-align:center; padding:32px 0; color:var(--muted-text); font-size:13px;">No posts match your search.</div>`;
+    container.innerHTML = emptyMarkup;
+    State._cachedFeeds[cacheKey] = emptyMarkup;
     return;
   }
   
+  let feedHtml = '';
+  
   filtered.forEach(post => {
-    const card = document.createElement('div');
-    card.className = 'feed-post-card';
-    if (!isSidebar) {
-      card.style.backgroundColor = 'var(--card-bg)';
-    }
-    
     // image markup if exists
     let imgMarkup = '';
     if (post.image && post.image !== 'none') {
@@ -1679,7 +1405,6 @@ function renderSocialFeed(containerId, isSidebar = false) {
       commentsMarkup = `
         <div class="thread-replies-list">
           ${post.comments.map(c => {
-            // Find commenter's avatar from users list
             const commenter = State.users ? State.users.find(u => u.name === c.user) : null;
             const avatar = commenter ? commenter.avatar : 'solar';
             return `
@@ -1699,69 +1424,78 @@ function renderSocialFeed(containerId, isSidebar = false) {
       `;
     }
     
-    card.innerHTML = `
-      <div class="thread-post-layout">
-        <!-- Left Column: Avatar & Connector line -->
-        <div class="thread-left-col">
-          <div class="thread-avatar-container">
-            <img src="${getAvatarSrc(post.author.avatar)}" alt="${post.author.name}" onclick="viewUserProfile('${post.author.name}')" class="thread-avatar">
-            <button class="thread-avatar-follow-btn"><i data-lucide="plus"></i></button>
-          </div>
-          ${post.comments && post.comments.length > 0 ? '<div class="thread-line"></div>' : ''}
-        </div>
-        
-        <!-- Right Column: User details, post body, attachments, actions, replies -->
-        <div class="thread-right-col">
-          <div class="thread-header">
-            <div class="thread-user-meta">
-              <span class="thread-author-name" onclick="viewUserProfile('${post.author.name}')">${getUserRoleMarkup(post.author.name)}</span>
-              ${post.author.name === 'Solar Explorer' || post.author.name === 'Nomad Bob' ? '<i data-lucide="badge-check" class="verified-badge" style="width:14px; height:14px; color:#1D9BF0; fill:#1D9BF0; display:inline-block; margin-left:2px; vertical-align:middle;"></i>' : ''}
-              <span class="thread-dot">•</span>
-              <span class="thread-time">${post.time}</span>
+    const isGuest = !State.isSignedIn;
+    const placeholderText = isGuest ? "Please sign in to reply..." : `Reply to ${post.author.name}...`;
+    const disabledAttr = isGuest ? "disabled" : "";
+    const avatarToUse = isGuest ? 'avatar_guest' : State.currentUser.avatar;
+    const cardStyle = isSidebar ? '' : 'style="background-color: var(--card-bg);"';
+
+    feedHtml += `
+      <div class="feed-post-card" ${cardStyle}>
+        <div class="thread-post-layout">
+          <!-- Left Column: Avatar & Connector line -->
+          <div class="thread-left-col">
+            <div class="thread-avatar-container">
+              <img src="${getAvatarSrc(post.author.avatar)}" alt="${post.author.name}" onclick="viewUserProfile('${post.author.name}')" class="thread-avatar">
+              <button class="thread-avatar-follow-btn"><i data-lucide="plus"></i></button>
             </div>
-            <button class="thread-options-btn"><i data-lucide="more-horizontal"></i></button>
+            ${post.comments && post.comments.length > 0 ? '<div class="thread-line"></div>' : ''}
           </div>
           
-          <div class="thread-body">
-            <p class="thread-content">${post.content}</p>
-            ${imgMarkup}
-          </div>
-          
-          <div class="thread-actions-bar">
-            <button class="thread-action-icon-btn ${post.likedByUser ? 'liked' : ''}" onclick="toggleLike('${post.id}')" title="Like">
-              <i data-lucide="heart"></i>
-              <span>${post.likes || 0}</span>
-            </button>
-            <button class="thread-action-icon-btn" onclick="focusCommentInput('${post.id}')" title="Comment">
-              <i data-lucide="message-circle"></i>
-              <span>${post.comments ? post.comments.length : 0}</span>
-            </button>
-            <button class="thread-action-icon-btn" onclick="sharePost('${post.id}')" title="Repost">
-              <i data-lucide="repeat"></i>
-              <span>${post.reposts || Math.floor(Math.random() * 5) + 1}</span>
-            </button>
-            <button class="thread-action-icon-btn" onclick="sendPostDirect('${post.id}')" title="Send">
-              <i data-lucide="send"></i>
-              <span>${post.shares || Math.floor(Math.random() * 3) + 1}</span>
-            </button>
-          </div>
-          
-          ${commentsMarkup}
-          
-          <!-- Reply form -->
-          <form class="thread-reply-form" onsubmit="submitComment(event, '${post.id}')">
-            <img src="${getAvatarSrc(State.currentUser.avatar)}" alt="Me" class="thread-reply-avatar">
-            <div class="thread-reply-input-wrapper">
-              <input type="text" placeholder="Reply to ${post.author.name}..." id="comment-input-${post.id}" class="thread-reply-input">
-              <button type="submit" class="thread-reply-submit-btn"><i data-lucide="corner-down-left"></i></button>
+          <!-- Right Column: User details, post body, attachments, actions, replies -->
+          <div class="thread-right-col">
+            <div class="thread-header">
+              <div class="thread-user-meta">
+                <span class="thread-author-name" onclick="viewUserProfile('${post.author.name}')">${getUserRoleMarkup(post.author.name)}</span>
+                ${post.author.name === 'Solar Explorer' || post.author.name === 'Nomad Bob' ? '<i data-lucide="badge-check" class="verified-badge" style="width:14px; height:14px; color:#1D9BF0; fill:#1D9BF0; display:inline-block; margin-left:2px; vertical-align:middle;"></i>' : ''}
+                <span class="thread-dot">•</span>
+                <span class="thread-time">${post.time}</span>
+              </div>
+              <button class="thread-options-btn"><i data-lucide="more-horizontal"></i></button>
             </div>
-          </form>
+            
+            <div class="thread-body">
+              <p class="thread-content">${post.content}</p>
+              ${imgMarkup}
+            </div>
+            
+            <div class="thread-actions-bar">
+              <button class="thread-action-icon-btn ${post.likedByUser ? 'liked' : ''}" onclick="toggleLike('${post.id}')" title="Like">
+                <i data-lucide="heart"></i>
+                <span>${post.likes || 0}</span>
+              </button>
+              <button class="thread-action-icon-btn" onclick="focusCommentInput('${post.id}')" title="Comment">
+                <i data-lucide="message-circle"></i>
+                <span>${post.comments ? post.comments.length : 0}</span>
+              </button>
+              <button class="thread-action-icon-btn" onclick="sharePost('${post.id}')" title="Repost">
+                <i data-lucide="repeat"></i>
+                <span>${post.reposts || Math.floor(Math.random() * 5) + 1}</span>
+              </button>
+              <button class="thread-action-icon-btn" onclick="sendPostDirect('${post.id}')" title="Send">
+                <i data-lucide="send"></i>
+                <span>${post.shares || Math.floor(Math.random() * 3) + 1}</span>
+              </button>
+            </div>
+            
+            ${commentsMarkup}
+            
+            <!-- Reply form -->
+            <form class="thread-reply-form" onsubmit="submitComment(event, '${post.id}')">
+              <img src="${getAvatarSrc(avatarToUse)}" alt="Me" class="thread-reply-avatar">
+              <div class="thread-reply-input-wrapper">
+                <input type="text" placeholder="${placeholderText}" id="comment-input-${post.id}" class="thread-reply-input" ${disabledAttr}>
+                <button type="submit" class="thread-reply-submit-btn" ${disabledAttr}><i data-lucide="corner-down-left"></i></button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     `;
-    container.appendChild(card);
   });
   
+  container.innerHTML = feedHtml;
+  State._cachedFeeds[cacheKey] = feedHtml;
   lucide.createIcons();
 }
 
@@ -1800,20 +1534,52 @@ function renderFeedTabPosts() {
   renderSocialFeed('feed-tab-posts-list', false);
 }
 
+function simulateApiCall(successCallback, failureCallback) {
+  setTimeout(() => {
+    if (State.isOffline) {
+      failureCallback();
+    } else {
+      if (Math.random() < 0.1) {
+        failureCallback();
+      } else {
+        successCallback();
+      }
+    }
+  }, 800);
+}
+
 function toggleLike(postId) {
   if (!requireAuth()) return;
   const post = State.posts.find(p => p.id === postId);
   if (post) {
+    const originalLiked = post.likedByUser;
+    const originalLikes = post.likes;
+
     if (post.likedByUser) {
-      post.likes--;
+      post.likes = Math.max(0, post.likes - 1);
       post.likedByUser = false;
     } else {
       post.likes++;
       post.likedByUser = true;
     }
-    saveStateToStorage();
+
+    State._cachedFeeds = {};
     renderDashboardFeed();
     renderFeedTabPosts();
+
+    simulateApiCall(
+      () => {
+        saveStateToStorage();
+      },
+      () => {
+        post.likedByUser = originalLiked;
+        post.likes = originalLikes;
+        State._cachedFeeds = {};
+        renderDashboardFeed();
+        renderFeedTabPosts();
+        showToast("Network sync failed. Like rolled back.", "error");
+      }
+    );
   }
 }
 
@@ -1834,6 +1600,7 @@ function submitComment(e, postId) {
         text: input.value.trim()
       });
       input.value = '';
+      State._cachedFeeds = {};
       saveStateToStorage();
       renderDashboardFeed();
       renderFeedTabPosts();
@@ -3165,6 +2932,68 @@ function markCurrentSpotAsVisited() {
   }
 }
 
+function updateVouchUI(spot) {
+  const vouchCountEl = document.getElementById('drawer-vouch-count');
+  if (vouchCountEl) {
+    const dataSource = spot.seeded ? ' (from Public Lands Database)' : ' (Community Contributed)';
+    vouchCountEl.innerText = `${spot.vouches || 0} Vanlifers Vouched${dataSource}`;
+  }
+  const vouchBtn = document.getElementById('drawer-vouch-btn');
+  if (vouchBtn) {
+    const alreadyVouched = spot.vouchedBy && spot.vouchedBy.includes(State.currentUser.name);
+    if (alreadyVouched) {
+      vouchBtn.innerHTML = `<i data-lucide="shield-check" style="width: 14px; height: 14px;"></i> <span>Vouched</span>`;
+      vouchBtn.classList.add('btn-primary');
+    } else {
+      vouchBtn.innerHTML = `<i data-lucide="shield" style="width: 14px; height: 14px;"></i> <span>Vouch Spot</span>`;
+      vouchBtn.classList.remove('btn-primary');
+    }
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  }
+}
+
+function toggleVouchSpot(spotId) {
+  if (!requireAuth()) return;
+  const spot = State.spots.find(s => s.id === spotId);
+  if (!spot) return;
+
+  if (!spot.vouchedBy) spot.vouchedBy = [];
+  const userName = State.currentUser.name;
+  const alreadyVouched = spot.vouchedBy.includes(userName);
+  
+  // Optimistic UI Update
+  if (alreadyVouched) {
+    spot.vouchedBy = spot.vouchedBy.filter(u => u !== userName);
+    spot.vouches = Math.max(0, (spot.vouches || 0) - 1);
+  } else {
+    spot.vouchedBy.push(userName);
+    spot.vouches = (spot.vouches || 0) + 1;
+  }
+  
+  updateVouchUI(spot);
+  showToast(alreadyVouched ? "Removing vouch..." : "Vouching spot...", "info");
+
+  simulateApiCall(
+    () => {
+      saveStateToStorage();
+      showToast(alreadyVouched ? "Removed vouch!" : "Vouched spot successfully!", "success");
+    },
+    () => {
+      if (alreadyVouched) {
+        spot.vouchedBy.push(userName);
+        spot.vouches++;
+      } else {
+        spot.vouchedBy = spot.vouchedBy.filter(u => u !== userName);
+        spot.vouches = Math.max(0, spot.vouches - 1);
+      }
+      updateVouchUI(spot);
+      showToast("Failed to sync vouch with server. Rollback applied.", "error");
+    }
+  );
+}
+
 function handleProfilePhotoUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -3256,6 +3085,25 @@ function initLeafletMap() {
   
   // GPS Locate Button click handler
   const locateBtn = document.getElementById('map-locate-btn');
+  const setupGpsMarker = (latitude, longitude) => {
+    if (State.leafletMap) {
+      State.leafletMap.flyTo([latitude, longitude], 13);
+    }
+    if (State.gpsMarker) {
+      State.gpsMarker.setLatLng([latitude, longitude]);
+    } else {
+      const gpsIcon = L.divIcon({
+        className: 'gps-location-pin',
+        html: '<div class="gps-pin-dot"></div><div class="gps-pin-pulse"></div>',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+      State.gpsMarker = L.marker([latitude, longitude], { icon: gpsIcon })
+        .addTo(State.leafletMap)
+        .bindPopup("<strong>Your Location</strong>");
+    }
+  };
+
   if (locateBtn) {
     locateBtn.addEventListener('click', () => {
       if (navigator.geolocation) {
@@ -3263,36 +3111,41 @@ function initLeafletMap() {
         navigator.geolocation.getCurrentPosition(
           (position) => {
             const { latitude, longitude } = position.coords;
-            
-            if (State.leafletMap) {
-              State.leafletMap.flyTo([latitude, longitude], 13);
-            }
-            
-            // Add or update GPS marker
-            if (State.gpsMarker) {
-              State.gpsMarker.setLatLng([latitude, longitude]);
-            } else {
-              const gpsIcon = L.divIcon({
-                className: 'gps-location-pin',
-                html: '<div class="gps-pin-dot"></div><div class="gps-pin-pulse"></div>',
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-              });
-              State.gpsMarker = L.marker([latitude, longitude], { icon: gpsIcon })
-                .addTo(State.leafletMap)
-                .bindPopup("<strong>Your Location</strong>");
-            }
+            setupGpsMarker(latitude, longitude);
             showToast("Centered on your location!", "success");
           },
           (error) => {
-            console.error(error);
-            showToast("Failed to retrieve GPS location. Ensure location access is enabled.", "error");
+            console.warn(error);
+            showToast("GPS access blocked/failed. Enter coordinates manually.", "warning");
+            openModal('modal-gps-input');
           },
-          { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+          { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
         );
       } else {
-        showToast("Geolocation is not supported by your browser.", "error");
+        showToast("Geolocation unsupported. Enter coordinates manually.", "warning");
+        openModal('modal-gps-input');
       }
+    });
+
+    // Auto-locate 1.2s after startup to request permission
+    setTimeout(() => {
+      locateBtn.click();
+    }, 1200);
+  }
+
+  // Handle manual GPS submit
+  const gpsSubmitBtn = document.getElementById('gps-submit-btn');
+  if (gpsSubmitBtn) {
+    gpsSubmitBtn.addEventListener('click', () => {
+      const latVal = parseFloat(document.getElementById('gps-input-lat').value);
+      const lngVal = parseFloat(document.getElementById('gps-input-lng').value);
+      if (isNaN(latVal) || isNaN(lngVal)) {
+        showToast("Please enter valid decimal coordinates.", "error");
+        return;
+      }
+      setupGpsMarker(latVal, lngVal);
+      closeModal('modal-gps-input');
+      showToast("Manual GPS position set!", "success");
     });
   }
 
@@ -3436,13 +3289,18 @@ function initMapLayers() {
   const layerFilterConfig = [
     { id: 'layer-dispersed', key: 'dispersed' },
     { id: 'layer-overnight', key: 'overnight' },
-    { id: 'layer-services', key: 'services' }
+    { id: 'layer-services', key: 'services' },
+    { id: 'layer-hosts', key: 'hosts' },
+    { id: 'layer-mechanics', key: 'mechanics' },
+    { id: 'layer-meetups', key: 'meetups' }
   ];
   layerFilterConfig.forEach(conf => {
     const el = document.getElementById(conf.id);
     if (el) {
+      el.checked = State.layerFilters[conf.key] !== undefined ? State.layerFilters[conf.key] : true;
       el.addEventListener('change', (e) => {
         State.layerFilters[conf.key] = e.target.checked;
+        saveStateToStorage();
         renderLeafletMarkers();
       });
     }
@@ -3471,7 +3329,10 @@ function shouldShowByLayerFilter(pin) {
   if (cat === 'dispersed_campsite' || cat === 'wild-camping') return State.layerFilters.dispersed;
   if (cat === 'walmart' || cat === 'cracker_barrel' || cat === 'rest_area') return State.layerFilters.overnight;
   if (cat === 'water-station' || cat === 'propane') return State.layerFilters.services;
-  return true; // meetups, mechanics, driveway hosts always show
+  if (cat === 'driveway-host') return State.layerFilters.hosts;
+  if (cat === 'service-mechanic') return State.layerFilters.mechanics;
+  if (!cat || cat === 'meetup') return State.layerFilters.meetups;
+  return true;
 }
 
 function renderLeafletMarkers() {
@@ -3665,7 +3526,7 @@ function openInfoDrawerForSpot(pin) {
     document.getElementById('drawer-vouch-count').innerText = `${pin.attendeesCount} Nomads Going`;
   } else {
     const dataSource = pin.seeded ? ' (from Public Lands Database)' : ' (Community Contributed)';
-    document.getElementById('drawer-vouch-count').innerText = `${pin.vouches} Vanlifers Vouched${dataSource}`;
+    document.getElementById('drawer-vouch-count').innerText = `${pin.vouches || 0} Vanlifers Vouched${dataSource}`;
   }
   
   State.currentViewedSpotId = pin.id;
@@ -3679,6 +3540,24 @@ function openInfoDrawerForSpot(pin) {
     } else {
       btn.innerHTML = `<i data-lucide="check-square" style="width: 14px; height: 14px;"></i> <span>Mark as Visited</span>`;
       btn.classList.add('btn-primary');
+    }
+  }
+
+  // Initialize vouch button state in drawer
+  const vouchBtn = document.getElementById('drawer-vouch-btn');
+  if (vouchBtn) {
+    if (!pin.category) {
+      vouchBtn.style.display = 'none';
+    } else {
+      vouchBtn.style.display = 'inline-flex';
+      const alreadyVouched = pin.vouchedBy && pin.vouchedBy.includes(State.currentUser.name);
+      if (alreadyVouched) {
+        vouchBtn.innerHTML = `<i data-lucide="shield-check" style="width: 14px; height: 14px;"></i> <span>Vouched</span>`;
+        vouchBtn.classList.add('btn-primary');
+      } else {
+        vouchBtn.innerHTML = `<i data-lucide="shield" style="width: 14px; height: 14px;"></i> <span>Vouch Spot</span>`;
+        vouchBtn.classList.remove('btn-primary');
+      }
     }
   }
 
@@ -4289,6 +4168,7 @@ function saveNewFeedTabPost() {
   };
   
   State.posts.unshift(newPost);
+  State._cachedFeeds = {};
   saveStateToStorage();
   
   // Clean inputs
@@ -4714,10 +4594,17 @@ window.adjustChatContainerForVisualViewport = adjustChatContainerForVisualViewpo
 
 function openMobileDrawer() {
   const drawer = document.getElementById('mobile-drawer');
+  const backdrop = document.getElementById('sidebar-backdrop');
   if (drawer) {
     drawer.style.display = 'flex';
     setTimeout(() => {
       drawer.classList.add('open');
+    }, 50);
+  }
+  if (backdrop) {
+    backdrop.style.display = 'block';
+    setTimeout(() => {
+      backdrop.classList.add('active');
     }, 50);
   }
   // Sync profile details inside drawer
@@ -4731,11 +4618,20 @@ function openMobileDrawer() {
 
 function closeMobileDrawer() {
   const drawer = document.getElementById('mobile-drawer');
+  const backdrop = document.getElementById('sidebar-backdrop');
   if (drawer) {
     drawer.classList.remove('open');
     setTimeout(() => {
       if (!drawer.classList.contains('open')) {
         drawer.style.display = 'none';
+      }
+    }, 300);
+  }
+  if (backdrop) {
+    backdrop.classList.remove('active');
+    setTimeout(() => {
+      if (!backdrop.classList.contains('active')) {
+        backdrop.style.display = 'none';
       }
     }, 300);
   }
@@ -4886,9 +4782,9 @@ function handleAuthSignUp(event) {
   event.preventDefault();
   const username = document.getElementById('signup-username').value.trim();
   const email = document.getElementById('signup-email').value.trim();
-  const rig = document.getElementById('signup-rig').value.trim() || "Standard Campervan";
-  const avatar = document.getElementById('signup-avatar').value;
+  const password = document.getElementById('signup-password').value.trim();
   const bio = document.getElementById('signup-bio').value.trim() || "New nomad on the road.";
+  const badgeTag = document.getElementById('signup-badge-tag').value.trim() || "Nomad";
   
   if (!username) return;
   const handle = `@${username.replace(/\s+/g, '_').toLowerCase()}`;
@@ -4908,9 +4804,10 @@ function handleAuthSignUp(event) {
   const newUser = {
     name: username,
     handle: handle,
-    avatar: avatar,
+    avatar: "avatar_bob",
     bio: bio,
-    rig: rig,
+    badgeTag: badgeTag,
+    rig: "Standard Camper",
     solar: "200W Solar",
     power: "100Ah AGM",
     water: "15 Gal Fresh",
@@ -5128,12 +5025,17 @@ function getUserRoleMarkup(username) {
     return `<span class="role-name-official" style="color: #10B981; font-weight: 700;">${cleanName}</span><span class="role-badge-official" style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid #10B981; border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 700; margin-left: 4px; vertical-align: middle;">OFFICIAL</span>`;
   }
   
-  // Find reputation
+  // Find reputation and custom badge tag
   let rep = 0;
   let user = State.users.find(u => u.name === cleanName);
   if (!user && State.currentUser && State.currentUser.name === cleanName) {
     user = State.currentUser;
   }
+  
+  if (user && user.badgeTag) {
+    return `<span class="role-name-custom" style="color: var(--accent-green); font-weight: 700;">${cleanName}</span><span class="role-badge-custom" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 700; margin-left: 4px; vertical-align: middle; text-transform: uppercase;">${user.badgeTag}</span>`;
+  }
+  
   if (user) {
     rep = user.reputation || 0;
   }

@@ -50,13 +50,17 @@
           <span>Messages</span>
           <span class="nav-unread-badge" id="nav-messages-badge" style="display: none;">0</span>
         </div>
-        <div class="nav-item" data-tab="jobs" style="display: none;">
+        <div class="nav-item" data-tab="jobs" id="sidebar-jobs-tab">
           <i data-lucide="briefcase"></i>
           <span>Work & Stay</span>
         </div>
         <div class="nav-item" data-tab="profile">
           <i data-lucide="user"></i>
           <span>My Profile</span>
+        </div>
+        <div class="nav-item" id="sidebar-about-btn" onclick="openAboutModal()">
+          <i data-lucide="info"></i>
+          <span>About VanLyfa</span>
         </div>
       </nav>
       
@@ -204,6 +208,30 @@
                       <span>Water / Propane</span>
                     </span>
                   </label>
+
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="layer-hosts" checked style="cursor: pointer; accent-color: #6E6A5F;">
+                    <span style="display: flex; align-items: center; gap: 6px;">
+                      <span style="width: 10px; height: 10px; background-color: rgba(110, 106, 95, 0.4); border: 1.5px solid #6E6A5F; border-radius: 50%;"></span>
+                      <span>Driveway Hosts</span>
+                    </span>
+                  </label>
+
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="layer-mechanics" checked style="cursor: pointer; accent-color: #2D2D2D;">
+                    <span style="display: flex; align-items: center; gap: 6px;">
+                      <span style="width: 10px; height: 10px; background-color: rgba(45, 45, 45, 0.4); border: 1.5px solid #2D2D2D; border-radius: 50%;"></span>
+                      <span>Van Mechanics</span>
+                    </span>
+                  </label>
+
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="layer-meetups" checked style="cursor: pointer; accent-color: #D55E00;">
+                    <span style="display: flex; align-items: center; gap: 6px;">
+                      <span style="width: 10px; height: 10px; background-color: rgba(213, 94, 0, 0.4); border: 1.5px solid #D55E00; border-radius: 50%;"></span>
+                      <span>Caravan Meetups</span>
+                    </span>
+                  </label>
                 </div>
               </div>
             </div>
@@ -266,10 +294,16 @@
               </div>
 
               <div style="margin-top: 4px; display: flex; flex-direction: column; gap: 8px;">
-                <button class="btn btn-sm btn-primary" id="drawer-mark-visited-btn" style="width: 100%; justify-content: center; gap: 6px;">
-                  <i data-lucide="check-square" style="width: 14px; height: 14px;"></i>
-                  <span>Mark as Visited</span>
-                </button>
+                <div style="display: flex; gap: 8px; width: 100%;">
+                  <button class="btn btn-sm btn-primary" id="drawer-mark-visited-btn" style="flex: 1; justify-content: center; gap: 6px;">
+                    <i data-lucide="check-square" style="width: 14px; height: 14px;"></i>
+                    <span>Mark as Visited</span>
+                  </button>
+                  <button class="btn btn-sm" id="drawer-vouch-btn" style="flex: 1; justify-content: center; gap: 6px;">
+                    <i data-lucide="shield-check" style="width: 14px; height: 14px;"></i>
+                    <span>Vouch Spot</span>
+                  </button>
+                </div>
                 <div style="display: flex; gap: 8px; width: 100%;">
                   <button class="btn btn-sm" id="drawer-directions-btn" style="flex: 1; justify-content: center; gap: 6px;">
                     <i data-lucide="navigation" style="width: 14px; height: 14px;"></i>
@@ -377,10 +411,6 @@
             <h2>Marketplace</h2>
             <p>Buy, sell, or trade camper rigs, spare parts, and van essentials.</p>
           </div>
-          <button class="btn btn-primary" id="market-create-btn">
-            <i data-lucide="plus"></i>
-            <span>Add Listing</span>
-          </button>
         </div>
         
         <div class="filter-row">
@@ -810,21 +840,9 @@
             <label for="signup-password">Password</label>
             <input type="password" id="signup-password" placeholder="••••••••" required style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);">
           </div>
-          <div class="form-row" style="display: flex; gap: 12px;">
-            <div class="form-group" style="flex: 1;">
-              <label for="signup-rig">Rig Model</label>
-              <input type="text" id="signup-rig" placeholder="e.g. Ford Transit" style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);">
-            </div>
-            <div class="form-group" style="flex: 1;">
-              <label for="signup-avatar">Choose Avatar</label>
-              <select id="signup-avatar" style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);">
-                <option value="avatar_bob">Default Blue</option>
-                <option value="avatar_clara">Adventure Green</option>
-                <option value="avatar_forest">Forest Brown</option>
-                <option value="avatar_solar">Solar Yellow</option>
-                <option value="avatar_surf">Surf Orange</option>
-              </select>
-            </div>
+          <div class="form-group">
+            <label for="signup-badge-tag">Badge Tag</label>
+            <input type="text" id="signup-badge-tag" placeholder="e.g. Solo Camper, Mechanic, Driveway Host" style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);">
           </div>
           <div class="form-group">
             <label for="signup-bio">Bio</label>
@@ -832,6 +850,34 @@
           </div>
           <button type="submit" class="btn btn-primary" style="margin-top: 12px; width: 100%; justify-content: center; padding: 10px;">Create Account</button>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Set GPS Location -->
+  <div class="modal-overlay" id="modal-gps-input">
+    <div class="modal-content" style="max-width: 400px; padding: 24px; border-radius: var(--radius-lg); background: var(--card-bg); border: 1px solid var(--border-color);">
+      <div class="modal-header" style="padding: 0 0 12px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <h3 style="font-size: 18px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; margin: 0;">
+          <i data-lucide="map-pin" style="color: var(--accent-green); width: 20px; height: 20px;"></i>
+          <span>Set GPS Location</span>
+        </h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-gps-input')"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding: 16px 0 0 0; display: flex; flex-direction: column; gap: 12px; overflow: visible;">
+        <p style="font-size: 13px; color: var(--muted-text); margin: 0; line-height: 1.4;">Geolocation is unavailable or blocked. Enter coordinates manually to center the map and drop your location marker.</p>
+        
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+          <label for="gps-input-lat" style="font-size: 12px; font-weight: 600; color: var(--text-main);">Latitude</label>
+          <input type="number" id="gps-input-lat" step="any" placeholder="e.g. 35.1983" value="35.1983" style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);">
+        </div>
+        
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+          <label for="gps-input-lng" style="font-size: 12px; font-weight: 600; color: var(--text-main);">Longitude</label>
+          <input type="number" id="gps-input-lng" step="any" placeholder="e.g. -111.6513" value="-111.6513" style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);">
+        </div>
+        
+        <button class="btn btn-primary" id="gps-submit-btn" style="margin-top: 12px; width: 100%; justify-content: center; padding: 10px;">Set Location</button>
       </div>
     </div>
   </div>
@@ -1362,7 +1408,7 @@
           <i data-lucide="message-circle"></i>
           <span>Messages</span>
         </div>
-        <div class="mobile-drawer-item" data-tab="jobs" onclick="switchTab('jobs'); closeMobileDrawer();" style="display: none;">
+        <div class="mobile-drawer-item" data-tab="jobs" onclick="switchTab('jobs'); closeMobileDrawer();">
           <i data-lucide="briefcase"></i>
           <span>Work & Stay</span>
         </div>
@@ -1376,7 +1422,7 @@
         </div>
       </nav>
       <!-- Profile Widget inside Mobile Drawer -->
-      <div class="mobile-drawer-profile" onclick="switchTab('profile'); closeMobileDrawer();">
+      <div class="mobile-drawer-profile" onclick="if (!State.isSignedIn) { openModal('modal-auth-required'); } else { switchTab('profile'); } closeMobileDrawer();">
         <img src="" alt="User Avatar" class="profile-avatar" id="mobile-drawer-user-avatar">
         <div class="profile-info" style="display: flex; flex-direction: column; gap: 2px;">
           <span class="profile-name" id="mobile-drawer-user-name" style="font-size: 14px; font-weight: 700; color: var(--text-charcoal);">Nomad Bob</span>

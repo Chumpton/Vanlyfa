@@ -1375,19 +1375,25 @@ const ClusterEngine = {
     this.allSpots = spots;
   },
   getVisibleSpots(bounds, zoom) {
-    const sw = bounds.getSouthWest();
-    const ne = bounds.getNorthEast();
-    let filtered = this.allSpots.filter(s =>
-      s.lat >= sw.lat && s.lat <= ne.lat &&
-      s.lng >= sw.lng && s.lng <= ne.lng
-    );
+    let filtered = this.allSpots;
     if (typeof shouldShowByLayerFilter === 'function') {
       filtered = filtered.filter(shouldShowByLayerFilter);
     }
-    if (zoom >= 10) return filtered;
-    if (zoom >= 7) return this.clusterByGrid(filtered, 0.3);
-    if (zoom >= 5) return this.clusterByGrid(filtered, 1.0);
-    return this.clusterByGrid(filtered, 3.0);
+    
+    let clustered;
+    if (zoom >= 10) {
+      clustered = filtered;
+    } else {
+      const cellSize = zoom >= 7 ? 0.3 : (zoom >= 5 ? 1.0 : 3.0);
+      clustered = this.clusterByGrid(filtered, cellSize);
+    }
+
+    const sw = bounds.getSouthWest();
+    const ne = bounds.getNorthEast();
+    return clustered.filter(s =>
+      s.lat >= sw.lat && s.lat <= ne.lat &&
+      s.lng >= sw.lng && s.lng <= ne.lng
+    );
   },
   clusterByGrid(spots, cellSize) {
     const cells = {};
