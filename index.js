@@ -859,6 +859,7 @@ function switchTab(tabName) {
     tribes: "Tribes",
     meetups: "Meetups",
     forum: "Forum Board",
+    messages: "Direct Messages",
     profile: "Rig Profile"
   };
   document.getElementById('page-display-title').innerText = titles[tabName] || "Vanlyfa";
@@ -871,6 +872,7 @@ function switchTab(tabName) {
     tribes: "Search caravaneer groups...",
     meetups: "Search fireside gatherings...",
     forum: "Search discussion topics...",
+    messages: "Search direct messages...",
     profile: "Search profile specs..."
   };
   document.getElementById('global-search').placeholder = placeholders[tabName] || "Search...";
@@ -958,6 +960,9 @@ function renderCurrentTab() {
       break;
     case "forum":
       renderForumView();
+      break;
+    case "messages":
+      renderContactsSidebar();
       break;
     case "profile":
       renderUserProfile();
@@ -2581,53 +2586,65 @@ function saveNewFeedTabPost() {
    ========================================================================== */
 
 function renderContactsSidebar() {
-  const container = document.getElementById('contacts-list-scroll');
-  if (!container) return;
-  
-  container.innerHTML = '';
+  const sidebarContainer = document.getElementById('contacts-list-scroll');
+  const tabContainer = document.getElementById('messages-tab-contacts-list');
   
   const contacts = State.users.filter(u => u.name !== State.currentUser.name);
   
-  contacts.forEach(contact => {
-    const row = document.createElement('div');
-    row.className = 'contact-item-row';
-    row.onclick = () => openDirectChat(contact.name);
+  const populate = (container) => {
+    if (!container) return;
+    container.innerHTML = '';
     
-    const isOnline = contact.name === "Clara Outdoors" || contact.name === "Forest Nomad" || contact.name === "Baja Surfer";
-    
-    const messages = State.chats[contact.name] || [];
-    let lastMsgText = "No messages yet";
-    if (messages.length > 0) {
-      const lastMsg = messages[messages.length - 1];
-      lastMsgText = (lastMsg.sender === State.currentUser.name ? "You: " : "") + lastMsg.text;
-    }
-    
-    row.innerHTML = `
-      <div class="contact-item-avatar-wrap">
-        <img src="${getAvatarSrc(contact.avatar)}" alt="${contact.name}" class="contact-item-avatar">
-        <div class="contact-status-dot ${isOnline ? 'online' : ''}"></div>
-      </div>
-      <div class="contact-item-details">
-        <div class="contact-item-name">${contact.name}</div>
-        <div class="contact-item-preview">${lastMsgText}</div>
-      </div>
-    `;
-    container.appendChild(row);
-  });
+    contacts.forEach(contact => {
+      const row = document.createElement('div');
+      row.className = 'contact-item-row';
+      row.onclick = () => openDirectChat(contact.name);
+      
+      const isOnline = contact.name === "Clara Outdoors" || contact.name === "Forest Nomad" || contact.name === "Baja Surfer";
+      
+      const messages = State.chats[contact.name] || [];
+      let lastMsgText = "No messages yet";
+      if (messages.length > 0) {
+        const lastMsg = messages[messages.length - 1];
+        lastMsgText = (lastMsg.sender === State.currentUser.name ? "You: " : "") + lastMsg.text;
+      }
+      
+      row.innerHTML = `
+        <div class="contact-item-avatar-wrap">
+          <img src="${getAvatarSrc(contact.avatar)}" alt="${contact.name}" class="contact-item-avatar">
+          <div class="contact-status-dot ${isOnline ? 'online' : ''}"></div>
+        </div>
+        <div class="contact-item-details">
+          <div class="contact-item-name">${contact.name}</div>
+          <div class="contact-item-preview">${lastMsgText}</div>
+        </div>
+      `;
+      container.appendChild(row);
+    });
+  };
+  
+  populate(sidebarContainer);
+  populate(tabContainer);
   
   // Compute unread count based on active chats that are closed or seed
-  const unreadBadge = document.getElementById('contacts-unread-badge');
-  if (unreadBadge) {
-    const unreadCount = 2; // Clara and Forest have seeded messages
-    const openActive = State.activeChats.length > 0;
-    
-    if (unreadCount > 0 && !openActive) {
-      unreadBadge.innerText = unreadCount;
-      unreadBadge.style.display = 'block';
-    } else {
-      unreadBadge.style.display = 'none';
+  const unreadCount = 2; // Clara and Forest have seeded messages
+  const openActive = State.activeChats.length > 0;
+  
+  const badges = [
+    document.getElementById('contacts-unread-badge'),
+    document.getElementById('nav-messages-badge')
+  ];
+  
+  badges.forEach(badge => {
+    if (badge) {
+      if (unreadCount > 0 && !openActive) {
+        badge.innerText = unreadCount;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
     }
-  }
+  });
 }
 
 function openDirectChat(username) {

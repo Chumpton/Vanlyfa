@@ -45,6 +45,11 @@
           <i data-lucide="message-square"></i>
           <span>Forum</span>
         </div>
+        <div class="nav-item" data-tab="messages" style="position: relative;">
+          <i data-lucide="message-circle"></i>
+          <span>Messages</span>
+          <span class="nav-unread-badge" id="nav-messages-badge" style="display: none;">0</span>
+        </div>
         <div class="nav-item" data-tab="profile">
           <i data-lucide="user"></i>
           <span>My Profile</span>
@@ -328,6 +333,21 @@
                 <button class="btn btn-primary" id="forum-submit-reply-btn">Submit Reply</button>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: MESSAGES -->
+      <section class="tab-content-pane" id="pane-messages">
+        <div class="forum-tab-layout">
+          <div class="section-header">
+            <div class="section-title-wrap">
+              <h2>Inbox / Messages</h2>
+              <p>Chat with fellow vanlifers and track your conversations.</p>
+            </div>
+          </div>
+          <div class="contacts-list" id="messages-tab-contacts-list" style="max-width: 600px; margin: 0 auto; background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px;">
+            <!-- Dynamically populated contacts -->
           </div>
         </div>
       </section>
