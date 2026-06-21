@@ -2742,7 +2742,8 @@ function renderContactsSidebar() {
   
   const badges = [
     document.getElementById('contacts-unread-badge'),
-    document.getElementById('nav-messages-badge')
+    document.getElementById('nav-messages-badge'),
+    document.getElementById('mobile-feed-unread-badge')
   ];
   
   badges.forEach(badge => {

@@ -1140,7 +1140,7 @@ body {
    ========================================================================== */
 .tribes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 24px;
 }
 
@@ -3005,4 +3005,54 @@ body.dark-mode .chat-messages-area {
 
 .welcome-btn:hover {
   opacity: 0.9;
+}
+
+/* Mobile Floating Feed FAB (hidden on desktop) */
+.mobile-feed-fab {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-feed-fab {
+    display: flex !important;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--accent-green);
+    color: white;
+    border: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    z-index: 1050; /* below chat windows and sidebar backdrop but above content pages */
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+  }
+  .mobile-feed-fab:active {
+    transform: scale(0.92);
+  }
+  .mobile-feed-fab i, .mobile-feed-fab svg {
+    width: 24px;
+    height: 24px;
+    stroke: white;
+  }
+  .mobile-feed-fab .nav-unread-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background-color: #D55E00;
+    color: white;
+    border-radius: 50%;
+    min-width: 18px;
+    height: 18px;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--card-bg);
+  }
 }
