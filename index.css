@@ -117,22 +117,10 @@ body {
   letter-spacing: -0.5px;
   color: var(--text-charcoal);
   text-transform: uppercase;
-  text-shadow: 
-    -1px -1px 0 rgba(0, 0, 0, 0.8),  
-     1px -1px 0 rgba(0, 0, 0, 0.8),
-    -1px  1px 0 rgba(0, 0, 0, 0.8),
-     1px  1px 0 rgba(0, 0, 0, 0.8),
-     1px  2px 3px rgba(0, 0, 0, 0.6);
 }
 
 .logo-accent {
   color: var(--accent-green);
-  text-shadow: 
-    -1px -1px 0 rgba(0, 0, 0, 0.8),  
-     1px -1px 0 rgba(0, 0, 0, 0.8),
-    -1px  1px 0 rgba(0, 0, 0, 0.8),
-     1px  1px 0 rgba(0, 0, 0, 0.8),
-     1px  2px 3px rgba(0, 0, 0, 0.6);
 }
 
 .nav-menu {
@@ -3584,3 +3572,72 @@ body.dark-mode .chat-messages-area {
     right: 444px !important;
   }
 }
+
+/* ==========================================================================
+   GPS PIN, MOBILE COMPOSER WRAPPING, AND MOBILE SMOOTHNESS RULES
+   ========================================================================== */
+
+/* Animated GPS Location Pin */
+.gps-location-pin {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gps-pin-dot {
+  width: 12px;
+  height: 12px;
+  background-color: #3b82f6;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  z-index: 2;
+}
+.gps-pin-pulse {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background-color: rgba(59, 130, 246, 0.4);
+  border-radius: 50%;
+  animation: gpsPulse 2s infinite ease-out;
+  z-index: 1;
+}
+@keyframes gpsPulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* Mobile post creator button cutoff fix */
+@media (max-width: 480px) {
+  .feed-tab-post-creator-footer {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .feed-tab-post-creator-footer .select-filter,
+  .feed-tab-post-creator-footer #feed-tab-post-submit {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* Mobile Smoothness Optimizations */
+@media (max-width: 768px) {
+  .tab-content-pane,
+  .chat-messages-area,
+  .contacts-list,
+  .meetup-comments-list {
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .map-info-drawer,
+  .mobile-drawer {
+    will-change: transform;
+  }
+}
+

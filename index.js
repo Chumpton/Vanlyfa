@@ -1378,6 +1378,10 @@ function updateSidebarProfileWidget() {
   const authBtn = document.getElementById('sidebar-auth-btn');
   const feedTabAvatar = document.getElementById('feed-tab-user-avatar');
   
+  const textarea = document.getElementById('feed-tab-post-text');
+  const submitBtn = document.getElementById('feed-tab-post-submit');
+  const imgSelect = document.getElementById('feed-tab-post-img-select');
+
   if (State.isSignedIn) {
     avatarEl.src = getAvatarSrc(State.currentUser.avatar);
     nameEl.innerText = State.currentUser.name;
@@ -1391,6 +1395,19 @@ function updateSidebarProfileWidget() {
     if (feedTabAvatar) {
       feedTabAvatar.src = getAvatarSrc(State.currentUser.avatar);
     }
+    
+    // Enable feed post creator
+    if (textarea) {
+      textarea.disabled = false;
+      textarea.placeholder = "What's happening on the road? Share campsite views, solar upgrades, or camper hacks...";
+    }
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<i data-lucide="send"></i> <span>Share Update</span>`;
+    }
+    if (imgSelect) {
+      imgSelect.disabled = false;
+    }
   } else {
     avatarEl.src = getAvatarSrc('avatar_guest');
     nameEl.innerText = "Guest Nomad";
@@ -1403,6 +1420,20 @@ function updateSidebarProfileWidget() {
     }
     if (feedTabAvatar) {
       feedTabAvatar.src = getAvatarSrc('avatar_guest');
+    }
+    
+    // Disable and lock feed post creator for guest
+    if (textarea) {
+      textarea.disabled = true;
+      textarea.value = '';
+      textarea.placeholder = "Please sign in to share updates on the road...";
+    }
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i data-lucide="lock"></i> <span>Locked</span>`;
+    }
+    if (imgSelect) {
+      imgSelect.disabled = true;
     }
   }
   
@@ -2236,6 +2267,7 @@ function renderTribeHubChat(tribeId) {
 
 function sendTribeChatMessage(e) {
   e.preventDefault();
+  if (!requireAuth()) return;
   const tribeId = State.activeTribeId;
   const input = document.getElementById('tribe-chat-input');
   if (!tribeId || !input || input.value.trim() === '') return;
@@ -2449,7 +2481,8 @@ function renderMeetupsList() {
     const day = d.getDate() || "15";
     
     // User RSVP status
-    const hasRsvped = meetup.attendees.includes('avatar_bob');
+    const userAvatar = State.currentUser ? State.currentUser.avatar : 'avatar_bob';
+    const hasRsvped = meetup.attendees.includes(userAvatar);
     
     const card = document.createElement('div');
     card.className = 'meetup-card';
@@ -2531,9 +2564,11 @@ function renderMeetupsList() {
 }
 
 function toggleMeetupRsvp(meetupId) {
+  if (!requireAuth()) return;
   const meetup = State.meetups.find(m => m.id === meetupId);
   if (meetup) {
-    const idx = meetup.attendees.indexOf('avatar_bob');
+    const userAvatar = State.currentUser ? State.currentUser.avatar : 'avatar_bob';
+    const idx = meetup.attendees.indexOf(userAvatar);
     if (idx > -1) {
       // cancel
       meetup.attendees.splice(idx, 1);
@@ -2541,7 +2576,7 @@ function toggleMeetupRsvp(meetupId) {
       showToast("Cancelled your RSVP.");
     } else {
       // rsvp
-      meetup.attendees.push('avatar_bob');
+      meetup.attendees.push(userAvatar);
       meetup.attendeesCount++;
       showToast("RSVP confirmed! See you at camp.", "success");
     }
@@ -3042,6 +3077,7 @@ function initProfileMap(user) {
 }
 
 function toggleFriend() {
+  if (!requireAuth()) return;
   const user = getActiveUser();
   if (user.name === State.currentUser.name) return;
   
@@ -3068,6 +3104,7 @@ function toggleFriend() {
 }
 
 function toggleReputation() {
+  if (!requireAuth()) return;
   const user = getActiveUser();
   const currentUserObj = State.users.find(u => u.name === State.currentUser.name);
   if (!currentUserObj || !user || user.name === currentUserObj.name) return;
@@ -3096,6 +3133,7 @@ function toggleReputation() {
 }
 
 function markCurrentSpotAsVisited() {
+  if (!requireAuth()) return;
   if (!State.currentViewedSpotId) return;
   
   const currentUserObj = State.users.find(u => u.name === State.currentUser.name);
@@ -3216,6 +3254,48 @@ function initLeafletMap() {
   renderLeafletMarkers();
   initMapLayers();
   
+  // GPS Locate Button click handler
+  const locateBtn = document.getElementById('map-locate-btn');
+  if (locateBtn) {
+    locateBtn.addEventListener('click', () => {
+      if (navigator.geolocation) {
+        showToast("Locating your position...", "info");
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            
+            if (State.leafletMap) {
+              State.leafletMap.flyTo([latitude, longitude], 13);
+            }
+            
+            // Add or update GPS marker
+            if (State.gpsMarker) {
+              State.gpsMarker.setLatLng([latitude, longitude]);
+            } else {
+              const gpsIcon = L.divIcon({
+                className: 'gps-location-pin',
+                html: '<div class="gps-pin-dot"></div><div class="gps-pin-pulse"></div>',
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+              });
+              State.gpsMarker = L.marker([latitude, longitude], { icon: gpsIcon })
+                .addTo(State.leafletMap)
+                .bindPopup("<strong>Your Location</strong>");
+            }
+            showToast("Centered on your location!", "success");
+          },
+          (error) => {
+            console.error(error);
+            showToast("Failed to retrieve GPS location. Ensure location access is enabled.", "error");
+          },
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
+      } else {
+        showToast("Geolocation is not supported by your browser.", "error");
+      }
+    });
+  }
+
   // Re-render markers on map pan/zoom (for clustering)
   State.leafletMap.on('moveend', () => {
     renderLeafletMarkers();
@@ -3397,10 +3477,6 @@ function shouldShowByLayerFilter(pin) {
 function renderLeafletMarkers() {
   if (!State.leafletMap) return;
   
-  // Clear existing markers
-  State.mapMarkers.forEach(m => State.leafletMap.removeLayer(m));
-  State.mapMarkers = [];
-  
   const zoom = State.leafletMap.getZoom();
   const bounds = State.leafletMap.getBounds();
   
@@ -3416,6 +3492,7 @@ function renderLeafletMarkers() {
   
   // De-duplicate by id
   const seen = new Set();
+  const nextPinsMap = new Map();
   
   pins.forEach(pin => {
     if (seen.has(pin.id)) return;
@@ -3430,8 +3507,32 @@ function renderLeafletMarkers() {
                          (pin.description && pin.description.toLowerCase().includes(query));
     if (!matchesQuery) return;
     
+    nextPinsMap.set(pin.id, pin);
+  });
+
+  // Track map markers in State using a Map of pinId -> marker object
+  if (!State.leafletMarkersMap) {
+    State.leafletMarkersMap = new Map();
+  }
+
+  // Remove markers that are no longer visible
+  for (const [pinId, marker] of State.leafletMarkersMap.entries()) {
+    if (!nextPinsMap.has(pinId)) {
+      State.leafletMap.removeLayer(marker);
+      State.leafletMarkersMap.delete(pinId);
+    }
+  }
+
+  // Add or update markers
+  for (const [pinId, pin] of nextPinsMap.entries()) {
+    if (State.leafletMarkersMap.has(pinId)) {
+      // Marker already exists on map, leave it untouched to preserve open popups
+      continue;
+    }
+
     const { markerColor, typeName } = getMarkerMeta(pin);
-    
+    let marker;
+
     // Cluster marker (larger, with count)
     if (pin._isCluster) {
       const count = pin._clusterCount;
@@ -3442,58 +3543,59 @@ function renderLeafletMarkers() {
         iconSize: [size, size],
         iconAnchor: [size/2, size/2]
       });
-      const marker = L.marker([pin.lat, pin.lng], { icon: customIcon }).addTo(State.leafletMap);
+      marker = L.marker([pin.lat, pin.lng], { icon: customIcon }).addTo(State.leafletMap);
       marker.on('click', () => {
         State.leafletMap.setView([pin.lat, pin.lng], zoom + 2);
       });
-      State.mapMarkers.push(marker);
-      return;
-    }
-    
-    // Standard single-spot marker
-    const borderStyle = pin.pendingSync ? '2px dashed var(--accent-red)' : '2px solid white';
-    const opacityStyle = pin.pendingSync ? '0.7' : '1.0';
-    const verifiedDot = pin.verified ? '<div style="position:absolute;top:-2px;right:-2px;width:7px;height:7px;background:#10b981;border-radius:50%;border:1px solid white;"></div>' : '';
-    const customIcon = L.divIcon({
-      html: `<div style="position:relative;background-color:${markerColor}; width:20px; height:20px; border-radius:50%; border:${borderStyle}; opacity:${opacityStyle}; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center;">
-              <div style="background-color:white; width:6px; height:6px; border-radius:50%;"></div>
-              ${verifiedDot}
-             </div>`,
-      className: 'custom-map-icon',
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
-    });
-    
-    const marker = L.marker([pin.lat, pin.lng], { icon: customIcon }).addTo(State.leafletMap);
-    
-    // Custom popup
-    const popupHtml = `
-      <div class="custom-map-popup-badge" style="background:${markerColor}1A; color:${markerColor};">${typeName}</div>
-      <div class="custom-map-popup-header">${pin.title}${pin.pendingSync ? ' <span style="font-size:9px; color:var(--accent-red); font-weight:bold; margin-left:4px;">(Syncing...)</span>' : ''}${pin.verified ? ' <span style="color:#10b981;font-size:11px;" title="Verified">✓</span>' : ''}</div>
-      <div class="custom-map-popup-desc">${pin.description ? pin.description.substring(0, 70) : 'Gathering at campsite details...'}...</div>
-      <div class="custom-map-popup-footer">
-        <span class="custom-map-popup-user">
-          <i data-lucide="user" style="width:10px; height:10px;"></i>
-          <span>${pin.author ? pin.author.name : pin.host.name}</span>
-        </span>
-        <span class="custom-map-popup-btn" onclick="triggerInfoDrawerFromMap('${pin.id}')">Details &rarr;</span>
-      </div>
-    `;
-    
-    if (window.innerWidth > 768) {
-      marker.bindPopup(popupHtml, {
-        closeButton: false,
-        minWidth: 200
+    } else {
+      // Standard single-spot marker
+      const borderStyle = pin.pendingSync ? '2px dashed var(--accent-red)' : '2px solid white';
+      const opacityStyle = pin.pendingSync ? '0.7' : '1.0';
+      const verifiedDot = pin.verified ? '<div style="position:absolute;top:-2px;right:-2px;width:7px;height:7px;background:#10b981;border-radius:50%;border:1px solid white;"></div>' : '';
+      const customIcon = L.divIcon({
+        html: `<div style="position:relative;background-color:${markerColor}; width:20px; height:20px; border-radius:50%; border:${borderStyle}; opacity:${opacityStyle}; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center;">
+                <div style="background-color:white; width:6px; height:6px; border-radius:50%;"></div>
+                ${verifiedDot}
+               </div>`,
+        className: 'custom-map-icon',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+      
+      marker = L.marker([pin.lat, pin.lng], { icon: customIcon }).addTo(State.leafletMap);
+      
+      // Custom popup
+      const popupHtml = `
+        <div class="custom-map-popup-badge" style="background:${markerColor}1A; color:${markerColor};">${typeName}</div>
+        <div class="custom-map-popup-header">${pin.title}${pin.pendingSync ? ' <span style="font-size:9px; color:var(--accent-red); font-weight:bold; margin-left:4px;">(Syncing...)</span>' : ''}${pin.verified ? ' <span style="color:#10b981;font-size:11px;" title="Verified">✓</span>' : ''}</div>
+        <div class="custom-map-popup-desc">${pin.description ? pin.description.substring(0, 70) : 'Gathering at campsite details...'}...</div>
+        <div class="custom-map-popup-footer">
+          <span class="custom-map-popup-user">
+            <i data-lucide="user" style="width:10px; height:10px;"></i>
+            <span>${pin.author ? pin.author.name : pin.host.name}</span>
+          </span>
+          <span class="custom-map-popup-btn" onclick="triggerInfoDrawerFromMap('${pin.id}')">Details &rarr;</span>
+        </div>
+      `;
+      
+      if (window.innerWidth > 768) {
+        marker.bindPopup(popupHtml, {
+          closeButton: false,
+          minWidth: 200
+        });
+      }
+      
+      // Drawer opener on click
+      marker.on('click', () => {
+        openInfoDrawerForSpot(pin);
       });
     }
     
-    // Drawer opener on click
-    marker.on('click', () => {
-      openInfoDrawerForSpot(pin);
-    });
-    
-    State.mapMarkers.push(marker);
-  });
+    State.leafletMarkersMap.set(pinId, marker);
+  }
+
+  // Keep State.mapMarkers synchronized for backwards-compatibility
+  State.mapMarkers = Array.from(State.leafletMarkersMap.values());
 }
 
 // Global scope binder to trigger info drawer inside popup string template
@@ -4100,6 +4202,7 @@ function saveNewMeetup() {
 
 // 8. Create Thread
 function saveNewForumThread() {
+  if (!requireAuth()) return;
   const title = document.getElementById('thread-title-input').value.trim();
   const category = document.getElementById('thread-cat-input').value.trim() || "General";
   const body = document.getElementById('thread-body-input').value.trim();
@@ -4165,6 +4268,7 @@ function toggleFeedShelf(shelf) {
 
 // Save post from Feed tab
 function saveNewFeedTabPost() {
+  if (!requireAuth()) return;
   const content = document.getElementById('feed-tab-post-text').value.trim();
   const imgVal = document.getElementById('feed-tab-post-img-select').value;
   
@@ -5159,6 +5263,7 @@ function saveNewJobListing(event) {
 
 function saveMeetupComment(event, meetupId) {
   event.preventDefault();
+  if (!requireAuth()) return;
   const input = document.getElementById(`meetup-comment-input-${meetupId}`);
   if (!input) return;
   const text = input.value.trim();
@@ -5191,6 +5296,7 @@ function shareMeetup(meetupId) {
 }
 
 function contactHost(hostName, meetupOrJobTitle) {
+  if (!requireAuth()) return;
   openDirectChat(hostName);
   if (meetupOrJobTitle) {
     setTimeout(() => {

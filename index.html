@@ -127,6 +127,11 @@
                 <i data-lucide="layers" style="width: 16px; height: 16px;"></i>
               </button>
 
+              <!-- Floating GPS Locate Button -->
+              <button class="btn" id="map-locate-btn" title="Find My Location" style="position: absolute; top: 16px; left: 96px; z-index: 1000; box-shadow: var(--shadow-md); padding: 8px; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer;">
+                <i data-lucide="locate" style="width: 16px; height: 16px;"></i>
+              </button>
+
               <!-- Floating Map Overlays Panel (Collapsible) -->
               <div id="map-layers-panel" style="position: absolute; top: 60px; left: 56px; z-index: 1000; background: rgba(30, 30, 30, 0.9); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 12px; width: 220px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); color: white; display: none; flex-direction: column; transition: all 0.3s ease;">
                 <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; color: var(--accent-green); display: flex; align-items: center; gap: 6px;">
