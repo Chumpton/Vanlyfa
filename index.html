@@ -248,19 +248,78 @@
 
       <!-- TAB: TRIBES -->
       <section class="tab-content-pane" id="pane-tribes">
-        <div class="section-header">
-          <div class="section-title-wrap">
-            <h2>Tribes</h2>
-            <p>Find your pack. Join regional groups, brand circles, and interest-based caravans.</p>
+        <!-- Main list view -->
+        <div id="tribes-main-view">
+          <div class="section-header">
+            <div class="section-title-wrap">
+              <h2>Tribes</h2>
+              <p>Find your tribe. Join regional groups, brand circles, and interest-based caravans.</p>
+            </div>
+            <button class="btn btn-primary" id="tribe-create-btn">
+              <i data-lucide="plus"></i>
+              <span>Form Tribe</span>
+            </button>
           </div>
-          <button class="btn btn-primary" id="tribe-create-btn">
-            <i data-lucide="plus"></i>
-            <span>Form Tribe</span>
-          </button>
+          
+          <!-- "Your Tribes" section -->
+          <div class="your-tribes-section" id="your-tribes-section" style="margin-bottom: 32px; display: none;">
+            <h3 style="font-size: 14px; font-weight: 700; color: var(--text-charcoal); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="users" style="color:var(--accent-green); width:18px; height:18px;"></i> Joined Tribes
+            </h3>
+            <div class="your-tribes-grid" id="your-tribes-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px;">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+          
+          <h3 style="font-size: 14px; font-weight: 700; color: var(--text-charcoal); margin-bottom: 16px;">Discover Caravan Tribes</h3>
+          <div class="tribes-grid" id="tribes-grid">
+            <!-- Dynamically populated -->
+          </div>
         </div>
-        
-        <div class="tribes-grid" id="tribes-grid">
-          <!-- Dynamically populated -->
+
+        <!-- Tribe Detailed Hub View -->
+        <div id="tribe-detail-view" style="display: none;">
+          <div class="tribe-hub-header-card" id="tribe-hub-header-card" style="background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 24px;">
+            <!-- Will be dynamically populated -->
+          </div>
+
+          <!-- Tabs: Live Chat vs Forum -->
+          <div class="tribe-hub-tabs" style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; gap: 16px;">
+            <button class="btn tab-btn active" id="tribe-tab-chat-btn" onclick="switchTribeHubTab('chat')">
+              <i data-lucide="message-square"></i> Live Chat
+            </button>
+            <button class="btn tab-btn" id="tribe-tab-forum-btn" onclick="switchTribeHubTab('forum')">
+              <i data-lucide="scroll-text"></i> Tribe Forum
+            </button>
+          </div>
+
+          <!-- Content: Live Chat -->
+          <div class="tribe-hub-content-pane active" id="tribe-pane-chat">
+            <div class="tribe-chat-box" style="background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; flex-direction: column; height: 420px; overflow: hidden;">
+              <div class="tribe-chat-messages" id="tribe-chat-messages-area" style="flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background-color: var(--bg-sand);">
+                <!-- Chat messages -->
+              </div>
+              <form class="tribe-chat-input-bar" id="tribe-chat-form" style="border-top: 1px solid var(--border-color); padding: 12px; display: flex; gap: 8px; background-color: var(--card-bg);" onsubmit="sendTribeChatMessage(event)">
+                <input type="text" id="tribe-chat-input" placeholder="Type a message to the tribe..." style="flex-grow:1; border: 1px solid var(--border-color); border-radius: 20px; padding: 8px 16px; outline:none; font-size:13px;" />
+                <button type="submit" class="btn btn-primary" style="border-radius:20px; padding: 6px 16px; display:flex; align-items:center; gap:6px;">
+                  <i data-lucide="send" style="width:14px; height:14px;"></i> Send
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Content: Forum -->
+          <div class="tribe-hub-content-pane" id="tribe-pane-forum" style="display: none;">
+            <div class="tribe-forum-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+              <h3 style="font-size:14px; font-weight:700; color:var(--text-charcoal);">Discussions</h3>
+              <button class="btn btn-sm btn-primary" onclick="openTribeNewThreadModal()">
+                <i data-lucide="plus"></i> New Thread
+              </button>
+            </div>
+            <div class="tribe-forum-list" id="tribe-forum-list" style="display:flex; flex-direction:column; gap:12px;">
+              <!-- Threads list -->
+            </div>
+          </div>
         </div>
       </section>
 
