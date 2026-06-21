@@ -799,6 +799,86 @@
   <!-- Chat Windows Container (floats at bottom right) -->
   <div class="chat-windows-container" id="chat-windows-container"></div>
 
+  <!-- Mobile Slide-out Navigation Drawer -->
+  <div class="mobile-drawer" id="mobile-drawer" style="display: none;">
+    <div class="mobile-drawer-content">
+      <div class="mobile-drawer-header">
+        <a href="javascript:void(0)" class="logo-container" onclick="switchTab('dashboard'); closeMobileDrawer();">
+          <img src="VLLOGO.png" alt="Vanlyfa Logo" class="logo-img" onerror="this.style.visibility='hidden';">
+          <span class="logo-text">Van<span class="logo-accent">lyfa</span></span>
+        </a>
+        <button class="btn btn-sm" onclick="closeMobileDrawer()" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center;"><i data-lucide="x"></i></button>
+      </div>
+      <nav class="mobile-drawer-menu">
+        <div class="mobile-drawer-item active" data-tab="dashboard" onclick="switchTab('dashboard'); closeMobileDrawer();">
+          <i data-lucide="compass"></i>
+          <span>Dashboard</span>
+        </div>
+        <div class="mobile-drawer-item" data-tab="feed" onclick="switchTab('feed'); closeMobileDrawer();">
+          <i data-lucide="rss"></i>
+          <span>Feed</span>
+        </div>
+        <div class="mobile-drawer-item" data-tab="marketplace" onclick="switchTab('marketplace'); closeMobileDrawer();">
+          <i data-lucide="shopping-bag"></i>
+          <span>Marketplace</span>
+        </div>
+        <div class="mobile-drawer-item" data-tab="tribes" onclick="switchTab('tribes'); closeMobileDrawer();">
+          <i data-lucide="users"></i>
+          <span>Tribes</span>
+        </div>
+        <div class="mobile-drawer-item" data-tab="meetups" onclick="switchTab('meetups'); closeMobileDrawer();">
+          <i data-lucide="calendar"></i>
+          <span>Meetups</span>
+        </div>
+        <div class="mobile-drawer-item" data-tab="forum" onclick="switchTab('forum'); closeMobileDrawer();">
+          <i data-lucide="scroll-text"></i>
+          <span>Forum</span>
+        </div>
+        <div class="mobile-drawer-item" data-tab="messages" onclick="switchTab('messages'); closeMobileDrawer();">
+          <i data-lucide="message-circle"></i>
+          <span>Messages</span>
+        </div>
+        <div class="mobile-drawer-item" data-tab="profile" onclick="switchTab('profile'); closeMobileDrawer();">
+          <i data-lucide="user"></i>
+          <span>My Profile</span>
+        </div>
+      </nav>
+      <!-- Profile Widget inside Mobile Drawer -->
+      <div class="mobile-drawer-profile" onclick="switchTab('profile'); closeMobileDrawer();">
+        <img src="" alt="User Avatar" class="profile-avatar" id="mobile-drawer-user-avatar">
+        <div class="profile-info" style="display: flex; flex-direction: column; gap: 2px;">
+          <span class="profile-name" id="mobile-drawer-user-name" style="font-size: 14px; font-weight: 700; color: var(--text-charcoal);">Nomad Bob</span>
+          <span class="profile-handle" id="mobile-drawer-user-handle" style="font-size: 11px; color: var(--muted-text);">@nomad_bob</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Floating Centered Action FAB (+) -->
+  <button class="mobile-action-fab" id="mobile-action-fab" title="Quick Actions">
+    <i data-lucide="plus"></i>
+  </button>
+  
+  <!-- Floating Action Menu Sheet -->
+  <div class="mobile-action-menu" id="mobile-action-menu" style="display: none;">
+    <div class="mobile-action-menu-content">
+      <h3>Quick Actions</h3>
+      <button class="btn btn-action-item" onclick="openModal('modal-add-post'); closeMobileActionMenu();">
+        <i data-lucide="rss"></i>
+        <span>Share Update / Post</span>
+      </button>
+      <button class="btn btn-action-item" onclick="openModal('modal-add-spot'); closeMobileActionMenu();">
+        <i data-lucide="map-pin"></i>
+        <span>Add Spot to Map</span>
+      </button>
+      <button class="btn btn-action-item" onclick="openModal('modal-add-listing'); closeMobileActionMenu();">
+        <i data-lucide="shopping-bag"></i>
+        <span>Create Marketplace Listing</span>
+      </button>
+      <button class="btn btn-cancel" style="margin-top: 8px; width: 100%; justify-content: center;" onclick="closeMobileActionMenu()">Cancel</button>
+    </div>
+  </div>
+
   <!-- Floating Contacts Toggle FAB -->
   <button class="contacts-toggle-btn" id="contacts-toggle-btn" title="Messages">
     <i data-lucide="message-square"></i>

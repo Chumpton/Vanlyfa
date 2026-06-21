@@ -964,18 +964,29 @@ function closeMobileSidebar() {
     document.getElementById('contacts-sidebar').classList.remove('open');
   });
 
-  // Mobile Hamburger Sidebar Toggle
+  // Mobile Hamburger Menu Drawer Toggle
   const mobileMenuBtn = document.getElementById('mobile-menu-btn');
   if (mobileMenuBtn) {
     mobileMenuBtn.addEventListener('click', () => {
-      toggleMobileSidebar(true);
+      openMobileDrawer();
     });
   }
 
-  const sidebarBackdrop = document.getElementById('sidebar-backdrop');
-  if (sidebarBackdrop) {
-    sidebarBackdrop.addEventListener('click', () => {
-      toggleMobileSidebar(false);
+  // Mobile Action Centered FAB toggle
+  const mobileActionFab = document.getElementById('mobile-action-fab');
+  if (mobileActionFab) {
+    mobileActionFab.addEventListener('click', () => {
+      openMobileActionMenu();
+    });
+  }
+
+  // Action Menu backdrop click closes the sheet
+  const mobileActionMenu = document.getElementById('mobile-action-menu');
+  if (mobileActionMenu) {
+    mobileActionMenu.addEventListener('click', (e) => {
+      if (e.target === mobileActionMenu) {
+        closeMobileActionMenu();
+      }
     });
   }
 
@@ -3317,3 +3328,60 @@ window.insertSampleEmoji = insertSampleEmoji;
 window.sendPlantSticker = sendPlantSticker;
 window.contactSeller = contactSeller;
 window.adjustChatContainerForVisualViewport = adjustChatContainerForVisualViewport;
+
+function openMobileDrawer() {
+  const drawer = document.getElementById('mobile-drawer');
+  if (drawer) {
+    drawer.style.display = 'flex';
+    setTimeout(() => {
+      drawer.classList.add('open');
+    }, 50);
+  }
+  // Sync profile details inside drawer
+  const drawerAvatar = document.getElementById('mobile-drawer-user-avatar');
+  const drawerName = document.getElementById('mobile-drawer-user-name');
+  const drawerHandle = document.getElementById('mobile-drawer-user-handle');
+  if (drawerAvatar) drawerAvatar.src = getAvatarSrc(State.currentUser.avatar);
+  if (drawerName) drawerName.innerText = State.currentUser.name;
+  if (drawerHandle) drawerHandle.innerText = State.currentUser.handle;
+}
+
+function closeMobileDrawer() {
+  const drawer = document.getElementById('mobile-drawer');
+  if (drawer) {
+    drawer.classList.remove('open');
+    setTimeout(() => {
+      if (!drawer.classList.contains('open')) {
+        drawer.style.display = 'none';
+      }
+    }, 300);
+  }
+}
+
+function openMobileActionMenu() {
+  const menu = document.getElementById('mobile-action-menu');
+  if (menu) {
+    menu.style.display = 'flex';
+    setTimeout(() => {
+      menu.classList.add('open');
+    }, 50);
+  }
+}
+
+function closeMobileActionMenu() {
+  const menu = document.getElementById('mobile-action-menu');
+  if (menu) {
+    menu.classList.remove('open');
+    setTimeout(() => {
+      if (!menu.classList.contains('open')) {
+        menu.style.display = 'none';
+      }
+    }, 300);
+  }
+}
+
+window.openMobileDrawer = openMobileDrawer;
+window.closeMobileDrawer = closeMobileDrawer;
+window.openMobileActionMenu = openMobileActionMenu;
+window.closeMobileActionMenu = closeMobileActionMenu;
+window.toggleMobileFeedTab = toggleMobileFeedTab;
