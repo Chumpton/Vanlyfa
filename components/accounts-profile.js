@@ -1,0 +1,280 @@
+/* ==========================================================================
+   VANLYFA COMPONENT: ACCOUNTS-PROFILE.JS
+   ========================================================================== */
+
+function renderUserProfile() {
+  const user = getActiveUser();
+  const isOwner = user.name === State.currentUser.name;
+  
+  // Update left column details
+  document.getElementById('profile-user-avatar').src = getAvatarSrc(user.avatar);
+  document.getElementById('profile-user-name').innerText = user.name;
+  document.getElementById('profile-user-handle').innerText = user.handle || `@${user.name.toLowerCase().replace(/\s+/g, '_')}`;
+  document.getElementById('profile-reputation-score').innerText = `Reputation: ${user.reputation || 0}`;
+  document.getElementById('profile-user-bio').innerText = user.bio;
+  
+  // Show edit button for owner, show visitor actions for visitor
+  const editBtn = document.getElementById('profile-edit-btn');
+  const visitorActions = document.getElementById('profile-visitor-actions');
+  const friendBtn = document.getElementById('profile-friend-btn');
+  const repBtn = document.getElementById('profile-rep-btn');
+  
+  if (isOwner) {
+    if (editBtn) editBtn.style.display = 'inline-flex';
+    if (visitorActions) visitorActions.style.display = 'none';
+  } else {
+    if (editBtn) editBtn.style.display = 'none';
+    if (visitorActions) visitorActions.style.display = 'flex';
+    
+    // Update Friend button text based on relationship
+    const currentUserObj = State.users.find(u => u.name === State.currentUser.name);
+    const isFriend = currentUserObj && currentUserObj.friends && currentUserObj.friends.includes(user.name);
+    if (friendBtn) {
+      if (isFriend) {
+        friendBtn.innerHTML = `<i data-lucide="user-minus"></i> <span>Remove Friend</span>`;
+        friendBtn.classList.remove('btn-primary');
+      } else {
+        friendBtn.innerHTML = `<i data-lucide="user-plus"></i> <span>Add Friend</span>`;
+        friendBtn.classList.add('btn-primary');
+      }
+    }
+
+    // Update Reputation button text based on vote state
+    const hasGivenRep = currentUserObj && currentUserObj.givenRepTo && currentUserObj.givenRepTo.includes(user.name);
+    if (repBtn) {
+      if (hasGivenRep) {
+        repBtn.innerHTML = `<i data-lucide="thumbs-up"></i> <span>Reputation Given</span>`;
+        repBtn.style.backgroundColor = 'var(--accent-green)';
+        repBtn.style.color = 'white';
+      } else {
+        repBtn.innerHTML = `<i data-lucide="thumbs-up"></i> <span>Give Reputation</span>`;
+        repBtn.style.backgroundColor = 'var(--accent-green-light)';
+        repBtn.style.color = 'var(--accent-green)';
+      }
+    }
+  }
+  
+  // Render vehicle specs
+  document.getElementById('profile-rig-model').innerText = user.rig || "N/A";
+  document.getElementById('profile-rig-solar').innerText = user.solar || "N/A";
+  document.getElementById('profile-rig-power').innerText = user.power || "N/A";
+  document.getElementById('profile-rig-water').innerText = user.water || "N/A";
+  
+  // Render Friends List
+  const friendsCountSpan = document.getElementById('profile-friends-title');
+  const friendsListContainer = document.getElementById('profile-friends-list');
+  if (friendsListContainer) {
+    friendsListContainer.innerHTML = '';
+    const friends = user.friends || [];
+    if (friendsCountSpan) {
+      friendsCountSpan.innerText = `Friends (${friends.length})`;
+    }
+    
+    if (friends.length === 0) {
+      friendsListContainer.innerHTML = `<span style="font-size:11px; font-style:italic;">No friends added yet.</span>`;
+    } else {
+      friends.forEach(friendName => {
+        const friendObj = State.users.find(u => u.name === friendName);
+        if (friendObj) {
+          const img = document.createElement('img');
+          img.src = getAvatarSrc(friendObj.avatar);
+          img.alt = friendObj.name;
+          img.title = friendObj.name;
+          img.className = 'mini-friend-avatar';
+          img.style.cursor = 'pointer';
+          img.addEventListener('click', () => {
+            viewUserProfile(friendObj.name);
+          });
+          friendsListContainer.appendChild(img);
+        }
+      });
+    }
+  }
+  
+  // Render Gallery
+  const galleryGrid = document.getElementById('profile-gallery-grid');
+  const uploadBtn = document.getElementById('profile-gallery-upload-btn');
+  
+  // Hide upload button if not owner
+  if (uploadBtn) {
+    uploadBtn.style.display = isOwner ? 'inline-flex' : 'none';
+  }
+  
+  if (galleryGrid) {
+    galleryGrid.innerHTML = '';
+    const gallery = user.gallery || [];
+    if (gallery.length === 0) {
+      galleryGrid.innerHTML = `<div style="grid-column: span 3; text-align:center; padding:24px; color:var(--muted-text); font-size:12px; font-style:italic;">No photos in gallery.</div>`;
+    } else {
+      gallery.forEach(imgKey => {
+        const img = document.createElement('img');
+        img.className = 'profile-gallery-item';
+        img.src = getImageSrc(imgKey);
+        img.alt = "Rig photo";
+        galleryGrid.appendChild(img);
+      });
+    }
+  }
+  
+  // Render Visited Places List
+  const visitedList = document.getElementById('profile-visited-spots-list');
+  if (visitedList) {
+    visitedList.innerHTML = '';
+    const visitedIds = user.visitedSpots || [];
+    const spots = State.spots.filter(s => visitedIds.includes(s.id));
+    
+    if (spots.length === 0) {
+      visitedList.innerHTML = `<div style="font-size:12px; color:var(--muted-text); font-style:italic;">No spots visited yet.</div>`;
+    } else {
+      spots.forEach(spot => {
+        const row = document.createElement('div');
+        row.className = 'visited-spot-row';
+        row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid var(--border-color); font-size:13px;";
+        
+        let typeName = 'Wild Camping';
+        if (spot.category === 'driveway-host') typeName = 'Driveway Host';
+        else if (spot.category === 'water-station') typeName = 'Water Station';
+        else if (spot.category === 'service-mechanic') typeName = 'Van Mechanic';
+        
+        row.innerHTML = `
+          <div>
+            <strong style="color:var(--text-charcoal); cursor:pointer;" onclick="viewSpotFromProfile('${spot.id}')">${spot.title}</strong>
+            <span style="font-size:11px; color:var(--muted-text); margin-left:8px;">(${typeName})</span>
+          </div>
+          <span style="font-size:11px; color:var(--muted-text);">${spot.lat.toFixed(2)}, ${spot.lng.toFixed(2)}</span>
+        `;
+        visitedList.appendChild(row);
+      });
+    }
+  }
+  
+  // Render Bookings (Owner only)
+  const bookingsSection = document.getElementById('profile-bookings-section');
+  const bookingsList = document.getElementById('profile-bookings-list');
+  if (bookingsSection && bookingsList) {
+    if (isOwner) {
+      bookingsSection.style.display = 'block';
+      bookingsList.innerHTML = '';
+      
+      const bookings = State.bookings || [];
+      if (bookings.length === 0) {
+        bookingsList.innerHTML = `<div style="font-size:12px; color:var(--muted-text); font-style:italic;">No active driveway bookings.</div>`;
+      } else {
+        bookings.forEach(booking => {
+          const row = document.createElement('div');
+          row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg-sand); border:1px solid var(--border-color); border-radius:var(--radius-sm); font-size:12px; margin-bottom:6px;";
+          row.innerHTML = `
+            <div>
+              <strong style="color:var(--text-charcoal); cursor:pointer;" onclick="viewSpotFromProfile('${booking.spotId}')">${booking.spotTitle}</strong>
+              <div style="font-size:10px; color:var(--muted-text); margin-top:2px;">Host: ${booking.hostName} • Date: ${booking.checkInDate} (${booking.nights} night${booking.nights > 1 ? 's' : ''})</div>
+            </div>
+            <span style="font-weight:700; color:var(--accent-green);">$${booking.totalCost.toFixed(2)}</span>
+          `;
+          bookingsList.appendChild(row);
+        });
+      }
+    } else {
+      bookingsSection.style.display = 'none';
+    }
+  }
+  
+  // Initialize Profile Map
+  initProfileMap(user);
+  
+  lucide.createIcons();
+}
+
+function getActiveUser() {
+  const name = State.activeProfileName || State.currentUser.name;
+  let user = State.users.find(u => u.name === name);
+  if (!user && name === State.currentUser.name) {
+    user = {
+      name: State.currentUser.name,
+      handle: State.currentUser.handle,
+      avatar: State.currentUser.avatar,
+      bio: State.currentUser.bio,
+      rig: State.currentUser.rig,
+      solar: State.currentUser.solar,
+      power: State.currentUser.power,
+      water: State.currentUser.water,
+      gallery: [],
+      visitedSpots: [],
+      friends: []
+    };
+    State.users.push(user);
+    saveStateToStorage();
+  }
+  return user;
+}
+
+function viewUserProfile(username) {
+  if (!username || username === State.currentUser.name) {
+    State.activeProfileName = null;
+  } else {
+    State.activeProfileName = username;
+  }
+  switchTab('profile');
+}
+
+function initProfileMap(user) {
+  const container = document.getElementById('profile-map');
+  if (!container) return;
+  
+  if (!State.profileMap) {
+    State.profileMap = L.map('profile-map', {
+      zoomControl: true
+    }).setView([37.0, -112.0], 5);
+    
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, USGS, NOAA',
+      maxZoom: 20
+    }).addTo(State.profileMap);
+  }
+  
+  if (State.profileMarkers) {
+    State.profileMarkers.forEach(m => State.profileMap.removeLayer(m));
+  }
+  State.profileMarkers = [];
+  
+  const visitedSpots = State.spots.filter(s => user.visitedSpots && user.visitedSpots.includes(s.id));
+  
+  if (visitedSpots.length > 0) {
+    const latLngs = [];
+    visitedSpots.forEach(spot => {
+      let markerColor = '#3B7A57';
+      if (spot.category === 'driveway-host') markerColor = '#6E6A5F';
+      else if (spot.category === 'water-station') markerColor = '#A2BEA9';
+      else if (spot.category === 'service-mechanic') markerColor = '#2D2D2D';
+      
+      const customIcon = L.divIcon({
+        html: `<div style="background-color:${markerColor}; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center;">
+                <div style="background-color:white; width:4px; height:4px; border-radius:50%;"></div>
+               </div>`,
+        className: 'custom-map-icon',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+      });
+      
+      const marker = L.marker([spot.lat, spot.lng], { icon: customIcon }).addTo(State.profileMap);
+      marker.bindPopup(`<strong>${spot.title}</strong><br>${spot.description.substring(0, 50)}...`);
+      State.profileMarkers.push(marker);
+      latLngs.push([spot.lat, spot.lng]);
+    });
+    
+    if (latLngs.length > 0) {
+      State.profileMap.fitBounds(latLngs, { padding: [30, 30] });
+    }
+  } else {
+    State.profileMap.setView([37.0, -112.0], 5);
+  }
+}
+
+function openProfileEditModal() {
+  document.getElementById('edit-profile-name').value = State.currentUser.name;
+  document.getElementById('edit-profile-bio').value = State.currentUser.bio;
+  document.getElementById('edit-profile-rig').value = State.currentUser.rig;
+  document.getElementById('edit-profile-solar').value = State.currentUser.solar;
+  document.getElementById('edit-profile-power').value = State.currentUser.power;
+  document.getElementById('edit-profile-water').value = State.currentUser.water;
+  openModal('modal-edit-profile');
+}
