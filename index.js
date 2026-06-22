@@ -11,10 +11,17 @@ function debounce(func, wait) {
   };
 }
 
-// Initialize lucide icons on load
+// Enforce sequential boot cycle on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
+  // 1. Initialize configuration, state, layouts, map pins, and component listeners
   initApp();
+  
+  // 2. Force Lucide icons rendering over finalized DOM elements
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
 });
+
 function initApp() {
   // One-time localStorage migration to clear out old mock data caches for Supabase prep
   if (!localStorage.getItem('vanlyfa_supabase_prep_v1')) {

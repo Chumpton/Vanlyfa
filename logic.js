@@ -1306,3 +1306,20 @@ function toggleMeetupSave(meetupId) {
   saveStateToStorage();
   renderMeetupsList();
 }
+
+async function safeFetchData(url, fallbackState) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!response.ok) throw new Error(`HTTP Error Status: ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.warn(`Fetch failure encountered for ${url}. Engaging fallback dataset.`, error);
+    if (typeof showToast === 'function') {
+      showToast("Sync intermittent. Showing locally cached data.", "warning");
+    }
+    return fallbackState;
+  }
+}
