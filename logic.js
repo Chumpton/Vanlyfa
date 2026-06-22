@@ -21,7 +21,9 @@ let State = {
     spotsCount: 0,
     listingsCount: 0,
     reputation: 0,
-    givenRepTo: []
+    givenRepTo: [],
+    savedPostIds: [],
+    savedMeetupIds: []
   },
   users: typeof DefaultUsers !== 'undefined' ? DefaultUsers : [],
   activeProfileName: null,
@@ -167,6 +169,10 @@ function loadStateFromStorage() {
       State.tribeThreads = parsed.tribeThreads || State.tribeThreads;
       State.forum = parsed.forum || State.forum;
       State.currentUser = parsed.currentUser || State.currentUser;
+      if (State.currentUser) {
+        State.currentUser.savedPostIds = State.currentUser.savedPostIds || [];
+        State.currentUser.savedMeetupIds = State.currentUser.savedMeetupIds || [];
+      }
       State.users = parsed.users || State.users;
       State.chats = parsed.chats || State.chats;
       State.activeChats = parsed.activeChats || State.activeChats;
@@ -1126,6 +1132,34 @@ function createCropObject() {
   };
 }
 
+function compressCanvasToJpeg(canvas, maxDimension = 800) {
+  const width = canvas.width;
+  const height = canvas.height;
+  let targetWidth = width;
+  let targetHeight = height;
+  
+  if (width > maxDimension || height > maxDimension) {
+    if (width > height) {
+      targetWidth = maxDimension;
+      targetHeight = Math.round((height * maxDimension) / width);
+    } else {
+      targetHeight = maxDimension;
+      targetWidth = Math.round((width * maxDimension) / height);
+    }
+  }
+  
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = targetWidth;
+  tempCanvas.height = targetHeight;
+  const tempCtx = tempCanvas.getContext('2d');
+  
+  // Draw the original canvas onto the temp canvas with scaling
+  tempCtx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
+  
+  // Export as compressed JPEG
+  return tempCanvas.toDataURL("image/jpeg", 0.7);
+}
+
 function drawGenericCrop(cropObj, canvas, drawOverlay = true) {
   const ctx = canvas.getContext('2d');
   const img = cropObj.img;
@@ -1150,28 +1184,35 @@ function drawGenericCrop(cropObj, canvas, drawOverlay = true) {
 }
 
 function initGenericCropHandlers(cropObj, canvas, zoomInput, onDrawCallback) {
+  canvas._currentCropObj = cropObj;
+  canvas._onDraw = onDrawCallback;
+  
   if (canvas._hasCropHandlers) return;
   canvas._hasCropHandlers = true;
   
   const onStart = (e) => {
-    cropObj.isDragging = true;
+    const cur = canvas._currentCropObj;
+    if (!cur) return;
+    cur.isDragging = true;
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    cropObj.dragStart = { x: clientX - cropObj.x, y: clientY - cropObj.y };
+    cur.dragStart = { x: clientX - cur.x, y: clientY - cur.y };
   };
   
   const onMove = (e) => {
-    if (!cropObj.isDragging) return;
+    const cur = canvas._currentCropObj;
+    if (!cur || !cur.isDragging) return;
     e.preventDefault();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    cropObj.x = clientX - cropObj.dragStart.x;
-    cropObj.y = clientY - cropObj.dragStart.y;
-    onDrawCallback(true);
+    cur.x = clientX - cur.dragStart.x;
+    cur.y = clientY - cur.dragStart.y;
+    if (canvas._onDraw) canvas._onDraw(true);
   };
   
   const onEnd = () => {
-    cropObj.isDragging = false;
+    const cur = canvas._currentCropObj;
+    if (cur) cur.isDragging = false;
   };
   
   canvas.addEventListener('mousedown', onStart);
@@ -1183,8 +1224,11 @@ function initGenericCropHandlers(cropObj, canvas, zoomInput, onDrawCallback) {
   window.addEventListener('touchend', onEnd);
   
   zoomInput.addEventListener('input', (e) => {
-    cropObj.zoom = parseFloat(e.target.value);
-    onDrawCallback(true);
+    const cur = canvas._currentCropObj;
+    if (cur) {
+      cur.zoom = parseFloat(e.target.value);
+      if (canvas._onDraw) canvas._onDraw(true);
+    }
   });
 }
 
@@ -1214,4 +1258,51 @@ function checkRateLimit(type) {
   timestamps.push(now);
   localStorage.setItem(storageKey, JSON.stringify(timestamps));
   return true;
+}
+
+function toggleSavePost(postId) {
+  if (!requireAuth()) return;
+  const { target } = findPostOrItem(postId);
+  if (target) {
+    if (!State.currentUser.savedPostIds) {
+      State.currentUser.savedPostIds = [];
+    }
+    const idx = State.currentUser.savedPostIds.indexOf(postId);
+    const originalSaved = target.savedByUser;
+    const originalSaves = target.saves || 0;
+    
+    if (idx > -1) {
+      State.currentUser.savedPostIds.splice(idx, 1);
+      target.savedByUser = false;
+      target.saves = Math.max(0, originalSaves - 1);
+      showToast("Post removed from bookmarks.");
+    } else {
+      State.currentUser.savedPostIds.push(postId);
+      target.savedByUser = true;
+      target.saves = originalSaves + 1;
+      showToast("Post saved to bookmarks!", "success");
+    }
+    
+    State._cachedFeeds = {};
+    saveStateToStorage();
+    renderDashboardFeed();
+    renderFeedTabPosts();
+  }
+}
+
+function toggleMeetupSave(meetupId) {
+  if (!requireAuth()) return;
+  if (!State.currentUser.savedMeetupIds) {
+    State.currentUser.savedMeetupIds = [];
+  }
+  const idx = State.currentUser.savedMeetupIds.indexOf(meetupId);
+  if (idx > -1) {
+    State.currentUser.savedMeetupIds.splice(idx, 1);
+    showToast("Meetup removed from bookmarks.");
+  } else {
+    State.currentUser.savedMeetupIds.push(meetupId);
+    showToast("Meetup saved to bookmarks!", "success");
+  }
+  saveStateToStorage();
+  renderMeetupsList();
 }

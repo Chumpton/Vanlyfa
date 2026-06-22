@@ -3784,7 +3784,7 @@ body.dark-mode .chat-messages-area {
 }
 .auth-modal-body {
   padding: var(--spacing-lg) 0 0 0 !important;
-  overflow: visible !important;
+  overflow: auto !important;
 }
 .auth-input {
   border: 1px solid var(--border-color) !important;

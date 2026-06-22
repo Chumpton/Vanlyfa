@@ -7,10 +7,63 @@ function renderMeetupsList() {
   container.innerHTML = '';
   
   const query = State.searchQuery;
+  const selectedArea = document.getElementById('meetup-filter-area') ? document.getElementById('meetup-filter-area').value : 'all';
+  const selectedSaved = document.getElementById('meetup-filter-saved') ? document.getElementById('meetup-filter-saved').value : 'all';
+
+  function meetupMatchesArea(meetup, area) {
+    if (area === 'all') return true;
+    let targetLat, targetLng;
+    if (area === 'near') {
+      const loc = getCachedLocation();
+      if (loc && loc.status === 'present') {
+        targetLat = loc.lat;
+        targetLng = loc.lng;
+      } else {
+        return true;
+      }
+    } else {
+      const areaCoords = {
+        moab: { lat: 38.5733, lng: -109.5498 },
+        bend: { lat: 44.0582, lng: -121.3153 },
+        flagstaff: { lat: 35.1983, lng: -111.6513 },
+        baja: { lat: 24.1426, lng: -110.3128 }
+      };
+      const coords = areaCoords[area];
+      if (!coords) return true;
+      targetLat = coords.lat;
+      targetLng = coords.lng;
+    }
+
+    if (typeof meetup.lat === 'number' && typeof meetup.lng === 'number') {
+      const dist = calculateHaversineDistance(meetup.lat, meetup.lng, targetLat, targetLng);
+      const maxRadius = area === 'near' ? 150 : 100;
+      return dist <= maxRadius;
+    }
+    
+    // text fallback
+    if (area !== 'near') {
+      const txt = (meetup.location + " " + meetup.title + " " + meetup.description).toLowerCase();
+      if (txt.includes(area)) return true;
+    }
+    return false;
+  }
+
   const filtered = State.meetups.filter(m => {
-    return m.title.toLowerCase().includes(query) || 
-           m.description.toLowerCase().includes(query) ||
-           m.location.toLowerCase().includes(query);
+    const queryMatch = m.title.toLowerCase().includes(query) || 
+                       m.description.toLowerCase().includes(query) ||
+                       m.location.toLowerCase().includes(query);
+                       
+    if (!queryMatch) return false;
+    
+    if (!meetupMatchesArea(m, selectedArea)) return false;
+    
+    // Saved filter
+    if (selectedSaved === 'saved') {
+      if (!State.currentUser || !State.currentUser.savedMeetupIds) return false;
+      if (!State.currentUser.savedMeetupIds.includes(m.id)) return false;
+    }
+    
+    return true;
   });
   
   if (filtered.length === 0) {
@@ -28,6 +81,7 @@ function renderMeetupsList() {
     // User RSVP status
     const userAvatar = State.currentUser ? State.currentUser.avatar : 'avatar_bob';
     const hasRsvped = meetup.attendees.includes(userAvatar);
+    const isSaved = State.currentUser && State.currentUser.savedMeetupIds && State.currentUser.savedMeetupIds.includes(meetup.id);
     
     const card = document.createElement('div');
     card.className = 'meetup-card';
@@ -89,6 +143,9 @@ function renderMeetupsList() {
         <div style="display: flex; gap: 6px; align-items: center;">
           <button class="btn btn-sm" onclick="shareMeetup('${meetup.id}')" title="Share Meetup" style="padding: 6px 10px; display: inline-flex; align-items: center; justify-content: center;">
             <i data-lucide="share-2" style="width: 14px; height: 14px;"></i>
+          </button>
+          <button class="btn btn-sm ${isSaved ? 'saved' : ''}" onclick="toggleMeetupSave('${meetup.id}')" title="Save Meetup" style="padding: 6px 10px; display: inline-flex; align-items: center; justify-content: center; color: ${isSaved ? 'var(--accent-green)' : 'inherit'};">
+            <i data-lucide="bookmark" style="width: 14px; height: 14px; fill: ${isSaved ? 'var(--accent-green)' : 'none'};"></i>
           </button>
           ${meetup.host.name !== State.currentUser.name ? `
             <button class="btn btn-sm" onclick="contactHost('${meetup.host.name}', 'Caravan Meetup: ${meetup.title}')" style="padding: 6px 10px; display: inline-flex; align-items: center; gap: 4px;">

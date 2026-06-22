@@ -2,6 +2,15 @@
    VANLYFA MAIN INITIALIZER & CONTROLLER - index.js
    ========================================================================== */
 
+function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), wait);
+  };
+}
+
 // Initialize lucide icons on load
 document.addEventListener('DOMContentLoaded', () => {
   initApp();
@@ -64,12 +73,24 @@ function initApp() {
   // Set up modal open/close handlers
   setupModalHandlers();
   
+  // Relayout map when top-bar scroll hide transition completes
+  const topBar = document.querySelector('.top-bar');
+  if (topBar) {
+    topBar.addEventListener('transitionend', (e) => {
+      if (e.propertyName === 'margin-top' || e.propertyName === 'transform') {
+        if (State.leafletMap) {
+          State.leafletMap.invalidateSize();
+        }
+      }
+    });
+  }
+  
   // Setup Search logic
   const searchInput = document.getElementById('global-search');
-  searchInput.addEventListener('input', (e) => {
+  searchInput.addEventListener('input', debounce((e) => {
     State.searchQuery = e.target.value.toLowerCase();
     renderCurrentTab();
-  });
+  }, 250));
 
   // Marketplace Filter Listeners
   const marketCat = document.getElementById('market-filter-category');
@@ -83,6 +104,21 @@ function initApp() {
   
   const marketRad = document.getElementById('market-filter-radius');
   if (marketRad) marketRad.addEventListener('change', renderMarketplaceListings);
+
+
+  // Feed Filter Listeners
+  const feedFilterArea = document.getElementById('feed-filter-area');
+  if (feedFilterArea) feedFilterArea.addEventListener('change', () => { State._cachedFeeds = {}; renderFeedTabPosts(); });
+  const feedFilterSort = document.getElementById('feed-filter-sort');
+  if (feedFilterSort) feedFilterSort.addEventListener('change', () => { State._cachedFeeds = {}; renderFeedTabPosts(); });
+  const feedFilterSaved = document.getElementById('feed-filter-saved');
+  if (feedFilterSaved) feedFilterSaved.addEventListener('change', () => { State._cachedFeeds = {}; renderFeedTabPosts(); });
+
+  // Meetup Filter Listeners
+  const meetupFilterArea = document.getElementById('meetup-filter-area');
+  if (meetupFilterArea) meetupFilterArea.addEventListener('change', renderMeetupsList);
+  const meetupFilterSaved = document.getElementById('meetup-filter-saved');
+  if (meetupFilterSaved) meetupFilterSaved.addEventListener('change', renderMeetupsList);
 
   // Theme Toggle Button
   document.getElementById('theme-toggle-btn').addEventListener('click', () => {
@@ -496,6 +532,13 @@ function initApp() {
           
           showToast(`Centered on ${resolved.name || resolved.city}!`, "success");
           closeModal('modal-gps-input');
+          
+          if (State._onboardingLocationPending) {
+            State._onboardingLocationPending = false;
+            setTimeout(() => {
+              triggerSignupOnboardingOnce();
+            }, 800);
+          }
         } else {
           showToast("Map is not initialized.", "error");
         }
@@ -895,7 +938,7 @@ function saveUserProfileEdit() {
     if (canvas && typeof drawCropImage === 'function') {
       // Draw image WITHOUT the helper circle border before export
       drawCropImage(canvas, false);
-      const croppedDataUrl = canvas.toDataURL("image/png");
+      const croppedDataUrl = compressCanvasToJpeg(canvas, 200);
       user.avatar = croppedDataUrl;
       State.currentUser.avatar = croppedDataUrl;
       
@@ -1061,10 +1104,11 @@ function saveNewPost() {
     const canvas = document.getElementById('post-crop-canvas');
     if (canvas) {
       drawGenericCrop(State.postCropState, canvas, false);
-      finalImage = canvas.toDataURL("image/png");
+      finalImage = compressCanvasToJpeg(canvas);
     }
   }
   
+  const loc = getCachedLocation();
   const newPost = {
     id: `post-${Date.now()}`,
     author: { name: State.currentUser.name, avatar: State.currentUser.avatar },
@@ -1074,7 +1118,9 @@ function saveNewPost() {
     likes: 0,
     likedByUser: false,
     comments: [],
-    status: State.currentUser.role === 'admin' ? 'approved' : 'pending'
+    status: State.currentUser.role === 'admin' ? 'approved' : 'pending',
+    lat: loc && loc.status === 'present' ? loc.lat : null,
+    lng: loc && loc.status === 'present' ? loc.lng : null
   };
   
   State.posts.unshift(newPost);
@@ -1120,7 +1166,7 @@ function saveNewListing() {
     const canvas = document.getElementById('list-crop-canvas');
     if (canvas) {
       drawGenericCrop(State.listingCropState, canvas, false);
-      finalImage = canvas.toDataURL("image/png");
+      finalImage = compressCanvasToJpeg(canvas);
     }
   } else {
     showToast("Please upload a photo for your listing.", "error");
@@ -1190,7 +1236,7 @@ function saveNewTribe() {
     const canvas = document.getElementById('tribe-icon-crop-canvas');
     if (canvas) {
       drawGenericCrop(State.tribeIconCropState, canvas, false);
-      finalIcon = canvas.toDataURL("image/png");
+      finalIcon = compressCanvasToJpeg(canvas, 200);
     }
   } else {
     showToast("Please upload a tribe profile icon.", "error");
@@ -1202,7 +1248,7 @@ function saveNewTribe() {
     const canvas = document.getElementById('tribe-banner-crop-canvas');
     if (canvas) {
       drawGenericCrop(State.tribeBannerCropState, canvas, false);
-      finalBanner = canvas.toDataURL("image/png");
+      finalBanner = compressCanvasToJpeg(canvas, 1000);
     }
   } else {
     showToast("Please upload a tribe banner image.", "error");
@@ -1322,7 +1368,7 @@ function saveNewForumThread() {
     const canvas = document.getElementById('thread-crop-canvas');
     if (canvas) {
       drawGenericCrop(State.threadCropState, canvas, false);
-      finalImage = canvas.toDataURL("image/png");
+      finalImage = compressCanvasToJpeg(canvas);
     }
   }
   
@@ -1389,11 +1435,12 @@ function saveNewFeedTabPost() {
     const canvas = document.getElementById('feed-tab-crop-canvas');
     if (canvas) {
       drawGenericCrop(State.feedTabCropState, canvas, false);
-      finalImage = canvas.toDataURL("image/png");
+      finalImage = compressCanvasToJpeg(canvas);
     }
   }
   
   const status = State.currentUser.role === 'admin' ? 'approved' : 'pending';
+  const loc = getCachedLocation();
   
   const newPost = {
     id: `post-${Date.now()}`,
@@ -1404,7 +1451,9 @@ function saveNewFeedTabPost() {
     likes: 0,
     likedByUser: false,
     comments: [],
-    status
+    status,
+    lat: loc && loc.status === 'present' ? loc.lat : null,
+    lng: loc && loc.status === 'present' ? loc.lng : null
   };
   
   State.posts.unshift(newPost);
@@ -1490,42 +1539,64 @@ function requestOnboardingGeolocation() {
     return;
   }
   
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
+  const optionsHigh = { enableHighAccuracy: true, timeout: 4000 };
+  const optionsLow = { enableHighAccuracy: false, timeout: 5000 };
+  
+  const handleSuccess = (position) => {
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
+    
+    cacheLocationPresent(lat, lng, 'My Geolocation');
+    
+    if (State.leafletMap) {
+      State.leafletMap.flyTo([lat, lng], 12);
       
-      cacheLocationPresent(lat, lng, 'My Geolocation');
-      
-      if (State.leafletMap) {
-        State.leafletMap.flyTo([lat, lng], 12);
-        
-        if (State.gpsMarker) {
-          State.gpsMarker.setLatLng([lat, lng]);
-        } else if (typeof L !== 'undefined') {
-          const gpsIcon = L.divIcon({
-            className: 'gps-location-pin',
-            html: '<div class="gps-pin-dot"></div><div class="gps-pin-pulse"></div>',
-            iconSize: [24, 24],
-            iconAnchor: [12, 12]
-          });
-          State.gpsMarker = L.marker([lat, lng], { icon: gpsIcon })
-            .addTo(State.leafletMap)
-            .bindPopup("<strong>Your Location</strong>");
-        }
+      if (State.gpsMarker) {
+        State.gpsMarker.setLatLng([lat, lng]);
+      } else if (typeof L !== 'undefined') {
+        const gpsIcon = L.divIcon({
+          className: 'gps-location-pin',
+          html: '<div class="gps-pin-dot"></div><div class="gps-pin-pulse"></div>',
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
+        State.gpsMarker = L.marker([lat, lng], { icon: gpsIcon })
+          .addTo(State.leafletMap)
+          .bindPopup("<strong>Your Location</strong>");
       }
-      showToast("Location updated from browser GPS!", "success");
-      
-      setTimeout(() => {
-        triggerSignupOnboardingOnce();
-      }, 800);
-    },
+    }
+    showToast("Location updated from browser GPS!", "success");
+    
+    setTimeout(() => {
+      triggerSignupOnboardingOnce();
+    }, 800);
+  };
+  
+  const tryLowAccuracy = () => {
+    console.log("High accuracy GPS failed/timed out, trying low-accuracy fallback...");
+    navigator.geolocation.getCurrentPosition(
+      handleSuccess,
+      (error) => {
+        console.warn("Low accuracy Geolocation failed/denied:", error);
+        openModal('modal-gps-input');
+        State._onboardingLocationPending = true;
+      },
+      optionsLow
+    );
+  };
+
+  navigator.geolocation.getCurrentPosition(
+    handleSuccess,
     (error) => {
-      console.warn("Geolocation failed/denied:", error);
-      openModal('modal-gps-input');
-      State._onboardingLocationPending = true;
+      if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
+        tryLowAccuracy();
+      } else {
+        console.warn("Geolocation permission denied:", error);
+        openModal('modal-gps-input');
+        State._onboardingLocationPending = true;
+      }
     },
-    { timeout: 8000 }
+    optionsHigh
   );
 }
 

@@ -8,11 +8,15 @@ function renderSocialFeed(containerId, isSidebar = false) {
   
   const query = State.searchQuery;
   
+  const selectedArea = document.getElementById('feed-filter-area') ? document.getElementById('feed-filter-area').value : 'all';
+  const selectedSort = document.getElementById('feed-filter-sort') ? document.getElementById('feed-filter-sort').value : 'trending';
+  const selectedSaved = document.getElementById('feed-filter-saved') ? document.getElementById('feed-filter-saved').value : 'all';
+
   // Cache check
   if (!State._cachedFeeds) {
     State._cachedFeeds = {};
   }
-  const cacheKey = `${containerId}_${query}_${State.isSignedIn}_${State.currentUser ? State.currentUser.name : 'guest'}`;
+  const cacheKey = `${containerId}_${query}_${State.isSignedIn}_${State.currentUser ? State.currentUser.name : 'guest'}_${selectedArea}_${selectedSort}_${selectedSaved}`;
   if (State._cachedFeeds[cacheKey]) {
     container.innerHTML = State._cachedFeeds[cacheKey];
     if (window.lucide) lucide.createIcons();
@@ -40,7 +44,11 @@ function renderSocialFeed(containerId, isSidebar = false) {
         shares: p.shares || 0,
         time: p.time || '1h ago',
         comments: p.comments || [],
-        status: p.status || 'approved'
+        status: p.status || 'approved',
+        lat: p.lat,
+        lng: p.lng,
+        views: p.views || 0,
+        saves: p.saves || 0
       });
     });
   }
@@ -59,7 +67,11 @@ function renderSocialFeed(containerId, isSidebar = false) {
         likedByUser: m.likedByUser || false,
         time: 'Marketplace',
         comments: [],
-        status: m.status || 'approved'
+        status: m.status || 'approved',
+        lat: m.lat,
+        lng: m.lng,
+        views: m.views || 0,
+        saves: m.saves || 0
       });
     });
   }
@@ -78,7 +90,11 @@ function renderSocialFeed(containerId, isSidebar = false) {
         likedByUser: mt.likedByUser || false,
         time: 'Meetup Event',
         comments: mt.comments || [],
-        status: mt.status || 'approved'
+        status: mt.status || 'approved',
+        lat: mt.lat,
+        lng: mt.lng,
+        views: mt.views || 0,
+        saves: mt.saves || 0
       });
     });
   }
@@ -98,18 +114,61 @@ function renderSocialFeed(containerId, isSidebar = false) {
           likedByUser: s.likedByUser || false,
           time: 'New Spot',
           comments: [],
-          status: s.status || 'approved'
+          status: s.status || 'approved',
+          lat: s.lat,
+          lng: s.lng,
+          views: s.views || 0,
+          saves: s.saves || 0
         });
       }
     });
   }
   
-  // 2. Filter by search query
+  // Helper for Area matching
+  function postMatchesArea(item, area) {
+    if (area === 'all') return true;
+    let targetLat, targetLng;
+    if (area === 'near') {
+      const loc = getCachedLocation();
+      if (loc && loc.status === 'present') {
+        targetLat = loc.lat;
+        targetLng = loc.lng;
+      } else {
+        return true; // if location not available, show everything
+      }
+    } else {
+      const areaCoords = {
+        moab: { lat: 38.5733, lng: -109.5498 },
+        bend: { lat: 44.0582, lng: -121.3153 },
+        flagstaff: { lat: 35.1983, lng: -111.6513 },
+        baja: { lat: 24.1426, lng: -110.3128 }
+      };
+      const coords = areaCoords[area];
+      if (!coords) return true;
+      targetLat = coords.lat;
+      targetLng = coords.lng;
+    }
+    
+    if (typeof item.lat === 'number' && typeof item.lng === 'number') {
+      const dist = calculateHaversineDistance(item.lat, item.lng, targetLat, targetLng);
+      const maxRadius = area === 'near' ? 150 : 100;
+      return dist <= maxRadius;
+    }
+    
+    // String fallback for specific areas
+    if (area !== 'near') {
+      const txt = (item.content || '').toLowerCase();
+      if (txt.includes(area)) return true;
+    }
+    return false;
+  }
+
+  // 2. Filter by search query, area, and saves
   let filtered = combinedItems.filter(p => {
     const queryMatch = p.content.toLowerCase().includes(query.toLowerCase()) || 
                        p.author.name.toLowerCase().includes(query.toLowerCase()) ||
                        p.type.toLowerCase().includes(query.toLowerCase());
-                       
+                        
     // Moderation Filter:
     // Approved items show to everyone.
     // Pending/Rejected items only show to the author or to the Admin
@@ -117,22 +176,44 @@ function renderSocialFeed(containerId, isSidebar = false) {
     const isAdmin = State.isSignedIn && State.currentUser.role === 'admin';
     const isApproved = p.status === 'approved';
     
-    return queryMatch && (isApproved || isOwner || isAdmin);
+    if (!(queryMatch && (isApproved || isOwner || isAdmin))) {
+      return false;
+    }
+
+    // Area filter
+    if (!postMatchesArea(p, selectedArea)) {
+      return false;
+    }
+
+    // Saved filter
+    if (selectedSaved === 'saved') {
+      if (!State.currentUser || !State.currentUser.savedPostIds) return false;
+      const isSaved = State.currentUser.savedPostIds.includes(p.rawId);
+      if (!isSaved) return false;
+    }
+    
+    return true;
   });
   
   // 3. Sort Feed
-  if (!State.isSignedIn) {
-    // Guest Mode: Sort by popularity (likes)
-    filtered.sort((a, b) => b.likes - a.likes);
+  if (selectedSort === 'trending') {
+    filtered.forEach(p => {
+      let recencyBoost = 0;
+      const parts = p.id.split('-');
+      const ts = parseInt(parts[parts.length - 1]);
+      if (!isNaN(ts) && ts > 0) {
+        const ageInHours = (Date.now() - ts) / (1000 * 60 * 60);
+        recencyBoost = Math.max(0, 50 - ageInHours);
+      }
+      p._engagementScore = (p.likes * 3) + (p.saves * 5) + ((p.comments ? p.comments.length : 0) * 4) + (p.views * 0.5) + recencyBoost;
+    });
+    filtered.sort((a, b) => b._engagementScore - a._engagementScore);
   } else {
-    // Logged In: chronological default (posts first or spots, let's keep array order or push newer ID first)
-    // To mock chronological, we sort post-ID decreasing or keep post type order
+    // Chronological (Recent)
     filtered.sort((a, b) => {
-      // Keep post types at top, or sort by id timestamp if available
       const aTime = a.id.includes('-') ? parseInt(a.id.split('-').pop()) || 0 : 0;
       const bTime = b.id.includes('-') ? parseInt(b.id.split('-').pop()) || 0 : 0;
-      if (aTime && bTime) return bTime - aTime;
-      return 0;
+      return bTime - aTime;
     });
   }
   
@@ -146,6 +227,22 @@ function renderSocialFeed(containerId, isSidebar = false) {
   let feedHtml = '';
   
   filtered.forEach(post => {
+    // Views tracking (once per session)
+    if (post.type === 'post' && !isSidebar) {
+      if (!State.viewedPostsInSession) {
+        State.viewedPostsInSession = new Set();
+      }
+      if (!State.viewedPostsInSession.has(post.rawId)) {
+        State.viewedPostsInSession.add(post.rawId);
+        const rawPost = State.posts.find(p => p.id === post.rawId);
+        if (rawPost) {
+          rawPost.views = (rawPost.views || 0) + 1;
+          post.views = rawPost.views; // Sync current rendering copy
+          saveStateToStorage();
+        }
+      }
+    }
+
     let imgMarkup = '';
     if (post.image && post.image !== 'none') {
       imgMarkup = `<img src="${getImageSrc(post.image)}" alt="Post Media" class="post-image" style="border-radius:var(--radius-sm); margin-top:8px; width:100%; max-height:220px; object-fit:cover;">`;
@@ -210,6 +307,8 @@ function renderSocialFeed(containerId, isSidebar = false) {
       clickGoMarkup = `<button class="btn btn-xs" onclick="viewSpotFromProfile('${post.rawId}')" style="font-size: 10px; background: rgba(59,122,87,0.1); color: var(--accent-green); border: 1px solid var(--accent-green-light); display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; cursor: pointer;"><i data-lucide="map" style="width:12px; height:12px;"></i> View Map Pin</button>`;
     }
 
+    const isSaved = State.currentUser && State.currentUser.savedPostIds && State.currentUser.savedPostIds.includes(post.rawId);
+
     feedHtml += `
       <div class="feed-post-card" id="post-card-${post.id}" ${cardStyle}>
         <div class="thread-post-layout" style="display:flex; gap:12px;">
@@ -247,6 +346,14 @@ function renderSocialFeed(containerId, isSidebar = false) {
                 <i data-lucide="message-circle" style="width:15px; height:15px;"></i>
                 <span>${post.comments ? post.comments.length : 0}</span>
               </button>
+              <button class="thread-action-icon-btn ${isSaved ? 'saved' : ''}" onclick="toggleSavePost('${post.rawId}')" title="Save Bookmark" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer;">
+                <i data-lucide="bookmark" style="width:15px; height:15px; color:${isSaved ? 'var(--accent-green)' : 'inherit'}; fill:${isSaved ? 'var(--accent-green)' : 'none'};"></i>
+                <span>${post.saves || 0}</span>
+              </button>
+              <span class="thread-action-icon-btn" title="Views" style="display:flex; align-items:center; gap:4px;">
+                <i data-lucide="eye" style="width:15px; height:15px;"></i>
+                <span>${post.views || 0}</span>
+              </span>
               <button class="thread-action-icon-btn" onclick="sharePost('${post.id}')" title="Share Link" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer;">
                 <i data-lucide="share" style="width:15px; height:15px;"></i>
                 <span>${post.shares || 0}</span>

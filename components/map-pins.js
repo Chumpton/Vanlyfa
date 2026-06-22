@@ -112,6 +112,12 @@ function initLeafletMap() {
     renderLeafletMarkers();
   });
 
+  State.leafletMap.on('popupopen', () => {
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  });
+
   State.leafletMap.on('click', (e) => {
     if (typeof State !== 'undefined' && State.isSelectingMeetupLocation) {
       const lat = e.latlng.lat;
@@ -440,6 +446,32 @@ function renderLeafletMarkers() {
     }
   }
 
+  // Group non-cluster pins by coordinates to detect overlaps and spread them (spiderfy)
+  const coordGroups = new Map();
+  nextPinsMap.forEach((pin, pinId) => {
+    if (pin._isCluster) return;
+    const key = `${pin.lat.toFixed(4)},${pin.lng.toFixed(4)}`;
+    if (!coordGroups.has(key)) {
+      coordGroups.set(key, []);
+    }
+    coordGroups.get(key).push(pinId);
+  });
+
+  const pinOffsets = new Map();
+  coordGroups.forEach((pinIds, key) => {
+    if (pinIds.length > 1) {
+      // Calculate radius based on zoom (smaller radius as we zoom in)
+      const radius = 0.0006 * Math.pow(2, 13 - zoom);
+      pinIds.forEach((pinId, index) => {
+        const angle = (index * 2 * Math.PI) / pinIds.length;
+        pinOffsets.set(pinId, {
+          latOffset: radius * Math.cos(angle),
+          lngOffset: radius * Math.sin(angle)
+        });
+      });
+    }
+  });
+
   // Add or update markers
   for (const [pinId, pin] of nextPinsMap.entries()) {
     if (State.leafletMarkersMap.has(pinId)) {
@@ -466,6 +498,14 @@ function renderLeafletMarkers() {
       });
     } else {
       // Standard single-spot marker
+      let lat = pin.lat;
+      let lng = pin.lng;
+      const offset = pinOffsets.get(pinId);
+      if (offset) {
+        lat += offset.latOffset;
+        lng += offset.lngOffset;
+      }
+
       const borderStyle = pin.pendingSync ? '2px dashed var(--accent-red)' : '2px solid white';
       const opacityStyle = pin.pendingSync ? '0.7' : '1.0';
       const verifiedDot = pin.verified ? '<div style="position:absolute;top:-2px;right:-2px;width:7px;height:7px;background:#10b981;border-radius:50%;border:1px solid white;"></div>' : '';
@@ -479,7 +519,7 @@ function renderLeafletMarkers() {
         iconAnchor: [10, 10]
       });
       
-      marker = L.marker([pin.lat, pin.lng], { icon: customIcon }).addTo(State.leafletMap);
+      marker = L.marker([lat, lng], { icon: customIcon }).addTo(State.leafletMap);
       
       // Custom popup
       const popupHtml = `

@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    VANLYFA SEED DATA - 1,300+ Verified Campsites & Overnight Locations
    Sources: USFS Recreation_Opportunities.csv, BLM Navigator, Community
    ========================================================================== */
@@ -1381,9 +1381,11 @@ const ClusterEngine = {
       s.lat >= sw.lat && s.lat <= ne.lat &&
       s.lng >= sw.lng && s.lng <= ne.lng
     );
-    if (zoom >= 10) return filtered;
-    if (zoom >= 7) return this.clusterByGrid(filtered, 0.3);
-    if (zoom >= 5) return this.clusterByGrid(filtered, 1.0);
+    if (zoom >= 13) return filtered;
+    if (zoom >= 11) return this.clusterByGrid(filtered, 0.05);
+    if (zoom >= 9) return this.clusterByGrid(filtered, 0.15);
+    if (zoom >= 7) return this.clusterByGrid(filtered, 0.4);
+    if (zoom >= 5) return this.clusterByGrid(filtered, 1.2);
     return this.clusterByGrid(filtered, 3.0);
   },
   clusterByGrid(spots, cellSize) {

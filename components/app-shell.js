@@ -74,9 +74,12 @@ function switchTab(tabName, isPopState = false) {
   
   // Relayout map if transitioning back to dashboard
   if (tabName === 'dashboard' && State.leafletMap) {
+    State.leafletMap.invalidateSize();
     setTimeout(() => {
-      State.leafletMap.invalidateSize();
-    }, 100);
+      if (State.leafletMap) {
+        State.leafletMap.invalidateSize();
+      }
+    }, 250);
   }
   if (tabName === 'profile' && State.profileMap) {
     setTimeout(() => {

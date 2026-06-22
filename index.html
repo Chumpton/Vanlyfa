@@ -480,7 +480,26 @@
               </div>
             </div>
           </div>
-          
+          <!-- Feed Filters -->
+          <div class="filter-row" style="margin-top: 16px; margin-bottom: 16px; justify-content: flex-start; display: flex; width: 100%;">
+            <select class="select-filter" id="feed-filter-area">
+              <option value="all">All Areas</option>
+              <option value="near">Near Me (< 150 mi)</option>
+              <option value="moab">Moab, UT</option>
+              <option value="bend">Bend, OR</option>
+              <option value="flagstaff">Flagstaff, AZ</option>
+              <option value="baja">Baja California</option>
+            </select>
+            <select class="select-filter" id="feed-filter-sort">
+              <option value="trending">Trending (Hot)</option>
+              <option value="recent">Recent</option>
+            </select>
+            <select class="select-filter" id="feed-filter-saved">
+              <option value="all">All Updates</option>
+              <option value="saved">Bookmarked</option>
+            </select>
+          </div>
+
           <!-- Feed Posts List -->
           <div class="feed-tab-posts-container" id="feed-tab-posts-list">
             <!-- Dynamically populated -->
@@ -644,8 +663,23 @@
             <i data-lucide="plus"></i>
             <span>Host Meetup</span>
           </button>
-        </div>
         
+        <!-- Meetup Filters -->
+        <div class="filter-row" style="margin-bottom: 16px; display: flex; width: 100%;">
+          <select class="select-filter" id="meetup-filter-area">
+            <option value="all">All Areas</option>
+            <option value="near">Near Me (< 150 mi)</option>
+            <option value="moab">Moab, UT</option>
+            <option value="bend">Bend, OR</option>
+            <option value="flagstaff">Flagstaff, AZ</option>
+            <option value="baja">Baja California</option>
+          </select>
+          <select class="select-filter" id="meetup-filter-saved">
+            <option value="all">All Meetups</option>
+            <option value="saved">Bookmarked</option>
+          </select>
+        </div>
+
         <div class="meetups-layout">
           <div class="meetup-list" id="meetup-list-container">
             <!-- Dynamically populated -->
@@ -1743,6 +1777,10 @@
           <i data-lucide="user"></i>
           <span>My Profile</span>
         </div>
+        <div class="mobile-drawer-item" data-tab="admin" id="mobile-drawer-admin-tab" style="display: none;" onclick="switchTab('admin'); closeMobileDrawer();">
+          <i data-lucide="shield-alert"></i>
+          <span>Admin Panel</span>
+        </div>
         <div class="mobile-drawer-item" id="mobile-drawer-about-btn" onclick="openAboutModal(); closeMobileDrawer();">
           <i data-lucide="info"></i>
           <span>About VanLyfa</span>
@@ -1882,5 +1920,15 @@
   <script src="view.js"></script>
   <!-- Main Controller & Initialization -->
   <script src="index.js"></script>
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('[Service Worker] Registered successfully:', reg.scope))
+          .catch(err => console.error('[Service Worker] Registration failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>

@@ -114,7 +114,8 @@ const DefaultUsers = [
     givenRepTo: [],
     role: "user",
     instagram_handle: "clara_outdoors",
-    tiktok_handle: "clara_outdoors"
+    tiktok_handle: "clara_outdoors",
+    password: "ClaraPass123!"
   },
   {
     name: "Forest Nomad",
@@ -132,7 +133,8 @@ const DefaultUsers = [
     givenRepTo: [],
     role: "user",
     instagram_handle: "forest_nomad",
-    tiktok_handle: ""
+    tiktok_handle: "",
+    password: "ForestPass123!"
   },
   {
     name: "Baja Surfer",
@@ -150,7 +152,8 @@ const DefaultUsers = [
     givenRepTo: [],
     role: "user",
     instagram_handle: "baja_surfer",
-    tiktok_handle: "bajasurfer"
+    tiktok_handle: "bajasurfer",
+    password: "BajaPass123!"
   },
   {
     name: "Solar Explorer",
@@ -168,7 +171,8 @@ const DefaultUsers = [
     givenRepTo: [],
     role: "moderator",
     instagram_handle: "solar_explorer",
-    tiktok_handle: "solar_explorer"
+    tiktok_handle: "solar_explorer",
+    password: "SolarPass123!"
   },
   {
     name: "Admin User",
@@ -186,7 +190,8 @@ const DefaultUsers = [
     givenRepTo: [],
     role: "admin",
     instagram_handle: "vanlyfa_official",
-    tiktok_handle: "vanlyfa_official"
+    tiktok_handle: "vanlyfa_official",
+    password: "AdminPass123!"
   }
 ];
 
@@ -251,7 +256,11 @@ const DefaultPosts = [
     comments: [
       { user: "Forest Nomad", text: "Looks amazing Clara! Enjoy the silence out there." }
     ],
-    status: "approved"
+    status: "approved",
+    lat: 38.5733,
+    lng: -109.5498,
+    views: 245,
+    saves: 28
   },
   {
     id: "post-2",
@@ -269,7 +278,11 @@ const DefaultPosts = [
     comments: [
       { user: "Clara Outdoors", text: "Nice! Cedar tongue & groove makes it look so premium." }
     ],
-    status: "approved"
+    status: "approved",
+    lat: 44.0582,
+    lng: -121.3153,
+    views: 184,
+    saves: 12
   },
   {
     id: "post-3",
@@ -285,7 +298,11 @@ const DefaultPosts = [
     shares: 0,
     time: "1 day ago",
     comments: [],
-    status: "approved"
+    status: "approved",
+    lat: 35.1983,
+    lng: -111.6513,
+    views: 92,
+    saves: 5
   },
   {
     id: "post-4",
@@ -301,7 +318,11 @@ const DefaultPosts = [
     shares: 0,
     time: "Just now",
     comments: [],
-    status: "pending"
+    status: "pending",
+    lat: 31.86,
+    lng: -116.60,
+    views: 12,
+    saves: 0
   }
 ];
 

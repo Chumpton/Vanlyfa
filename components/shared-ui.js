@@ -140,15 +140,18 @@ function updateSidebarProfileWidget() {
   }
   
   const adminTab = document.getElementById('sidebar-admin-tab');
+  const mobileAdminTab = document.getElementById('mobile-drawer-admin-tab');
+  const isAdmin = State.isSignedIn && State.currentUser.role === 'admin';
+  
   if (adminTab) {
-    if (State.isSignedIn && State.currentUser.role === 'admin') {
-      adminTab.style.display = 'flex';
-    } else {
-      adminTab.style.display = 'none';
-      if (State.activeTab === 'admin') {
-        switchTab('dashboard');
-      }
-    }
+    adminTab.style.display = isAdmin ? 'flex' : 'none';
+  }
+  if (mobileAdminTab) {
+    mobileAdminTab.style.display = isAdmin ? 'flex' : 'none';
+  }
+  
+  if (!isAdmin && State.activeTab === 'admin') {
+    switchTab('dashboard');
   }
   
   if (window.lucide) {
