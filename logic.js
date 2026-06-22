@@ -32,7 +32,7 @@ let State = {
   meetups: typeof DefaultMeetups !== 'undefined' ? DefaultMeetups : [],
   posts: typeof DefaultPosts !== 'undefined' ? DefaultPosts : [],
   marketplace: typeof DefaultMarketplace !== 'undefined' ? DefaultMarketplace : [],
-  tribes: [],
+  tribes: typeof DefaultTribes !== 'undefined' ? JSON.parse(JSON.stringify(DefaultTribes)) : [],
   tribeChats: {},
   tribeThreads: {},
   forum: typeof DefaultForum !== 'undefined' ? DefaultForum : [],
@@ -48,11 +48,21 @@ let State = {
   minimizedChats: [],
   chats: typeof DefaultChats !== 'undefined' ? JSON.parse(JSON.stringify(DefaultChats)) : {},
   unreadChats: [],
-  layerFilters: { dispersed: true, overnight: true, services: true, hosts: true, mechanics: true, meetups: true }
+  layerFilters: { dispersed: true, overnight: true, services: true, hosts: true, mechanics: true, meetups: true },
+  postCropState: { img: null, zoom: 1.0, x: 0, y: 0, isDragging: false, dragStart: { x: 0, y: 0 } },
+  feedTabCropState: { img: null, zoom: 1.0, x: 0, y: 0, isDragging: false, dragStart: { x: 0, y: 0 } },
+  listingCropState: { img: null, zoom: 1.0, x: 0, y: 0, isDragging: false, dragStart: { x: 0, y: 0 } },
+  threadCropState: { img: null, zoom: 1.0, x: 0, y: 0, isDragging: false, dragStart: { x: 0, y: 0 } },
+  tribeIconCropState: { img: null, zoom: 1.0, x: 0, y: 0, isDragging: false, dragStart: { x: 0, y: 0 } },
+  tribeBannerCropState: { img: null, zoom: 1.0, x: 0, y: 0, isDragging: false, dragStart: { x: 0, y: 0 } },
+  feedbacks: [],
+  isSelectingMeetupLocation: false
 };
 
-const WELCOME_DISMISSED_STORAGE_KEY = 'vanlyfa_welcome_dismissed_v1';
-const LOCATION_CACHE_STORAGE_KEY = 'vanlyfa_location_cache_v1';
+const WELCOME_DISMISSED_STORAGE_KEY = 'vanlyfa_welcome_dismissed_v2';
+const GPS_ASKED_STORAGE_KEY = 'vanlyfa_gps_asked_v2';
+const SIGNUP_ENCOURAGED_STORAGE_KEY = 'vanlyfa_signup_encouraged_v2';
+const LOCATION_CACHE_STORAGE_KEY = 'vanlyfa_location_cache_v2';
 const DEFAULT_LOCATION_CACHE = { status: 'not-present', lat: 5, lng: 5 };
 
 function hasDismissedWelcome() {
@@ -61,6 +71,22 @@ function hasDismissedWelcome() {
 
 function cacheWelcomeDismissal() {
   localStorage.setItem(WELCOME_DISMISSED_STORAGE_KEY, 'true');
+}
+
+function hasAskedGps() {
+  return localStorage.getItem(GPS_ASKED_STORAGE_KEY) === 'true';
+}
+
+function cacheGpsAsked() {
+  localStorage.setItem(GPS_ASKED_STORAGE_KEY, 'true');
+}
+
+function hasEncouragedSignup() {
+  return localStorage.getItem(SIGNUP_ENCOURAGED_STORAGE_KEY) === 'true';
+}
+
+function cacheSignupEncouraged() {
+  localStorage.setItem(SIGNUP_ENCOURAGED_STORAGE_KEY, 'true');
 }
 
 function getCachedLocation() {
@@ -118,7 +144,8 @@ function saveStateToStorage() {
     bookings: State.bookings,
     notifications: State.notifications,
     jobs: State.jobs,
-    layerFilters: State.layerFilters
+    layerFilters: State.layerFilters,
+    feedbacks: State.feedbacks
   }));
 }
 
@@ -133,6 +160,9 @@ function loadStateFromStorage() {
       State.posts = parsed.posts || State.posts;
       State.marketplace = parsed.marketplace || State.marketplace;
       State.tribes = parsed.tribes || State.tribes;
+      if (!State.tribes || State.tribes.length === 0) {
+        State.tribes = typeof DefaultTribes !== 'undefined' ? JSON.parse(JSON.stringify(DefaultTribes)) : [];
+      }
       State.tribeChats = parsed.tribeChats || State.tribeChats;
       State.tribeThreads = parsed.tribeThreads || State.tribeThreads;
       State.forum = parsed.forum || State.forum;
@@ -148,6 +178,7 @@ function loadStateFromStorage() {
       State.notifications = parsed.notifications || State.notifications;
       State.jobs = parsed.jobs || State.jobs;
       State.layerFilters = parsed.layerFilters || State.layerFilters;
+      State.feedbacks = parsed.feedbacks || [];
     } catch(e) {
       console.warn("Could not load stored state, using defaults", e);
       State.isSignedIn = false;
@@ -266,19 +297,42 @@ function processSyncQueue() {
   showToast("Offline data successfully synchronized!", "success");
 }
 
+function findPostOrItem(postId) {
+  const strId = String(postId || '');
+  let target = null;
+  let array = null;
+  if (strId.startsWith('market-post-')) {
+    const rawId = strId.replace('market-post-', '');
+    target = State.marketplace.find(m => String(m.id) === rawId);
+    array = State.marketplace;
+  } else if (strId.startsWith('meetup-post-')) {
+    const rawId = strId.replace('meetup-post-', '');
+    target = State.meetups.find(m => String(m.id) === rawId);
+    array = State.meetups;
+  } else if (strId.startsWith('spot-post-')) {
+    const rawId = strId.replace('spot-post-', '');
+    target = State.spots.find(s => String(s.id) === rawId);
+    array = State.spots;
+  } else {
+    target = State.posts.find(p => String(p.id) === strId);
+    array = State.posts;
+  }
+  return { target, array };
+}
+
 function toggleLike(postId) {
   if (!requireAuth()) return;
-  const post = State.posts.find(p => p.id === postId);
-  if (post) {
-    const originalLiked = post.likedByUser;
-    const originalLikes = post.likes;
+  const { target } = findPostOrItem(postId);
+  if (target) {
+    const originalLiked = target.likedByUser;
+    const originalLikes = target.likes || 0;
 
-    if (post.likedByUser) {
-      post.likes = Math.max(0, post.likes - 1);
-      post.likedByUser = false;
+    if (target.likedByUser) {
+      target.likes = Math.max(0, originalLikes - 1);
+      target.likedByUser = false;
     } else {
-      post.likes++;
-      post.likedByUser = true;
+      target.likes = originalLikes + 1;
+      target.likedByUser = true;
     }
 
     State._cachedFeeds = {};
@@ -290,8 +344,8 @@ function toggleLike(postId) {
         saveStateToStorage();
       },
       () => {
-        post.likedByUser = originalLiked;
-        post.likes = originalLikes;
+        target.likedByUser = originalLiked;
+        target.likes = originalLikes;
         State._cachedFeeds = {};
         renderDashboardFeed();
         renderFeedTabPosts();
@@ -306,9 +360,10 @@ function submitComment(e, postId) {
   if (!requireAuth()) return;
   const input = document.getElementById(`comment-input-${postId}`);
   if (input && input.value.trim() !== '') {
-    const post = State.posts.find(p => p.id === postId);
-    if (post) {
-      post.comments.push({
+    const { target } = findPostOrItem(postId);
+    if (target) {
+      if (!target.comments) target.comments = [];
+      target.comments.push({
         user: State.currentUser.name,
         text: input.value.trim()
       });
@@ -534,6 +589,84 @@ function toggleVouchSpot(spotId) {
   );
 }
 
+let cropState = {
+  img: null,
+  zoom: 1.0,
+  x: 100,
+  y: 100,
+  isDragging: false,
+  dragStart: { x: 0, y: 0 }
+};
+
+function drawCropImage(canvas, drawBorder = true) {
+  const ctx = canvas.getContext('2d');
+  const img = cropState.img;
+  if (!img) return;
+  
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  ctx.save();
+  // Clip to circle circular viewport
+  ctx.beginPath();
+  ctx.arc(100, 100, 100, 0, Math.PI * 2);
+  ctx.clip();
+  
+  // Scale factor to make image fit
+  const scale = Math.max(200 / img.width, 200 / img.height) * cropState.zoom;
+  const w = img.width * scale;
+  const h = img.height * scale;
+  
+  ctx.drawImage(img, cropState.x - w / 2, cropState.y - h / 2, w, h);
+  ctx.restore();
+  
+  if (drawBorder) {
+    ctx.beginPath();
+    ctx.arc(100, 100, 99, 0, Math.PI * 2);
+    ctx.strokeStyle = '#3B7A57';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+function initCropHandlers(canvas, zoomInput) {
+  if (canvas._hasCropHandlers) return;
+  canvas._hasCropHandlers = true;
+  
+  const onStart = (e) => {
+    cropState.isDragging = true;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    cropState.dragStart = { x: clientX - cropState.x, y: clientY - cropState.y };
+  };
+  
+  const onMove = (e) => {
+    if (!cropState.isDragging) return;
+    e.preventDefault();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    cropState.x = clientX - cropState.dragStart.x;
+    cropState.y = clientY - cropState.dragStart.y;
+    drawCropImage(canvas);
+  };
+  
+  const onEnd = () => {
+    cropState.isDragging = false;
+  };
+  
+  canvas.addEventListener('mousedown', onStart);
+  canvas.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onEnd);
+  
+  canvas.addEventListener('touchstart', onStart, { passive: false });
+  canvas.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('touchend', onEnd);
+  
+  zoomInput.addEventListener('input', (e) => {
+    cropState.zoom = parseFloat(e.target.value);
+    drawCropImage(canvas);
+  });
+}
+
 function handleProfilePhotoUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -541,11 +674,28 @@ function handleProfilePhotoUpload(e) {
   const reader = new FileReader();
   reader.onload = function(evt) {
     const dataUrl = evt.target.result;
-    const statusSpan = document.getElementById('profile-photo-upload-status');
-    if (statusSpan) statusSpan.innerText = "Photo uploaded and ready to save!";
+    const workspace = document.getElementById('avatar-crop-workspace');
+    if (!workspace) return;
     
-    State.currentUser.avatar = dataUrl;
-    showToast("Profile photo loaded! Click Save to apply.", "success");
+    workspace.style.display = 'flex';
+    const canvas = document.getElementById('avatar-crop-canvas');
+    const zoomInput = document.getElementById('avatar-crop-zoom');
+    
+    cropState.img = new Image();
+    cropState.img.onload = function() {
+      cropState.zoom = 1.0;
+      cropState.x = 100;
+      cropState.y = 100;
+      zoomInput.value = 1.0;
+      
+      initCropHandlers(canvas, zoomInput);
+      drawCropImage(canvas);
+      
+      const statusSpan = document.getElementById('profile-photo-upload-status');
+      if (statusSpan) statusSpan.innerText = "Position and zoom your photo below.";
+      showToast("Reposition and zoom your avatar inside the preview circle!", "info");
+    };
+    cropState.img.src = dataUrl;
   };
   reader.readAsDataURL(file);
 }
@@ -554,14 +704,28 @@ function handleRigPhotoUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
   
+  // File size validation (max 2MB)
+  const MAX_FILE_SIZE = 2 * 1024 * 1024;
+  if (file.size > MAX_FILE_SIZE) {
+    showToast("File size exceeds 2MB limit. Please upload a smaller image.", "error");
+    e.target.value = '';
+    return;
+  }
+  
+  // Gallery size check (max 3 images)
+  const user = getActiveUser();
+  if (!user.gallery) user.gallery = [];
+  if (user.gallery.length >= 3) {
+    showToast("Maximum of 3 rig photos allowed.", "error");
+    e.target.value = '';
+    return;
+  }
+  
   const reader = new FileReader();
   reader.onload = function(evt) {
     const dataUrl = evt.target.result;
     
-    const user = getActiveUser();
-    if (!user.gallery) user.gallery = [];
     user.gallery.push(dataUrl);
-    
     saveStateToStorage();
     renderUserProfile();
     showToast("Rig photo added to gallery!", "success");
@@ -569,25 +733,100 @@ function handleRigPhotoUpload(e) {
   reader.readAsDataURL(file);
 }
 
-function handleListingPhotoUpload(e) {
+function handleGenericPhotoUpload(e, cropObj, canvasId, zoomInputId, workspaceId, statusId) {
   const file = e.target.files[0];
   if (!file) return;
+  
+  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+  if (file.size > MAX_FILE_SIZE) {
+    showToast("File size exceeds 2MB limit. Please upload a smaller image.", "error");
+    e.target.value = '';
+    return;
+  }
   
   const reader = new FileReader();
   reader.onload = function(evt) {
     const dataUrl = evt.target.result;
-    const preview = document.getElementById('list-photo-preview');
-    const container = document.getElementById('list-photo-preview-container');
-    const select = document.getElementById('list-img-select');
+    const workspace = document.getElementById(workspaceId);
+    if (!workspace) return;
     
-    if (preview && container && select) {
-      preview.src = dataUrl;
-      container.style.display = 'block';
-      select.value = 'custom';
-      showToast("Listing photo loaded successfully!", "success");
-    }
+    workspace.style.display = 'flex';
+    const canvas = document.getElementById(canvasId);
+    const zoomInput = document.getElementById(zoomInputId);
+    
+    cropObj.img = new Image();
+    cropObj.img.onload = function() {
+      cropObj.zoom = 1.0;
+      cropObj.x = canvas.width / 2;
+      cropObj.y = canvas.height / 2;
+      zoomInput.value = 1.0;
+      
+      initGenericCropHandlers(cropObj, canvas, zoomInput, (drawBorder) => {
+        drawGenericCrop(cropObj, canvas, drawBorder);
+      });
+      drawGenericCrop(cropObj, canvas, true);
+      
+      const statusSpan = document.getElementById(statusId);
+      if (statusSpan) statusSpan.innerText = "Position and zoom your photo below.";
+      showToast("Reposition and zoom your photo inside the box!", "info");
+    };
+    cropObj.img.src = dataUrl;
   };
   reader.readAsDataURL(file);
+}
+
+function handleListingPhotoUpload(e) {
+  handleGenericPhotoUpload(e, State.listingCropState, 'list-crop-canvas', 'list-crop-zoom', 'list-crop-workspace', 'list-photo-upload-status');
+}
+
+function handlePostPhotoUpload(e) {
+  handleGenericPhotoUpload(e, State.postCropState, 'post-crop-canvas', 'post-crop-zoom', 'post-crop-workspace', 'post-photo-upload-status');
+}
+
+function handleFeedTabPhotoUpload(e) {
+  handleGenericPhotoUpload(e, State.feedTabCropState, 'feed-tab-crop-canvas', 'feed-tab-crop-zoom', 'feed-tab-crop-workspace', 'feed-tab-photo-upload-status');
+}
+
+function handleThreadPhotoUpload(e) {
+  handleGenericPhotoUpload(e, State.threadCropState, 'thread-crop-canvas', 'thread-crop-zoom', 'thread-crop-workspace', 'thread-photo-upload-status');
+}
+
+function handleTribeIconUpload(e) {
+  handleGenericPhotoUpload(e, State.tribeIconCropState, 'tribe-icon-crop-canvas', 'tribe-icon-crop-zoom', 'tribe-icon-crop-workspace', 'tribe-icon-upload-status');
+}
+
+function handleTribeBannerUpload(e) {
+  handleGenericPhotoUpload(e, State.tribeBannerCropState, 'tribe-banner-crop-canvas', 'tribe-banner-crop-zoom', 'tribe-banner-crop-workspace', 'tribe-banner-upload-status');
+}
+
+function handlePrivateTribeJoin(tribe, onTriggerRender) {
+  if (tribe.pendingJoin) {
+    showToast("Join request is already pending approval.", "info");
+    return;
+  }
+  tribe.pendingJoin = true;
+  saveStateToStorage();
+  onTriggerRender();
+  showToast("Join request submitted to Tribe owner.", "info");
+  
+  setTimeout(() => {
+    const liveTribe = State.tribes.find(t => t.id === tribe.id);
+    if (liveTribe && liveTribe.pendingJoin) {
+      liveTribe.joined = true;
+      liveTribe.pendingJoin = false;
+      liveTribe.membersCount++;
+      saveStateToStorage();
+      showToast(`Approved! You are now a member of "${liveTribe.title}".`, "success");
+      
+      renderTribesList();
+      if (State.activeTribeId === liveTribe.id) {
+        renderTribeHubHeader(liveTribe.id);
+        const chatBtn = document.getElementById('tribe-tab-chat-btn');
+        const activeTab = (chatBtn && chatBtn.classList.contains('active')) ? 'chat' : 'forum';
+        switchTribeHubTab(activeTab);
+      }
+    }
+  }, 2500);
 }
 
 function toggleTribeHubMembership(tribeId) {
@@ -598,17 +837,25 @@ function toggleTribeHubMembership(tribeId) {
       tribe.joined = false;
       tribe.membersCount--;
       showToast(`Left the "${tribe.title}" tribe.`);
+      saveStateToStorage();
+      renderTribeHubHeader(tribeId);
+      const activeTab = document.querySelector('.tribe-hub-tabs .tab-btn.active').id.includes('chat') ? 'chat' : 'forum';
+      switchTribeHubTab(activeTab);
     } else {
-      tribe.joined = true;
-      tribe.membersCount++;
-      showToast(`Joined the "${tribe.title}" tribe!`, 'success');
+      if (!tribe.isPublic) {
+        handlePrivateTribeJoin(tribe, () => {
+          renderTribeHubHeader(tribeId);
+        });
+      } else {
+        tribe.joined = true;
+        tribe.membersCount++;
+        showToast(`Joined the "${tribe.title}" tribe!`, 'success');
+        saveStateToStorage();
+        renderTribeHubHeader(tribeId);
+        const activeTab = document.querySelector('.tribe-hub-tabs .tab-btn.active').id.includes('chat') ? 'chat' : 'forum';
+        switchTribeHubTab(activeTab);
+      }
     }
-    saveStateToStorage();
-    renderTribeHubHeader(tribeId);
-    
-    // Re-render chat/forum to apply join/leave lock overlays
-    const activeTab = document.querySelector('.tribe-hub-tabs .tab-btn.active').id.includes('chat') ? 'chat' : 'forum';
-    switchTribeHubTab(activeTab);
   }
 }
 
@@ -684,13 +931,37 @@ function toggleTribeMembership(tribeId) {
       tribe.joined = false;
       tribe.membersCount--;
       showToast(`Left the "${tribe.title}" tribe.`);
+      saveStateToStorage();
+      renderTribesList();
     } else {
-      tribe.joined = true;
-      tribe.membersCount++;
-      showToast(`Joined the "${tribe.title}" tribe!`, 'success');
+      if (!tribe.isPublic) {
+        handlePrivateTribeJoin(tribe, () => {
+          renderTribesList();
+        });
+      } else {
+        tribe.joined = true;
+        tribe.membersCount++;
+        showToast(`Joined the "${tribe.title}" tribe!`, 'success');
+        saveStateToStorage();
+        renderTribesList();
+      }
     }
-    saveStateToStorage();
-    renderTribesList();
+  }
+}
+
+function updateMessageTickUI(msgId, status) {
+  const ticksEl = document.getElementById(`ticks-${msgId}`);
+  if (ticksEl) {
+    if (status === 'read') {
+      ticksEl.innerHTML = `<i data-lucide="check-check" style="width: 11px; height: 11px; color: var(--accent-green); display: inline-block;"></i>`;
+    } else if (status === 'delivered') {
+      ticksEl.innerHTML = `<i data-lucide="check-check" style="width: 11px; height: 11px; color: var(--muted-text); display: inline-block;"></i>`;
+    } else {
+      ticksEl.innerHTML = `<i data-lucide="check" style="width: 11px; height: 11px; color: var(--muted-text); display: inline-block;"></i>`;
+    }
+    if (window.lucide) {
+      lucide.createIcons();
+    }
   }
 }
 
@@ -699,13 +970,15 @@ function sendChatMessage(username, text) {
   if (!State.chats[username]) State.chats[username] = [];
   
   const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const msgId = `msg-${Date.now()}`;
   
   const newMsg = {
-    id: `msg-${Date.now()}`,
+    id: msgId,
     sender: State.currentUser.name,
     text: text,
     time: timeString,
-    reaction: false
+    reaction: false,
+    status: 'sent'
   };
   
   State.chats[username].push(newMsg);
@@ -713,9 +986,35 @@ function sendChatMessage(username, text) {
   renderActiveChats();
   renderContactsSidebar();
   
+  // Transition sent -> delivered after 1.2s
+  setTimeout(() => {
+    const chat = State.chats[username];
+    if (chat) {
+      const msg = chat.find(m => m.id === msgId);
+      if (msg && msg.status === 'sent') {
+        msg.status = 'delivered';
+        saveStateToStorage();
+        updateMessageTickUI(msgId, 'delivered');
+      }
+    }
+  }, 1200);
+  
+  // Transition delivered -> read after 2.8s
+  setTimeout(() => {
+    const chat = State.chats[username];
+    if (chat) {
+      const msg = chat.find(m => m.id === msgId);
+      if (msg && msg.status === 'delivered') {
+        msg.status = 'read';
+        saveStateToStorage();
+        updateMessageTickUI(msgId, 'read');
+      }
+    }
+  }, 2800);
+
   setTimeout(() => {
     triggerMockReply(username, text);
-  }, 1500);
+  }, 3500);
 }
 
 function toggleHeartReaction(username, msgId) {
@@ -775,9 +1074,144 @@ function simulateAutoReply(username, text, delay) {
   
   if (!State.chats[username]) State.chats[username] = [];
   State.chats[username].push(replyMsg);
+  
+  // Mark outgoing messages as read when receiving reply
+  State.chats[username].forEach(m => {
+    if (m.sender === 'me' || m.sender === State.currentUser.name) {
+      m.status = 'read';
+    }
+  });
+  
   saveStateToStorage();
   renderActiveChats();
   renderContactsSidebar();
   
   showToast(`New message from ${username}`);
+}
+
+const Backend = {
+  createListing(listing) {
+    return new Promise((resolve, reject) => {
+      simulateApiCall(
+        () => {
+          State.marketplace.push(listing);
+          saveStateToStorage();
+          resolve();
+        },
+        () => {
+          if (State.isOffline) {
+            listing.pendingSync = true;
+            State.marketplace.push(listing);
+            State.syncQueue.push({ type: 'CREATE_LISTING', payload: listing });
+            saveStateToStorage();
+            updateConnectionUI();
+            resolve();
+          } else {
+            reject(new Error("Network sync failed."));
+          }
+        }
+      );
+    });
+  }
+};
+
+function createCropObject() {
+  return {
+    img: null,
+    zoom: 1.0,
+    x: 0,
+    y: 0,
+    isDragging: false,
+    dragStart: { x: 0, y: 0 }
+  };
+}
+
+function drawGenericCrop(cropObj, canvas, drawOverlay = true) {
+  const ctx = canvas.getContext('2d');
+  const img = cropObj.img;
+  if (!img) return;
+  
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  ctx.save();
+  // Scale factor to make image cover the canvas
+  const scale = Math.max(canvas.width / img.width, canvas.height / img.height) * cropObj.zoom;
+  const w = img.width * scale;
+  const h = img.height * scale;
+  
+  ctx.drawImage(img, cropObj.x - w / 2, cropObj.y - h / 2, w, h);
+  ctx.restore();
+  
+  if (drawOverlay) {
+    ctx.strokeStyle = '#3B7A57';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
+  }
+}
+
+function initGenericCropHandlers(cropObj, canvas, zoomInput, onDrawCallback) {
+  if (canvas._hasCropHandlers) return;
+  canvas._hasCropHandlers = true;
+  
+  const onStart = (e) => {
+    cropObj.isDragging = true;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    cropObj.dragStart = { x: clientX - cropObj.x, y: clientY - cropObj.y };
+  };
+  
+  const onMove = (e) => {
+    if (!cropObj.isDragging) return;
+    e.preventDefault();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    cropObj.x = clientX - cropObj.dragStart.x;
+    cropObj.y = clientY - cropObj.dragStart.y;
+    onDrawCallback(true);
+  };
+  
+  const onEnd = () => {
+    cropObj.isDragging = false;
+  };
+  
+  canvas.addEventListener('mousedown', onStart);
+  canvas.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onEnd);
+  
+  canvas.addEventListener('touchstart', onStart, { passive: false });
+  canvas.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('touchend', onEnd);
+  
+  zoomInput.addEventListener('input', (e) => {
+    cropObj.zoom = parseFloat(e.target.value);
+    onDrawCallback(true);
+  });
+}
+
+function checkRateLimit(type) {
+  const now = Date.now();
+  const oneHour = 60 * 60 * 1000;
+  
+  const storageKey = `vanlyfa_rate_limit_${type}`;
+  const timestampsStr = localStorage.getItem(storageKey);
+  let timestamps = [];
+  
+  if (timestampsStr) {
+    try {
+      timestamps = JSON.parse(timestampsStr);
+    } catch (e) {
+      timestamps = [];
+    }
+  }
+  
+  timestamps = timestamps.filter(t => now - t < oneHour);
+  
+  const limit = type === 'post' ? 5 : 3;
+  if (timestamps.length >= limit) {
+    return false;
+  }
+  
+  timestamps.push(now);
+  localStorage.setItem(storageKey, JSON.stringify(timestamps));
+  return true;
 }

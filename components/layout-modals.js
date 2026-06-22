@@ -4,12 +4,46 @@
 
 function openModal(id) {
   const modal = document.getElementById(id);
-  if (modal) modal.classList.add('open');
+  if (modal) {
+    modal.classList.add('open');
+    
+    // Clean up photo crop workspaces upon opening modal
+    if (id === 'modal-add-post') {
+      const workspace = document.getElementById('post-crop-workspace');
+      if (workspace) workspace.style.display = 'none';
+      const fileInput = document.getElementById('post-photo-upload');
+      if (fileInput) fileInput.value = '';
+      const statusSpan = document.getElementById('post-photo-upload-status');
+      if (statusSpan) statusSpan.innerText = '';
+      if (typeof State !== 'undefined') {
+        State.postCropState = createCropObject();
+      }
+    } else if (id === 'modal-add-listing') {
+      const workspace = document.getElementById('list-crop-workspace');
+      if (workspace) workspace.style.display = 'none';
+      const fileInput = document.getElementById('list-photo-upload');
+      if (fileInput) fileInput.value = '';
+      const statusSpan = document.getElementById('list-photo-upload-status');
+      if (statusSpan) statusSpan.innerText = '';
+      if (typeof State !== 'undefined') {
+        State.listingCropState = createCropObject();
+      }
+    }
+  }
 }
 
 function closeModal(id) {
   const modal = document.getElementById(id);
   if (modal) modal.classList.remove('open');
+  
+  if (id === 'modal-gps-input' && typeof State !== 'undefined' && State._onboardingLocationPending) {
+    State._onboardingLocationPending = false;
+    setTimeout(() => {
+      if (typeof triggerSignupOnboardingOnce === 'function') {
+        triggerSignupOnboardingOnce();
+      }
+    }, 400);
+  }
 }
 
 function openMobileDrawer() {

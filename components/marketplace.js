@@ -69,6 +69,11 @@ function renderMarketplaceListings() {
     const badgeClass = item.category === 'services-offer' ? 'badge-service-offer' : 
                        (item.category === 'services-want' ? 'badge-service-want' : '');
     
+    const isOwner = State.isSignedIn && item.seller.name === State.currentUser.name;
+    const actionButton = isOwner ? 
+      `<button class="btn btn-sm" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.15); font-size: 11px; cursor: pointer;" onclick="deleteListing('${item.id}')">Delete</button>` :
+      `<button class="btn btn-sm btn-primary" onclick="contactSeller('${item.seller.name}', '${item.title}')">Message</button>`;
+      
     card.innerHTML = `
       <div class="market-img-wrapper">
         <img src="${getImageSrc(item.image)}" alt="${item.title}" class="market-img">
@@ -87,7 +92,7 @@ function renderMarketplaceListings() {
             <img src="${getAvatarSrc(item.seller.avatar)}" alt="${item.seller.name}">
             <span>By ${getUserRoleMarkup(item.seller.name)}</span>
           </div>
-          <button class="btn btn-sm btn-primary" onclick="contactSeller('${item.seller.name}', '${item.title}')">Message</button>
+          ${actionButton}
         </div>
       </div>
     `;
@@ -98,6 +103,13 @@ function renderMarketplaceListings() {
 }
 
 function contactSeller(sellerName, itemTitle) {
+  if (localStorage.getItem('vanlyfa_marketplace_agreed') !== 'true') {
+    State._onMarketplaceSafetyAgreed = () => {
+      contactSeller(sellerName, itemTitle);
+    };
+    openModal('modal-market-safety');
+    return;
+  }
   openDirectChat(sellerName);
   if (itemTitle) {
     setTimeout(() => {
@@ -124,5 +136,17 @@ function contactSeller(sellerName, itemTitle) {
         }
       }
     }, 150);
+  }
+}
+
+function deleteListing(itemId) {
+  if (confirm("Are you sure you want to delete this listing?")) {
+    State.marketplace = State.marketplace.filter(item => String(item.id) !== String(itemId));
+    saveStateToStorage();
+    State._cachedFeeds = {}; // Clear feed cache
+    renderMarketplaceListings();
+    renderDashboardFeed();
+    renderFeedTabPosts();
+    showToast("Listing deleted successfully.", "success");
   }
 }

@@ -6,18 +6,35 @@
 create extension if not exists "uuid-ossp";
 
 -- ==========================================
+-- Admin / Moderation Security Helper
+-- ==========================================
+create or replace function public.is_admin()
+returns boolean as $$
+begin
+  return exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role in ('admin', 'moderator')
+  );
+end;
+$$ language plpgsql security definer;
+
+-- ==========================================
 -- 1. Profiles Table
 -- ==========================================
 create table public.profiles (
   id uuid references auth.users on delete cascade primary key,
   name text not null,
   handle text unique not null,
-  avatar text, -- Will store avatar key (e.g. 'avatar_bob') or a public URL to an uploaded file in Supabase Storage
+  avatar text, -- Will store avatar key or a public URL/base64 to an uploaded file
   bio text,
   rig text,
   solar text,
   power text,
   water text,
+  instagram_handle text, -- Instagram social link
+  tiktok_handle text,    -- TikTok social link
+  role text default 'user' not null, -- 'admin', 'moderator', 'pro', 'user'
+  avatar_crop jsonb default '{"x":0,"y":0,"zoom":1}'::jsonb not null, -- Store crop positioning
   gallery text[] default '{}'::text[], -- Array of image URLs
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
@@ -31,7 +48,7 @@ create policy "Public profiles are viewable by everyone"
 
 create policy "Users can update their own profile" 
   on public.profiles for update 
-  using (auth.uid() = id);
+  using (auth.uid() = id or public.is_admin());
 
 -- ==========================================
 -- 2. Spots Table (Vouched Campsites/Locations)
@@ -45,22 +62,23 @@ create table public.spots (
   description text,
   author_id uuid references public.profiles(id) on delete cascade not null,
   vouches integer default 0 not null,
+  status text default 'pending' not null, -- 'pending', 'approved', 'rejected'
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
 alter table public.spots enable row level security;
 
-create policy "Spots are viewable by everyone" 
+create policy "Spots are viewable by everyone if approved, or by the owner/admin" 
   on public.spots for select 
-  using (true);
+  using (status = 'approved' or auth.uid() = author_id or public.is_admin());
 
 create policy "Authenticated users can create spots" 
   on public.spots for insert 
   with check (auth.role() = 'authenticated');
 
-create policy "Authors can update/delete their own spots" 
+create policy "Authors or admins can update/delete spots" 
   on public.spots for all 
-  using (auth.uid() = author_id);
+  using (auth.uid() = author_id or public.is_admin());
 
 -- ==========================================
 -- 3. Visited Spots (Many-to-Many join table)
@@ -80,7 +98,7 @@ create policy "Visited logs are viewable by everyone"
 
 create policy "Users can modify their own visited spots list" 
   on public.visited_spots for all 
-  using (auth.uid() = profile_id);
+  using (auth.uid() = profile_id or public.is_admin());
 
 -- ==========================================
 -- 4. Meetups Table (Caravans & Campouts)
@@ -95,22 +113,23 @@ create table public.meetups (
   location text not null,
   description text,
   host_id uuid references public.profiles(id) on delete cascade not null,
+  status text default 'pending' not null, -- 'pending', 'approved', 'rejected'
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
 alter table public.meetups enable row level security;
 
-create policy "Meetups are viewable by everyone" 
+create policy "Meetups are viewable by everyone if approved, or by host/admin" 
   on public.meetups for select 
-  using (true);
+  using (status = 'approved' or auth.uid() = host_id or public.is_admin());
 
 create policy "Authenticated users can host meetups" 
   on public.meetups for insert 
   with check (auth.role() = 'authenticated');
 
-create policy "Hosts can update/delete their own meetups" 
+create policy "Hosts or admins can update/delete meetups" 
   on public.meetups for all 
-  using (auth.uid() = host_id);
+  using (auth.uid() = host_id or public.is_admin());
 
 -- ==========================================
 -- 5. Meetup Attendees (Many-to-Many join table)
@@ -130,7 +149,7 @@ create policy "Attendees list is viewable by everyone"
 
 create policy "Users can RSVP or cancel RSVP for themselves" 
   on public.meetup_attendees for all 
-  using (auth.uid() = profile_id);
+  using (auth.uid() = profile_id or public.is_admin());
 
 -- ==========================================
 -- 6. Social Feed Posts
@@ -141,26 +160,46 @@ create table public.posts (
   image text, -- Key referencing an SVG mockup or a public URL to uploaded storage media
   author_id uuid references public.profiles(id) on delete cascade not null,
   likes integer default 0 not null,
-  liked_by uuid[] default '{}'::uuid[] not null, -- Array of user IDs who liked the post to track toggle status
+  status text default 'pending' not null, -- 'pending', 'approved', 'rejected'
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
 alter table public.posts enable row level security;
 
-create policy "Posts are viewable by everyone" 
+create policy "Posts are viewable by everyone if approved, or by author/admin" 
   on public.posts for select 
-  using (true);
+  using (status = 'approved' or auth.uid() = author_id or public.is_admin());
 
 create policy "Authenticated users can create posts" 
   on public.posts for insert 
   with check (auth.role() = 'authenticated');
 
-create policy "Authors can delete or edit their own posts" 
+create policy "Authors or admins can delete or edit posts" 
   on public.posts for all 
-  using (auth.uid() = author_id);
+  using (auth.uid() = author_id or public.is_admin());
 
 -- ==========================================
--- 7. Post Comments
+-- 7. Post Likes (Replaces old liked_by array)
+-- ==========================================
+create table public.post_likes (
+  post_id uuid references public.posts(id) on delete cascade not null,
+  profile_id uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default timezone('utc'::text, now()) not null,
+  primary key (post_id, profile_id)
+);
+
+alter table public.post_likes enable row level security;
+
+create policy "Likes are viewable by everyone" 
+  on public.post_likes for select 
+  using (true);
+
+create policy "Authenticated users can toggle their own likes" 
+  on public.post_likes for all 
+  using (auth.uid() = profile_id);
+
+-- ==========================================
+-- 8. Post Comments
 -- ==========================================
 create table public.comments (
   id uuid default gen_random_uuid() primary key,
@@ -180,12 +219,12 @@ create policy "Authenticated users can comment"
   on public.comments for insert 
   with check (auth.role() = 'authenticated');
 
-create policy "Authors can edit or delete their own comments" 
+create policy "Authors or admins can edit or delete comments" 
   on public.comments for all 
-  using (auth.uid() = author_id);
+  using (auth.uid() = author_id or public.is_admin());
 
 -- ==========================================
--- 8. Marketplace Listings
+-- 9. Marketplace Listings
 -- ==========================================
 create table public.marketplace (
   id uuid default gen_random_uuid() primary key,
@@ -197,25 +236,26 @@ create table public.marketplace (
   description text,
   image text, -- SVG mockup key or public URL
   seller_id uuid references public.profiles(id) on delete cascade not null,
+  status text default 'pending' not null, -- 'pending', 'approved', 'rejected'
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
 alter table public.marketplace enable row level security;
 
-create policy "Listings are viewable by everyone" 
+create policy "Listings are viewable by everyone if approved, or by seller/admin" 
   on public.marketplace for select 
-  using (true);
+  using (status = 'approved' or auth.uid() = seller_id or public.is_admin());
 
 create policy "Authenticated users can post listings" 
   on public.marketplace for insert 
   with check (auth.role() = 'authenticated');
 
-create policy "Sellers can manage their own listings" 
+create policy "Sellers or admins can manage listings" 
   on public.marketplace for all 
-  using (auth.uid() = seller_id);
+  using (auth.uid() = seller_id or public.is_admin());
 
 -- ==========================================
--- 9. Skill Trade Directory
+-- 10. Skill Trade Directory
 -- ==========================================
 create table public.skills (
   id uuid default gen_random_uuid() primary key,
@@ -225,25 +265,26 @@ create table public.skills (
   tags text[] default '{}'::text[],
   description text,
   author_id uuid references public.profiles(id) on delete cascade not null,
+  status text default 'pending' not null, -- 'pending', 'approved', 'rejected'
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
 alter table public.skills enable row level security;
 
-create policy "Skill trades are viewable by everyone" 
+create policy "Skill trades are viewable by everyone if approved, or by author/admin" 
   on public.skills for select 
-  using (true);
+  using (status = 'approved' or auth.uid() = author_id or public.is_admin());
 
 create policy "Authenticated users can post skill listings" 
   on public.skills for insert 
   with check (auth.role() = 'authenticated');
 
-create policy "Authors can manage their own skill listings" 
+create policy "Authors or admins can manage skill listings" 
   on public.skills for all 
-  using (auth.uid() = author_id);
+  using (auth.uid() = author_id or public.is_admin());
 
 -- ==========================================
--- 10. Forum Threads
+-- 11. Forum Threads
 -- ==========================================
 create table public.forum_threads (
   id uuid default gen_random_uuid() primary key,
@@ -252,25 +293,26 @@ create table public.forum_threads (
   body text not null,
   author_id uuid references public.profiles(id) on delete cascade not null,
   views_count integer default 0 not null,
+  status text default 'approved' not null, -- 'pending', 'approved', 'rejected' (default approved for forum)
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
 alter table public.forum_threads enable row level security;
 
-create policy "Threads are viewable by everyone" 
+create policy "Threads are viewable by everyone if approved, or by author/admin" 
   on public.forum_threads for select 
-  using (true);
+  using (status = 'approved' or auth.uid() = author_id or public.is_admin());
 
 create policy "Authenticated users can create threads" 
   on public.forum_threads for insert 
   with check (auth.role() = 'authenticated');
 
-create policy "Authors can edit or delete their own threads" 
+create policy "Authors or admins can edit or delete threads" 
   on public.forum_threads for all 
-  using (auth.uid() = author_id);
+  using (auth.uid() = author_id or public.is_admin());
 
 -- ==========================================
--- 11. Forum Thread Replies
+-- 12. Forum Thread Replies
 -- ==========================================
 create table public.forum_replies (
   id uuid default gen_random_uuid() primary key,
@@ -290,12 +332,12 @@ create policy "Authenticated users can write replies"
   on public.forum_replies for insert 
   with check (auth.role() = 'authenticated');
 
-create policy "Authors can edit or delete their own replies" 
+create policy "Authors or admins can edit or delete replies" 
   on public.forum_replies for all 
-  using (auth.uid() = author_id);
+  using (auth.uid() = author_id or public.is_admin());
 
 -- ==========================================
--- 12. Friendships (Many-to-Many symmetrical relation)
+-- 13. Friendships (Many-to-Many symmetrical relation)
 -- ==========================================
 create table public.friendships (
   profile_id_1 uuid references public.profiles(id) on delete cascade not null,
@@ -313,18 +355,47 @@ create policy "Friendships are viewable by everyone"
 
 create policy "Users can establish or end their own friendships" 
   on public.friendships for all 
-  using (auth.uid() = profile_id_1 or auth.uid() = profile_id_2);
+  using (auth.uid() = profile_id_1 or auth.uid() = profile_id_2 or public.is_admin());
 
 -- ==========================================
--- 13. Direct Messages Table
+-- 14. Routes & Trips Table (Featured or Shared)
+-- ==========================================
+create table public.routes (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  description text,
+  waypoints jsonb not null, -- Array of lat/lng objects
+  author_id uuid references public.profiles(id) on delete cascade not null,
+  is_featured boolean default false not null,
+  status text default 'pending' not null, -- 'pending', 'approved', 'rejected'
+  created_at timestamptz default timezone('utc'::text, now()) not null
+);
+
+alter table public.routes enable row level security;
+
+create policy "Routes are viewable by everyone if approved/featured, or by author/admin"
+  on public.routes for select
+  using (status = 'approved' or is_featured = true or auth.uid() = author_id or public.is_admin());
+
+create policy "Authenticated users can create routes"
+  on public.routes for insert
+  with check (auth.role() = 'authenticated');
+
+create policy "Authors or admins can modify routes"
+  on public.routes for all
+  using (auth.uid() = author_id or public.is_admin());
+
+-- ==========================================
+-- 15. Direct Messages Table
 -- ==========================================
 create table public.messages (
   id uuid default gen_random_uuid() primary key,
   sender_id uuid references public.profiles(id) on delete cascade not null,
   receiver_id uuid references public.profiles(id) on delete cascade not null,
   text text,
-  image text, -- For sticker name (e.g. 'plant-sticker') or public attachment url
+  image text, -- Sticker name or public attachment url
   heart_reaction boolean default false not null,
+  status text default 'sent' not null, -- 'sent', 'delivered', 'read'
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
@@ -332,15 +403,15 @@ alter table public.messages enable row level security;
 
 create policy "Messages are viewable by the sender or receiver" 
   on public.messages for select 
-  using (auth.uid() = sender_id or auth.uid() = receiver_id);
+  using (auth.uid() = sender_id or auth.uid() = receiver_id or public.is_admin());
 
 create policy "Users can send messages to other profiles" 
   on public.messages for insert 
   with check (auth.role() = 'authenticated' and auth.uid() = sender_id);
 
-create policy "Users can update reaction states on messages they are involved in"
+create policy "Users can update reaction and read states on messages they are involved in"
   on public.messages for update
-  using (auth.uid() = sender_id or auth.uid() = receiver_id);
+  using (auth.uid() = sender_id or auth.uid() = receiver_id or public.is_admin());
 
 -- =========================================================================
 -- Automatically create profile records when new users sign up on Supabase
@@ -348,13 +419,14 @@ create policy "Users can update reaction states on messages they are involved in
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, name, handle, avatar, bio)
+  insert into public.profiles (id, name, handle, avatar, bio, role)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'name', 'New Nomad'),
     coalesce(new.raw_user_meta_data->>'handle', 'nomad_' || substring(md5(random()::text) from 1 for 8)),
     'avatar_bob', -- Default avatar
-    'Living full time on the road.'
+    'Living full time on the road.',
+    'user'
   );
   return new;
 end;

@@ -3,8 +3,16 @@
    ========================================================================== */
 
 function switchTab(tabName, isPopState = false) {
-  if (tabName !== 'dashboard') {
+  if (tabName === 'messages') {
     if (!requireAuth()) return;
+  }
+  if (tabName === 'admin') {
+    if (!requireAuth()) return;
+    if (State.currentUser.role !== 'admin') {
+      showToast("Access Denied. Admins only.", "error");
+      switchTab('dashboard');
+      return;
+    }
   }
   State.activeTab = tabName;
   State.activeThreadId = null; // Reset forum viewing state
@@ -40,7 +48,8 @@ function switchTab(tabName, isPopState = false) {
     forum: "Forum Board",
     messages: "Direct Messages",
     profile: "Rig Profile",
-    jobs: "Work & Stay"
+    jobs: "Work & Stay",
+    admin: "Admin Moderation Panel"
   };
   document.getElementById('page-display-title').innerText = titles[tabName] || "Vanlyfa";
   
@@ -54,7 +63,8 @@ function switchTab(tabName, isPopState = false) {
     forum: "Search discussion topics...",
     messages: "Search direct messages...",
     profile: "Search profile specs...",
-    jobs: "Search farm help, camp hosts, carpentry..."
+    jobs: "Search farm help, camp hosts, carpentry...",
+    admin: "Filter pending moderation..."
   };
   document.getElementById('global-search').placeholder = placeholders[tabName] || "Search...";
   
@@ -109,29 +119,21 @@ function updateHeaderActionButton() {
   const btn = document.getElementById('main-action-btn');
   const searchBar = document.getElementById('search-bar-container');
   
-  if (State.activeTab === 'profile') {
-    btn.style.display = 'none';
+  // Hide search bar on profile and admin tabs
+  if (State.activeTab === 'profile' || State.activeTab === 'admin') {
     searchBar.style.visibility = 'hidden';
+  } else {
+    searchBar.style.visibility = 'visible';
+  }
+  
+  // Hide header main action button on all tabs except dashboard
+  if (State.activeTab !== 'dashboard') {
+    btn.style.display = 'none';
     return;
   }
   
   btn.style.display = 'inline-flex';
-  searchBar.style.visibility = 'visible';
-  
-  const configs = {
-    dashboard: { text: "Add Spot", icon: "plus" },
-    feed: { text: "Share Update", icon: "edit-3" },
-    marketplace: { text: "Add Listing", icon: "plus" },
-    tribes: { text: "Form Tribe", icon: "users" },
-    meetups: { text: "Host Meetup", icon: "calendar" },
-    forum: { text: "New Thread", icon: "plus" },
-    jobs: { text: "Host Work & Stay", icon: "briefcase" }
-  };
-  
-  const conf = configs[State.activeTab];
-  if (conf) {
-    btn.innerHTML = `<i data-lucide="${conf.icon}"></i> <span>${conf.text}</span>`;
-  }
+  btn.innerHTML = `<i data-lucide="plus"></i> <span>Add Spot</span>`;
   lucide.createIcons();
 }
 
@@ -147,7 +149,18 @@ function triggerMainActionButtonModal() {
     jobs: 'modal-add-job'
   };
   const modalId = modals[State.activeTab];
-  if (modalId) openModal(modalId);
+  if (modalId) {
+    if (State.activeTab === 'marketplace') {
+      if (localStorage.getItem('vanlyfa_marketplace_agreed') !== 'true') {
+        State._onMarketplaceSafetyAgreed = () => {
+          openModal('modal-add-listing');
+        };
+        openModal('modal-market-safety');
+        return;
+      }
+    }
+    openModal(modalId);
+  }
 }
 
 function renderCurrentTab() {
@@ -181,6 +194,9 @@ function renderCurrentTab() {
       break;
     case "jobs":
       renderJobsList();
+      break;
+    case "admin":
+      renderAdminPanel();
       break;
   }
 }

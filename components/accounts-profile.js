@@ -13,6 +13,32 @@ function renderUserProfile() {
   document.getElementById('profile-reputation-score').innerText = `Reputation: ${user.reputation || 0}`;
   document.getElementById('profile-user-bio').innerText = user.bio;
   
+  // Render social links
+  const igLink = document.getElementById('profile-link-instagram');
+  const igHandle = document.getElementById('profile-handle-instagram');
+  const ttLink = document.getElementById('profile-link-tiktok');
+  const ttHandle = document.getElementById('profile-handle-tiktok');
+  
+  if (user.instagram_handle) {
+    if (igLink && igHandle) {
+      igLink.style.display = 'inline-flex';
+      igLink.href = `https://instagram.com/${user.instagram_handle}`;
+      igHandle.innerText = `@${user.instagram_handle}`;
+    }
+  } else {
+    if (igLink) igLink.style.display = 'none';
+  }
+  
+  if (user.tiktok_handle) {
+    if (ttLink && ttHandle) {
+      ttLink.style.display = 'inline-flex';
+      ttLink.href = `https://tiktok.com/@${user.tiktok_handle}`;
+      ttHandle.innerText = `@${user.tiktok_handle}`;
+    }
+  } else {
+    if (ttLink) ttLink.style.display = 'none';
+  }
+  
   // Show edit button for owner, show visitor actions for visitor
   const editBtn = document.getElementById('profile-edit-btn');
   const visitorActions = document.getElementById('profile-visitor-actions');
@@ -54,11 +80,29 @@ function renderUserProfile() {
     }
   }
   
-  // Render vehicle specs
-  document.getElementById('profile-rig-model').innerText = user.rig || "N/A";
-  document.getElementById('profile-rig-solar').innerText = user.solar || "N/A";
-  document.getElementById('profile-rig-power').innerText = user.power || "N/A";
-  document.getElementById('profile-rig-water').innerText = user.water || "N/A";
+  // Render vehicle specs optionally
+  const showRig = user.showRigProfile !== false;
+  const rigSection = document.getElementById('profile-rig-section');
+  const gallerySection = document.getElementById('profile-gallery-section');
+  
+  if (rigSection) rigSection.style.display = showRig ? 'block' : 'none';
+  if (gallerySection) gallerySection.style.display = showRig ? 'block' : 'none';
+  
+  if (showRig) {
+    const rigDesc = document.getElementById('profile-rig-desc');
+    if (rigDesc) {
+      if (user.rig_desc) {
+        rigDesc.innerText = user.rig_desc;
+        rigDesc.style.display = 'block';
+      } else {
+        rigDesc.style.display = 'none';
+      }
+    }
+    document.getElementById('profile-rig-model').innerText = user.rig || "N/A";
+    document.getElementById('profile-rig-solar').innerText = user.solar || "N/A";
+    document.getElementById('profile-rig-power').innerText = user.power || "N/A";
+    document.getElementById('profile-rig-water').innerText = user.water || "N/A";
+  }
   
   // Render Friends List
   const friendsCountSpan = document.getElementById('profile-friends-title');
@@ -94,24 +138,51 @@ function renderUserProfile() {
   // Render Gallery
   const galleryGrid = document.getElementById('profile-gallery-grid');
   const uploadBtn = document.getElementById('profile-gallery-upload-btn');
+  const gallery = user.gallery || [];
   
-  // Hide upload button if not owner
+  // Hide upload button if not owner or if gallery already has 3 or more photos
   if (uploadBtn) {
-    uploadBtn.style.display = isOwner ? 'inline-flex' : 'none';
+    uploadBtn.style.display = (isOwner && gallery.length < 3) ? 'inline-flex' : 'none';
   }
   
   if (galleryGrid) {
     galleryGrid.innerHTML = '';
-    const gallery = user.gallery || [];
     if (gallery.length === 0) {
       galleryGrid.innerHTML = `<div style="grid-column: span 3; text-align:center; padding:24px; color:var(--muted-text); font-size:12px; font-style:italic;">No photos in gallery.</div>`;
     } else {
-      gallery.forEach(imgKey => {
+      gallery.forEach((imgKey, index) => {
+        const container = document.createElement('div');
+        container.style.position = 'relative';
+        container.style.width = '100%';
+        container.style.aspectRatio = '1';
+        
         const img = document.createElement('img');
         img.className = 'profile-gallery-item';
         img.src = getImageSrc(imgKey);
         img.alt = "Rig photo";
-        galleryGrid.appendChild(img);
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = 'var(--radius-md)';
+        container.appendChild(img);
+        
+        if (isOwner) {
+          const deleteBtn = document.createElement('button');
+          deleteBtn.innerHTML = '×';
+          deleteBtn.style.cssText = "position:absolute; top:6px; right:6px; background:rgba(0,0,0,0.65); color:white; border:none; border-radius:50%; width:22px; height:22px; font-size:16px; line-height:18px; text-align:center; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; z-index:10; border:1px solid rgba(255,255,255,0.4);";
+          deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm("Remove this photo from your rig gallery?")) {
+              user.gallery.splice(index, 1);
+              saveStateToStorage();
+              renderUserProfile();
+              showToast("Photo removed from gallery.", "success");
+            }
+          });
+          container.appendChild(deleteBtn);
+        }
+        
+        galleryGrid.appendChild(container);
       });
     }
   }
@@ -272,9 +343,39 @@ function initProfileMap(user) {
 function openProfileEditModal() {
   document.getElementById('edit-profile-name').value = State.currentUser.name;
   document.getElementById('edit-profile-bio').value = State.currentUser.bio;
-  document.getElementById('edit-profile-rig').value = State.currentUser.rig;
-  document.getElementById('edit-profile-solar').value = State.currentUser.solar;
-  document.getElementById('edit-profile-power').value = State.currentUser.power;
-  document.getElementById('edit-profile-water').value = State.currentUser.water;
+  
+  const showRigCb = document.getElementById('edit-profile-show-rig');
+  if (showRigCb) {
+    showRigCb.checked = State.currentUser.showRigProfile !== false;
+    toggleEditProfileRigFields(showRigCb.checked);
+  }
+  
+  const rigDescInput = document.getElementById('edit-profile-rig-desc');
+  if (rigDescInput) {
+    rigDescInput.value = State.currentUser.rig_desc || "";
+  }
+  
+  document.getElementById('edit-profile-rig').value = State.currentUser.rig || "";
+  document.getElementById('edit-profile-solar').value = State.currentUser.solar || "";
+  document.getElementById('edit-profile-power').value = State.currentUser.power || "";
+  document.getElementById('edit-profile-water').value = State.currentUser.water || "";
+  
+  // Populate social handles
+  document.getElementById('edit-profile-instagram').value = State.currentUser.instagram_handle || "";
+  document.getElementById('edit-profile-tiktok').value = State.currentUser.tiktok_handle || "";
+  
+  // Reset crop workspace
+  const workspace = document.getElementById('avatar-crop-workspace');
+  if (workspace) workspace.style.display = 'none';
+  const fileInput = document.getElementById('edit-profile-avatar-upload');
+  if (fileInput) fileInput.value = '';
+  
   openModal('modal-edit-profile');
+}
+
+function toggleEditProfileRigFields(show) {
+  const container = document.getElementById('edit-profile-rig-fields-container');
+  if (container) {
+    container.style.display = show ? 'block' : 'none';
+  }
 }

@@ -190,16 +190,36 @@ function renderActiveChats() {
           lastTime = msg.time;
         }
         
-        const isMe = msg.sender === State.currentUser.name;
+        const isMe = msg.sender === State.currentUser.name || msg.sender === 'me';
         
+        let tickIcon = 'check'; // Default sent status
+        let tickColor = 'var(--muted-text)';
+        if (msg.status === 'read') {
+          tickIcon = 'check-check';
+          tickColor = 'var(--accent-green)';
+        } else if (msg.status === 'delivered') {
+          tickIcon = 'check-check';
+          tickColor = 'var(--muted-text)';
+        }
+        
+        const statusMarkup = isMe ? `
+          <div class="chat-msg-status-area" style="display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 9px; opacity: 0.65; justify-content: flex-end; width: 100%;">
+            <span style="font-size: 8px;">${msg.time || ''}</span>
+            <span class="chat-msg-ticks" id="ticks-${msg.id}">
+              <i data-lucide="${tickIcon}" style="width: 11px; height: 11px; color: ${tickColor}; display: inline-block;"></i>
+            </span>
+          </div>
+        ` : '';
+
         messagesHtml += `
           <div class="chat-msg-row ${isMe ? 'outgoing' : 'incoming'}">
             ${!isMe ? `<img src="${getAvatarSrc(contact.avatar)}" alt="${contact.name}" class="chat-msg-avatar" onclick="viewUserProfile('${contact.name}')" style="cursor:pointer;">` : ''}
-            <div class="chat-msg-bubble-wrap">
-              <div class="chat-msg-bubble" style="cursor:pointer;" onclick="toggleHeartReaction('${username}', '${msg.id}')" title="Click to react with Heart">
+            <div class="chat-msg-bubble-wrap" style="display: flex; flex-direction: column; width: max-content; max-width: 75%; align-items: ${isMe ? 'flex-end' : 'flex-start'};">
+              <div class="chat-msg-bubble" style="cursor:pointer; padding: 8px 12px; width: fit-content; max-width: 100%; word-break: break-word;" onclick="toggleHeartReaction('${username}', '${msg.id}')" title="Click to react with Heart">
                 ${msg.text}
               </div>
-              ${msg.reaction ? `<div class="chat-bubble-reaction" onclick="toggleHeartReaction('${username}', '${msg.id}')">❤️</div>` : ''}
+              ${msg.reaction ? `<div class="chat-bubble-reaction" onclick="toggleHeartReaction('${username}', '${msg.id}')" style="margin-top: -8px; z-index: 1;">❤️</div>` : ''}
+              ${statusMarkup}
             </div>
           </div>
         `;
@@ -238,7 +258,6 @@ function renderActiveChats() {
         <div class="chat-footer-top">
           <button class="chat-footer-action-btn" title="Photos" onclick="showToast('Media attachment not supported in chat.', 'info')"><i data-lucide="image"></i></button>
           <button class="chat-footer-action-btn" title="Stickers" onclick="showToast('Stickers not loaded.', 'info')"><i data-lucide="smile"></i></button>
-          <button class="chat-footer-action-btn" title="GIF" onclick="showToast('GIF search not loaded.', 'info')"><i data-lucide="image-play"></i></button>
           
           <div class="chat-input-wrapper">
             <input type="text" class="chat-input-field" placeholder="Aa" onkeypress="handleChatKeyPress(event, '${username}')" onfocus="setTimeout(adjustChatContainerForVisualViewport, 300)" onblur="setTimeout(adjustChatContainerForVisualViewport, 100)">

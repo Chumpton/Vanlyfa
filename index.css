@@ -3793,5 +3793,50 @@ body.dark-mode .chat-messages-area {
   color: var(--text-charcoal) !important;
 }
 
+/* Formatting Editor & Markdown Parser Styles */
+.formatting-toolbar {
+  background: var(--bg-sand);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+}
+.btn-format {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-charcoal);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-format:hover {
+  background: rgba(59, 122, 87, 0.1);
+  border-color: var(--accent-green-light);
+  color: var(--accent-green);
+}
+.btn-format:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+blockquote {
+  border-left: 3px solid var(--accent-green);
+  padding-left: 10px;
+  margin: 8px 0;
+  color: var(--muted-text);
+  font-style: italic;
+  background: rgba(59, 122, 87, 0.03);
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+code {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 90%;
+  color: #d63384;
+}
+.dark-mode code {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f43f5e;
+}
+
 
 

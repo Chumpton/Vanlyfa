@@ -45,9 +45,17 @@ function renderTribesList() {
       };
       
       const bgGrad = bannerColors[tribe.banner] || bannerColors.forest;
+      const bannerStyle = tribe.banner && tribe.banner.startsWith('data:') 
+        ? `background-image: url(${tribe.banner}); background-size: cover; background-position: center;`
+        : `background: ${bgGrad};`;
+        
+      const iconHtml = tribe.icon && tribe.icon.startsWith('data:')
+        ? `<img src="${tribe.icon}" style="width:100%; height:100%; border-radius:inherit; object-fit:cover;" />`
+        : tribe.iconLetter;
+        
       card.innerHTML = `
-        <div class="tribe-banner" style="background: ${bgGrad}; height: 60px;">
-          <div class="tribe-icon-overlap" style="width:36px; height:36px; font-size:14px; bottom:-12px; left:12px;">${tribe.iconLetter}</div>
+        <div class="tribe-banner" style="${bannerStyle} height: 60px;">
+          <div class="tribe-icon-overlap" style="width:36px; height:36px; font-size:14px; bottom:-12px; left:12px; overflow:hidden; border-radius:50%; display:flex; align-items:center; justify-content:center;">${iconHtml}</div>
         </div>
         <div class="tribe-details" style="padding: 16px 12px 12px 12px;">
           <h3 class="tribe-title" style="margin-top: 4px; font-size: 13px;">${tribe.title}</h3>
@@ -77,22 +85,39 @@ function renderTribesList() {
     };
     
     const bgGrad = bannerColors[tribe.banner] || bannerColors.forest;
-    
+    const bannerStyle = tribe.banner && tribe.banner.startsWith('data:') 
+      ? `background-image: url(${tribe.banner}); background-size: cover; background-position: center;`
+      : `background: ${bgGrad};`;
+      
+    const iconHtml = tribe.icon && tribe.icon.startsWith('data:')
+      ? `<img src="${tribe.icon}" style="width:100%; height:100%; border-radius:inherit; object-fit:cover;" />`
+      : tribe.iconLetter;
+
+    const joinBtnText = tribe.pendingJoin ? 'Pending Approval' : (tribe.joined ? 'Leave Tribe' : 'Join Tribe');
+    const joinBtnClass = tribe.joined ? '' : 'btn-primary';
+    const joinBtnDisabled = tribe.pendingJoin ? 'disabled' : '';
+
     card.innerHTML = `
-      <div class="tribe-banner" style="background: ${bgGrad}">
-        <div class="tribe-icon-overlap">${tribe.iconLetter}</div>
+      <div class="tribe-banner" style="${bannerStyle}">
+        <div class="tribe-icon-overlap" style="overflow:hidden; border-radius:50%; display:flex; align-items:center; justify-content:center;">${iconHtml}</div>
       </div>
       <div class="tribe-details">
         <h3 class="tribe-title" style="margin-top: 12px;">${tribe.title}</h3>
         <div class="tribe-meta" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <span>${tribe.membersCount} Members</span>
-          <span style="font-size:10px; font-weight:600; color:var(--muted-text); background:var(--bg-sand); padding:2px 6px; border-radius:4px;">${tribe.state} • ${tribe.category}</span>
+          <div style="display:flex; gap:4px; align-items:center;">
+            <span style="font-size:10px; font-weight:600; color:var(--muted-text); background:var(--bg-sand); padding:2px 6px; border-radius:4px;">${tribe.state} • ${tribe.category}</span>
+            <span style="font-size:10px; font-weight:600; color:${tribe.isPublic ? 'var(--accent-green)' : '#f59e0b'}; background:var(--bg-sand); padding:2px 6px; border-radius:4px; display:inline-flex; align-items:center; gap:2px;">
+              <i data-lucide="${tribe.isPublic ? 'globe' : 'lock'}" style="width:10px; height:10px;"></i>
+              ${tribe.isPublic ? 'Public' : 'Private'}
+            </span>
+          </div>
         </div>
         <p class="tribe-description">${tribe.description}</p>
         <div class="tribe-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top: 12px;">
           <span style="font-size:10px; color:var(--muted-text); font-style:italic;">Ideal: ${tribe.ideal}</span>
-          <button class="btn btn-sm ${tribe.joined ? '' : 'btn-primary'}" onclick="toggleTribeMembership('${tribe.id}')">
-            ${tribe.joined ? 'Leave Tribe' : 'Join Tribe'}
+          <button class="btn btn-sm ${joinBtnClass}" ${joinBtnDisabled} onclick="toggleTribeMembership('${tribe.id}')">
+            ${joinBtnText}
           </button>
         </div>
       </div>
@@ -136,20 +161,37 @@ function renderTribeHubHeader(tribeId) {
     mountain: "linear-gradient(to right, #A6A194, #2D2D2D)"
   };
   const bgGrad = bannerColors[tribe.banner] || bannerColors.forest;
+  const bannerStyle = tribe.banner && tribe.banner.startsWith('data:') 
+    ? `background-image: url(${tribe.banner}); background-size: cover; background-position: center;`
+    : `background: ${bgGrad};`;
+    
+  const iconHtml = tribe.icon && tribe.icon.startsWith('data:')
+    ? `<img src="${tribe.icon}" style="width:100%; height:100%; border-radius:inherit; object-fit:cover;" />`
+    : tribe.iconLetter;
+
+  const joinBtnText = tribe.pendingJoin ? 'Pending Approval' : (tribe.joined ? 'Leave Tribe' : 'Join Tribe');
+  const joinBtnClass = tribe.joined ? 'btn-outline' : 'btn-primary';
+  const joinBtnDisabled = tribe.pendingJoin ? 'disabled' : '';
 
   container.innerHTML = `
-    <div class="tribe-banner" style="background: ${bgGrad}; height: 120px; position: relative;">
+    <div class="tribe-banner" style="${bannerStyle} height: 120px; position: relative;">
       <button class="btn btn-sm" onclick="closeTribeHub()" style="position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; padding: 6px; display: inline-flex; align-items: center; justify-content: center;"><i data-lucide="arrow-left"></i></button>
-      <div class="tribe-icon-overlap" style="position: absolute; bottom: -20px; left: 24px; width: 64px; height: 64px; border-radius: 12px; background-color: var(--accent-green); color: white; font-size: 24px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 4px solid var(--card-bg); box-shadow: var(--shadow-md);">${tribe.iconLetter}</div>
+      <div class="tribe-icon-overlap" style="position: absolute; bottom: -20px; left: 24px; width: 64px; height: 64px; border-radius: 50%; background-color: var(--accent-green); color: white; font-size: 24px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 4px solid var(--card-bg); box-shadow: var(--shadow-md); overflow: hidden;">${iconHtml}</div>
     </div>
     <div style="padding: 32px 24px 24px 24px;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
         <div>
           <h2 style="font-size: 20px; font-weight: 700; color: var(--text-charcoal);">${tribe.title}</h2>
-          <span style="font-size: 13px; color: var(--muted-text); font-weight: 600;">${tribe.membersCount} members</span>
+          <span style="font-size: 13px; color: var(--muted-text); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+            ${tribe.membersCount} members • 
+            <span style="display: inline-flex; align-items: center; gap: 2px;">
+              <i data-lucide="${tribe.isPublic ? 'globe' : 'lock'}" style="width: 12px; height: 12px;"></i>
+              ${tribe.isPublic ? 'Public' : 'Private'}
+            </span>
+          </span>
         </div>
-        <button class="btn ${tribe.joined ? 'btn-outline' : 'btn-primary'}" onclick="toggleTribeHubMembership('${tribe.id}')">
-          ${tribe.joined ? 'Leave Tribe' : 'Join Tribe'}
+        <button class="btn ${joinBtnClass}" ${joinBtnDisabled} onclick="toggleTribeHubMembership('${tribe.id}')">
+          ${joinBtnText}
         </button>
       </div>
       <p style="font-size: 14px; color: var(--text-charcoal); margin-top: 12px; line-height: 1.5;">${tribe.description}</p>

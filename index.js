@@ -28,9 +28,22 @@ function initApp() {
   updateThemeToggleUI();
 
   const initialWelcomeModal = document.getElementById('welcome-modal');
-  if (initialWelcomeModal && hasDismissedWelcome()) {
-    initialWelcomeModal.classList.remove('active', 'fading');
-    initialWelcomeModal.style.display = 'none';
+  if (initialWelcomeModal) {
+    if (hasDismissedWelcome()) {
+      initialWelcomeModal.classList.remove('active', 'fading');
+      initialWelcomeModal.style.display = 'none';
+      
+      // If they dismissed welcome but we haven't asked for GPS/signup yet, trigger it now!
+      if (!hasAskedGps()) {
+        requestOnboardingGeolocation();
+      } else if (!hasEncouragedSignup()) {
+        triggerSignupOnboardingOnce();
+      }
+    } else {
+      initialWelcomeModal.classList.add('active');
+      initialWelcomeModal.classList.remove('fading');
+      initialWelcomeModal.style.display = 'flex';
+    }
   }
 
   // Render sidebar profile details
@@ -104,6 +117,36 @@ function initApp() {
   document.getElementById('main-action-btn').addEventListener('click', () => {
     triggerMainActionButtonModal();
   });
+
+  // Bottom pane creation buttons
+  const meetupCreateBtn = document.getElementById('meetup-create-btn');
+  if (meetupCreateBtn) {
+    meetupCreateBtn.addEventListener('click', () => handleTabCreateButton('modal-add-meetup'));
+  }
+  const forumCreateBtn = document.getElementById('forum-create-btn');
+  if (forumCreateBtn) {
+    forumCreateBtn.addEventListener('click', () => handleTabCreateButton('modal-add-thread'));
+  }
+  const marketCreateBtn = document.getElementById('market-create-btn');
+  if (marketCreateBtn) {
+    marketCreateBtn.addEventListener('click', () => handleTabCreateButton('modal-add-listing'));
+  }
+  const tribeCreateBtn = document.getElementById('tribe-create-btn');
+  if (tribeCreateBtn) {
+    tribeCreateBtn.addEventListener('click', () => handleTabCreateButton('modal-add-tribe'));
+  }
+  const jobCreateBtn = document.getElementById('job-create-btn');
+  if (jobCreateBtn) {
+    jobCreateBtn.addEventListener('click', () => handleTabCreateButton('modal-add-job'));
+  }
+
+  // Edit Profile - Rig section toggle
+  const showRigCb = document.getElementById('edit-profile-show-rig');
+  if (showRigCb) {
+    showRigCb.addEventListener('change', (e) => {
+      toggleEditProfileRigFields(e.target.checked);
+    });
+  }
   
   // Post button inside feed sidebar
   document.getElementById('feed-post-btn').addEventListener('click', () => {
@@ -190,20 +233,58 @@ function initApp() {
     listingPhotoUpload.addEventListener('change', handleListingPhotoUpload);
   }
 
-  const listImgSelect = document.getElementById('list-img-select');
-  if (listImgSelect) {
-    listImgSelect.addEventListener('change', (e) => {
-      const container = document.getElementById('list-photo-preview-container');
-      if (e.target.value !== 'custom') {
-        if (container) container.style.display = 'none';
-      } else {
-        const preview = document.getElementById('list-photo-preview');
-        if (preview && preview.src && preview.src.startsWith('data:') && container) {
-          container.style.display = 'block';
-        }
-      }
-    });
+  const postPhotoUpload = document.getElementById('post-photo-upload');
+  if (postPhotoUpload) {
+    postPhotoUpload.addEventListener('change', handlePostPhotoUpload);
   }
+
+  const feedTabPhotoUpload = document.getElementById('feed-tab-photo-upload');
+  if (feedTabPhotoUpload) {
+    feedTabPhotoUpload.addEventListener('change', handleFeedTabPhotoUpload);
+  }
+
+  const threadPhotoUpload = document.getElementById('thread-photo-upload');
+  if (threadPhotoUpload) {
+    threadPhotoUpload.addEventListener('change', handleThreadPhotoUpload);
+  }
+
+  const tribeIconUpload = document.getElementById('tribe-icon-upload');
+  if (tribeIconUpload) {
+    tribeIconUpload.addEventListener('change', handleTribeIconUpload);
+  }
+
+  const tribeBannerUpload = document.getElementById('tribe-banner-upload');
+  if (tribeBannerUpload) {
+    tribeBannerUpload.addEventListener('change', handleTribeBannerUpload);
+  }
+
+  // Formatting toolbar buttons click handlers
+  document.querySelectorAll('.btn-format').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const format = btn.getAttribute('data-format');
+      const targetId = btn.getAttribute('data-target') || 'post-text';
+      const textarea = document.getElementById(targetId);
+      if (!textarea) return;
+      
+      let startToken = '';
+      let endToken = '';
+      if (format === 'bold') {
+        startToken = '**';
+        endToken = '**';
+      } else if (format === 'italic') {
+        startToken = '*';
+        endToken = '*';
+      } else if (format === 'quote') {
+        startToken = '\n> ';
+        endToken = '\n';
+      } else if (format === 'code') {
+        startToken = '`';
+        endToken = '`';
+      }
+      insertFormatting(textarea, startToken, endToken);
+    });
+  });
 
   // Contacts Sidebar Drawer Event Listeners
   document.getElementById('contacts-toggle-btn').addEventListener('click', () => {
@@ -279,16 +360,22 @@ function initApp() {
   renderContactsSidebar();
   renderActiveChats();
 
-  // Parse query parameters for spot or meetup sharing
+  // Parse query parameters for sharing
   const params = new URLSearchParams(window.location.search);
   const sharedSpotId = params.get('spot');
   if (sharedSpotId) {
-    const spot = State.spots.find(s => s.id === sharedSpotId);
-    if (spot) {
+    setTimeout(() => {
+      switchTab('dashboard');
       setTimeout(() => {
-        openInfoDrawerForSpot(spot);
-      }, 600);
-    }
+        const spot = State.spots.find(s => s.id === sharedSpotId);
+        if (spot) {
+          triggerInfoDrawerFromMap(sharedSpotId);
+          if (State.leafletMap) {
+            State.leafletMap.flyTo([spot.lat, spot.lng], 12);
+          }
+        }
+      }, 500);
+    }, 600);
   }
   const sharedMeetupId = params.get('meetup');
   if (sharedMeetupId) {
@@ -303,6 +390,32 @@ function initApp() {
       }, 400);
     }, 600);
   }
+  const sharedPostId = params.get('post');
+  if (sharedPostId) {
+    setTimeout(() => {
+      switchTab('feed');
+      setTimeout(() => {
+        const card = document.getElementById(`post-card-${sharedPostId}`);
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.style.transition = 'outline 0.3s ease, border 0.3s ease';
+          card.style.outline = '3px solid var(--accent-green)';
+          card.style.border = '1px solid var(--accent-green)';
+          let isOutline = true;
+          let blinks = 0;
+          const interval = setInterval(() => {
+            card.style.outline = isOutline ? '3px solid var(--accent-green)' : 'none';
+            isOutline = !isOutline;
+            blinks++;
+            if (blinks > 6) {
+              clearInterval(interval);
+              card.style.outline = 'none';
+            }
+          }, 300);
+        }
+      }, 500);
+    }, 600);
+  }
 
   // Onboarding Welcome Modal Dismiss
   const welcomeDismissBtn = document.getElementById('welcome-dismiss-btn');
@@ -315,8 +428,7 @@ function initApp() {
       setTimeout(() => {
         welcomeModal.classList.remove('active', 'fading');
         welcomeModal.style.display = 'none';
-        switchAuthTab('signup');
-        openModal('modal-auth-required');
+        requestOnboardingGeolocation();
       }, 300);
     });
   }
@@ -536,37 +648,133 @@ function setupModalHandlers() {
   document.getElementById('save-tribe-btn').addEventListener('click', saveNewTribe);
   document.getElementById('save-meetup-btn').addEventListener('click', saveNewMeetup);
   document.getElementById('save-thread-btn').addEventListener('click', saveNewForumThread);
+
+  // Safety Agreement Checklist Verification
+  const safetyChecks = document.querySelectorAll('.safety-check');
+  const agreeBtn = document.getElementById('btn-agree-safety');
+  if (agreeBtn) {
+    safetyChecks.forEach(cb => {
+      cb.addEventListener('change', () => {
+        const allChecked = Array.from(safetyChecks).every(c => c.checked);
+        agreeBtn.disabled = !allChecked;
+        agreeBtn.style.opacity = allChecked ? '1' : '0.5';
+      });
+    });
+    
+    agreeBtn.addEventListener('click', () => {
+      localStorage.setItem('vanlyfa_marketplace_agreed', 'true');
+      closeModal('modal-market-safety');
+      // Reset checkboxes
+      safetyChecks.forEach(c => c.checked = false);
+      agreeBtn.disabled = true;
+      agreeBtn.style.opacity = '0.5';
+      
+      // Execute queued action
+      if (typeof State._onMarketplaceSafetyAgreed === 'function') {
+        State._onMarketplaceSafetyAgreed();
+        State._onMarketplaceSafetyAgreed = null;
+      }
+    });
+  }
 }
 
 function handleAuthSignIn(event) {
   event.preventDefault();
   const inputVal = document.getElementById('signin-email').value.trim();
+  const passwordVal = document.getElementById('signin-password').value;
   
   if (!inputVal) return;
   
+  // Normalizing input to match handle or name
+  let searchName = inputVal.toLowerCase();
+  if (searchName === 'bob') searchName = '@nomad_bob';
+  if (searchName === 'clara') searchName = '@clara_outdoors';
+  if (searchName === 'forest') searchName = '@forest_nomad';
+  if (searchName === 'baja') searchName = '@baja_surfer';
+  if (searchName === 'solar') searchName = '@solar_explorer';
+  if (searchName === 'admin') searchName = '@admin';
+
   // Find user in database simulator
-  const user = State.users.find(u => u.name.toLowerCase() === inputVal.toLowerCase() || 
-                                      u.handle.toLowerCase() === inputVal.toLowerCase() ||
-                                      u.handle.toLowerCase() === `@${inputVal.toLowerCase()}`);
+  let user = State.users.find(u => u.name.toLowerCase() === searchName || 
+                                     u.handle.toLowerCase() === searchName ||
+                                     u.handle.toLowerCase() === `@${searchName}`);
+                                     
+  // For testing convenience, if 'bob' or '@nomad_bob' doesn't exist in users yet, create him
+  if (!user && (searchName === '@nomad_bob' || searchName === 'bob')) {
+    user = {
+      name: "Nomad Bob",
+      handle: "@nomad_bob",
+      avatar: "avatar_bob",
+      bio: "Rig builder and highway traveler.",
+      rig: "Camper Rig",
+      solar: "200W Solar",
+      power: "100Ah Lithium",
+      water: "15 Gal Fresh",
+      gallery: [],
+      visitedSpots: [],
+      friends: [],
+      reputation: 5,
+      givenRepTo: [],
+      role: "user",
+      instagram_handle: "nomad_bob",
+      tiktok_handle: "nomad_bob",
+      password: "NomadPass123!"
+    };
+    State.users.push(user);
+    saveStateToStorage();
+  }
   
   if (user) {
+    // Password validation rules
+    let expectedPassword = user.password;
+    if (!expectedPassword) {
+      if (user.handle === "@admin") expectedPassword = "AdminPass123!";
+      else if (user.handle === "@clara_outdoors") expectedPassword = "ClaraPass123!";
+      else if (user.handle === "@forest_nomad") expectedPassword = "ForestPass123!";
+      else if (user.handle === "@baja_surfer") expectedPassword = "BajaPass123!";
+      else if (user.handle === "@solar_explorer") expectedPassword = "SolarPass123!";
+      else if (user.handle === "@nomad_bob") expectedPassword = "NomadPass123!";
+      else expectedPassword = "password"; // Default fallback
+    }
+    
+    if (passwordVal !== expectedPassword) {
+      showToast("Incorrect password. Please try again.", "error");
+      return;
+    }
+    
     State.currentUser = {
       name: user.name,
       handle: user.handle,
       avatar: user.avatar,
       bio: user.bio || "",
+      showRigProfile: user.showRigProfile !== false,
+      rig_desc: user.rig_desc || "",
       rig: user.rig || "",
       solar: user.solar || "",
       power: user.power || "",
       water: user.water || "",
       reputation: user.reputation || 0,
-      givenRepTo: user.givenRepTo || []
+      givenRepTo: user.givenRepTo || [],
+      role: user.role || "user",
+      instagram_handle: user.instagram_handle || "",
+      tiktok_handle: user.tiktok_handle || "",
+      avatar_crop: user.avatar_crop || { x: 0, y: 0, zoom: 1 }
     };
     State.isSignedIn = true;
     saveStateToStorage();
     updateSidebarProfileWidget();
     closeModal('modal-auth-required');
-    showToast(`Signed in as ${user.name}!`, "success");
+    showToast(`Welcome back, ${user.name}! (${user.role})`, "success");
+    
+    // Check if admin to refresh UI tabs
+    if (user.role === 'admin') {
+      const adminTab = document.getElementById('sidebar-admin-tab');
+      if (adminTab) adminTab.style.display = 'flex';
+    } else {
+      const adminTab = document.getElementById('sidebar-admin-tab');
+      if (adminTab) adminTab.style.display = 'none';
+    }
+    
     renderCurrentTab();
   } else {
     // Autocreate account for convenience in mockup
@@ -577,6 +785,8 @@ function handleAuthSignIn(event) {
       handle: newHandle,
       avatar: "avatar_bob",
       bio: "Living the dream on four wheels.",
+      showRigProfile: true,
+      rig_desc: "",
       rig: "Camper Rig",
       solar: "200W Solar",
       power: "100Ah Lithium",
@@ -585,7 +795,12 @@ function handleAuthSignIn(event) {
       visitedSpots: [],
       friends: [],
       reputation: 3,
-      givenRepTo: []
+      givenRepTo: [],
+      role: "user",
+      instagram_handle: "",
+      tiktok_handle: "",
+      password: passwordVal || "password",
+      avatar_crop: { x: 0, y: 0, zoom: 1 }
     };
     State.users.push(newUser);
     State.currentUser = { ...newUser };
@@ -609,15 +824,9 @@ function handleAuthSignUp(event) {
   if (!username) return;
   const handle = `@${username.replace(/\s+/g, '_').toLowerCase()}`;
   
-  const existingUser = State.users.find(u => u.name.toLowerCase() === username.toLowerCase());
+  const existingUser = State.users.find(u => u.name.toLowerCase() === username.toLowerCase() || u.handle.toLowerCase() === handle.toLowerCase());
   if (existingUser) {
-    showToast("Username already exists. Signed in to existing account.", "info");
-    State.currentUser = { ...existingUser };
-    State.isSignedIn = true;
-    saveStateToStorage();
-    updateSidebarProfileWidget();
-    closeModal('modal-auth-required');
-    renderCurrentTab();
+    showToast("Username already exists. Please choose another or Sign In.", "error");
     return;
   }
   
@@ -627,6 +836,8 @@ function handleAuthSignUp(event) {
     avatar: "avatar_bob",
     bio: bio,
     badgeTag: badgeTag,
+    showRigProfile: true,
+    rig_desc: "",
     rig: "Standard Camper",
     solar: "200W Solar",
     power: "100Ah AGM",
@@ -635,7 +846,12 @@ function handleAuthSignUp(event) {
     visitedSpots: [],
     friends: [],
     reputation: 5,
-    givenRepTo: []
+    givenRepTo: [],
+    role: "user",
+    instagram_handle: "",
+    tiktok_handle: "",
+    password: password,
+    avatar_crop: { x: 0, y: 0, zoom: 1 }
   };
   
   State.users.push(newUser);
@@ -645,6 +861,11 @@ function handleAuthSignUp(event) {
   updateSidebarProfileWidget();
   closeModal('modal-auth-required');
   showToast(`Welcome aboard, ${username}!`, "success");
+  
+  // Hide admin tab on fresh signup
+  const adminTab = document.getElementById('sidebar-admin-tab');
+  if (adminTab) adminTab.style.display = 'none';
+
   renderCurrentTab();
 }
 
@@ -660,18 +881,52 @@ function saveUserProfileEdit() {
   
   user.name = newName;
   user.bio = document.getElementById('edit-profile-bio').value.trim() || user.bio;
+  user.showRigProfile = document.getElementById('edit-profile-show-rig').checked;
+  user.rig_desc = document.getElementById('edit-profile-rig-desc').value.trim();
   user.rig = document.getElementById('edit-profile-rig').value.trim() || user.rig;
   user.solar = document.getElementById('edit-profile-solar').value.trim() || user.solar;
   user.power = document.getElementById('edit-profile-power').value.trim() || user.power;
   user.water = document.getElementById('edit-profile-water').value.trim() || user.water;
-  user.avatar = State.currentUser.avatar;
+  
+  // Crop avatar processing
+  const cropWorkspace = document.getElementById('avatar-crop-workspace');
+  if (cropWorkspace && (cropWorkspace.style.display === 'flex' || cropWorkspace.style.display === 'block')) {
+    const canvas = document.getElementById('avatar-crop-canvas');
+    if (canvas && typeof drawCropImage === 'function') {
+      // Draw image WITHOUT the helper circle border before export
+      drawCropImage(canvas, false);
+      const croppedDataUrl = canvas.toDataURL("image/png");
+      user.avatar = croppedDataUrl;
+      State.currentUser.avatar = croppedDataUrl;
+      
+      // Store offsets
+      if (typeof cropState !== 'undefined') {
+        user.avatar_crop = { x: cropState.x, y: cropState.y, zoom: cropState.zoom };
+        State.currentUser.avatar_crop = user.avatar_crop;
+      }
+      
+      // Reset workspace
+      cropWorkspace.style.display = 'none';
+      document.getElementById('edit-profile-avatar-upload').value = '';
+    }
+  } else {
+    user.avatar = State.currentUser.avatar;
+  }
+  
+  // Social handles
+  user.instagram_handle = document.getElementById('edit-profile-instagram').value.trim();
+  user.tiktok_handle = document.getElementById('edit-profile-tiktok').value.trim();
   
   State.currentUser.name = newName;
   State.currentUser.bio = user.bio;
+  State.currentUser.showRigProfile = user.showRigProfile;
+  State.currentUser.rig_desc = user.rig_desc;
   State.currentUser.rig = user.rig;
   State.currentUser.solar = user.solar;
   State.currentUser.power = user.power;
   State.currentUser.water = user.water;
+  State.currentUser.instagram_handle = user.instagram_handle;
+  State.currentUser.tiktok_handle = user.tiktok_handle;
   
   if (oldName !== newName) {
     State.posts.forEach(p => {
@@ -729,6 +984,8 @@ function saveNewSpot() {
     return;
   }
   
+  const status = State.currentUser.role === 'admin' ? 'approved' : 'pending';
+  
   const newSpot = {
     id: `spot-${Date.now()}`,
     title,
@@ -738,7 +995,8 @@ function saveNewSpot() {
     description,
     author: { name: State.currentUser.name, avatar: State.currentUser.avatar },
     vouches: 1,
-    reviews: []
+    reviews: [],
+    status
   };
   
   if (category === 'driveway-host') {
@@ -751,6 +1009,8 @@ function saveNewSpot() {
     };
   }
   
+  const successMsg = status === 'approved' ? "Campsite vouched successfully!" : "Campsite submitted! Awaiting admin approval.";
+  
   if (State.isOffline) {
     newSpot.pendingSync = true;
     State.spots.push(newSpot);
@@ -761,7 +1021,7 @@ function saveNewSpot() {
   } else {
     State.spots.push(newSpot);
     saveStateToStorage();
-    showToast("Campsite vouched successfully!", "success");
+    showToast(successMsg, "success");
   }
   
   // Reload maps
@@ -785,11 +1045,24 @@ function saveNewSpot() {
 function saveNewPost() {
   if (!requireAuth()) return;
   const content = document.getElementById('post-text').value.trim();
-  const imgVal = document.getElementById('post-img-select').value;
   
   if (!content) {
     showToast("Post content cannot be empty.", "error");
     return;
+  }
+
+  if (!checkRateLimit('post')) {
+    showToast("Rate limit exceeded. You can only create 5 posts per hour.", "error");
+    return;
+  }
+  
+  let finalImage = null;
+  if (State.postCropState.img) {
+    const canvas = document.getElementById('post-crop-canvas');
+    if (canvas) {
+      drawGenericCrop(State.postCropState, canvas, false);
+      finalImage = canvas.toDataURL("image/png");
+    }
   }
   
   const newPost = {
@@ -797,10 +1070,11 @@ function saveNewPost() {
     author: { name: State.currentUser.name, avatar: State.currentUser.avatar },
     time: "Just now",
     content,
-    image: imgVal === 'none' ? null : `image_${imgVal}`,
+    image: finalImage,
     likes: 0,
     likedByUser: false,
-    comments: []
+    comments: [],
+    status: State.currentUser.role === 'admin' ? 'approved' : 'pending'
   };
   
   State.posts.unshift(newPost);
@@ -808,11 +1082,17 @@ function saveNewPost() {
   
   // Clean inputs
   document.getElementById('post-text').value = '';
-  document.getElementById('post-img-select').value = 'none';
+  document.getElementById('post-photo-upload').value = '';
+  const statusSpan = document.getElementById('post-photo-upload-status');
+  if (statusSpan) statusSpan.innerText = '';
+  const workspace = document.getElementById('post-crop-workspace');
+  if (workspace) workspace.style.display = 'none';
+  State.postCropState = createCropObject();
   
   closeModal('modal-add-post');
   renderDashboardFeed();
-  showToast("Update shared with community feed!", "success");
+  const successMsg = newPost.status === 'approved' ? "Update shared with community feed!" : "Post submitted! Awaiting admin approval.";
+  showToast(successMsg, "success");
 }
 
 function saveNewListing() {
@@ -824,28 +1104,35 @@ function saveNewListing() {
   const location = document.getElementById('list-location').value.trim();
   const zip = document.getElementById('list-zip').value.trim();
   const description = document.getElementById('list-desc').value.trim();
-  const imgVal = document.getElementById('list-img-select').value;
   
   if (!title || isNaN(price) || !location || !zip || !description) {
     showToast("Please fill out all listing fields, including Zip Code.", "error");
     return;
   }
+
+  if (!checkRateLimit('marketplace')) {
+    showToast("Rate limit exceeded. You can only create 3 marketplace listings per hour.", "error");
+    return;
+  }
   
-  let finalImage = `item_${imgVal}`;
-  if (imgVal === 'custom') {
-    const preview = document.getElementById('list-photo-preview');
-    if (preview && preview.src && preview.src.startsWith('data:')) {
-      finalImage = preview.src;
-    } else {
-      showToast("Please upload a custom photo first, or choose a mockup template.", "error");
-      return;
+  let finalImage = null;
+  if (State.listingCropState.img) {
+    const canvas = document.getElementById('list-crop-canvas');
+    if (canvas) {
+      drawGenericCrop(State.listingCropState, canvas, false);
+      finalImage = canvas.toDataURL("image/png");
     }
+  } else {
+    showToast("Please upload a photo for your listing.", "error");
+    return;
   }
   
   const coords = resolveZipCoordinates(zip) || { lat: 39.0, lng: -105.0 };
   
   const condition = category === 'services-offer' ? 'Service Offered' : 
                     (category === 'services-want' ? 'Service Wanted' : 'Good');
+  
+  const status = State.currentUser.role === 'admin' ? 'approved' : 'pending';
   
   const newListing = {
     id: `market-${Date.now()}`,
@@ -859,7 +1146,8 @@ function saveNewListing() {
     condition,
     description,
     seller: { name: State.currentUser.name, avatar: State.currentUser.avatar },
-    image: finalImage
+    image: finalImage,
+    status
   };
   
   // Save listing using Backend Client Simulator
@@ -870,31 +1158,54 @@ function saveNewListing() {
     document.getElementById('list-location').value = '';
     document.getElementById('list-zip').value = '';
     document.getElementById('list-desc').value = '';
+    document.getElementById('list-photo-upload').value = '';
     
-    const preview = document.getElementById('list-photo-preview');
-    if (preview) preview.src = '';
-    const container = document.getElementById('list-photo-preview-container');
-    if (container) container.style.display = 'none';
-    const fileInput = document.getElementById('list-photo-upload');
-    if (fileInput) fileInput.value = '';
-    const select = document.getElementById('list-img-select');
-    if (select) select.value = 'solar';
+    const statusSpan = document.getElementById('list-photo-upload-status');
+    if (statusSpan) statusSpan.innerText = '';
+    const workspace = document.getElementById('list-crop-workspace');
+    if (workspace) workspace.style.display = 'none';
+    State.listingCropState = createCropObject();
     
     closeModal('modal-add-listing');
     renderMarketplaceListings();
-    showToast("Marketplace listing published!", "success");
+    
+    const successMsg = status === 'approved' ? "Marketplace listing published!" : "Listing submitted! Awaiting admin approval.";
+    showToast(successMsg, "success");
   });
 }
 
 function saveNewTribe() {
   if (!requireAuth()) return;
   const title = document.getElementById('tribe-name-input').value.trim();
-  const iconLetter = document.getElementById('tribe-icon-input').value.trim().toUpperCase();
-  const banner = document.getElementById('tribe-banner-select').value;
   const description = document.getElementById('tribe-desc-input').value.trim();
+  const isPublic = document.getElementById('tribe-privacy-input').checked;
   
-  if (!title || !iconLetter || !description) {
+  if (!title || !description) {
     showToast("Please fill all tribe fields.", "error");
+    return;
+  }
+
+  let finalIcon = null;
+  if (State.tribeIconCropState.img) {
+    const canvas = document.getElementById('tribe-icon-crop-canvas');
+    if (canvas) {
+      drawGenericCrop(State.tribeIconCropState, canvas, false);
+      finalIcon = canvas.toDataURL("image/png");
+    }
+  } else {
+    showToast("Please upload a tribe profile icon.", "error");
+    return;
+  }
+
+  let finalBanner = null;
+  if (State.tribeBannerCropState.img) {
+    const canvas = document.getElementById('tribe-banner-crop-canvas');
+    if (canvas) {
+      drawGenericCrop(State.tribeBannerCropState, canvas, false);
+      finalBanner = canvas.toDataURL("image/png");
+    }
+  } else {
+    showToast("Please upload a tribe banner image.", "error");
     return;
   }
   
@@ -902,10 +1213,15 @@ function saveNewTribe() {
     id: `tribe-${Date.now()}`,
     title,
     membersCount: 1,
-    banner,
-    iconLetter,
+    banner: finalBanner,
+    icon: finalIcon,
+    iconLetter: title.substring(0, 2).toUpperCase(),
     description,
-    joined: true
+    isPublic,
+    joined: true,
+    category: "Interest",
+    state: "CA",
+    ideal: "Off-grid / Boondocking"
   };
   
   State.tribes.push(newTribe);
@@ -913,8 +1229,23 @@ function saveNewTribe() {
   
   // Clean inputs
   document.getElementById('tribe-name-input').value = '';
-  document.getElementById('tribe-icon-input').value = '';
   document.getElementById('tribe-desc-input').value = '';
+  document.getElementById('tribe-privacy-input').checked = true;
+  document.getElementById('tribe-icon-upload').value = '';
+  document.getElementById('tribe-banner-upload').value = '';
+  
+  const iconStatus = document.getElementById('tribe-icon-upload-status');
+  if (iconStatus) iconStatus.innerText = '';
+  const bannerStatus = document.getElementById('tribe-banner-upload-status');
+  if (bannerStatus) bannerStatus.innerText = '';
+  
+  const iconWorkspace = document.getElementById('tribe-icon-crop-workspace');
+  if (iconWorkspace) iconWorkspace.style.display = 'none';
+  const bannerWorkspace = document.getElementById('tribe-banner-crop-workspace');
+  if (bannerWorkspace) bannerWorkspace.style.display = 'none';
+  
+  State.tribeIconCropState = createCropObject();
+  State.tribeBannerCropState = createCropObject();
   
   closeModal('modal-add-tribe');
   renderTribesList();
@@ -936,6 +1267,8 @@ function saveNewMeetup() {
     return;
   }
   
+  const status = State.currentUser.role === 'admin' ? 'approved' : 'pending';
+  
   const newMeetup = {
     id: `meetup-${Date.now()}`,
     title,
@@ -947,7 +1280,8 @@ function saveNewMeetup() {
     description,
     host: { name: State.currentUser.name, avatar: State.currentUser.avatar },
     attendees: ['avatar_bob'],
-    attendeesCount: 1
+    attendeesCount: 1,
+    status
   };
   
   State.meetups.push(newMeetup);
@@ -967,18 +1301,29 @@ function saveNewMeetup() {
   
   closeModal('modal-add-meetup');
   renderMeetupsList();
-  showToast("Meetup hosted and pinned on global map!", "success");
+  
+  const successMsg = status === 'approved' ? "Meetup hosted and pinned on global map!" : "Meetup submitted! Awaiting admin approval.";
+  showToast(successMsg, "success");
 }
 
 function saveNewForumThread() {
   if (!requireAuth()) return;
   const title = document.getElementById('thread-title-input').value.trim();
-  const category = document.getElementById('thread-cat-input').value.trim() || "General";
+  const category = document.getElementById('thread-cat-select').value;
   const body = document.getElementById('thread-body-input').value.trim();
   
   if (!title || !body) {
     showToast("Please fill out thread title and body content.", "error");
     return;
+  }
+
+  let finalImage = null;
+  if (State.threadCropState.img) {
+    const canvas = document.getElementById('thread-crop-canvas');
+    if (canvas) {
+      drawGenericCrop(State.threadCropState, canvas, false);
+      finalImage = canvas.toDataURL("image/png");
+    }
   }
   
   const newThread = {
@@ -990,6 +1335,7 @@ function saveNewForumThread() {
     viewsCount: 1,
     date: "Just now",
     body,
+    image: finalImage,
     replies: []
   };
   
@@ -1010,8 +1356,15 @@ function saveNewForumThread() {
   
   // Clean inputs
   document.getElementById('thread-title-input').value = '';
-  document.getElementById('thread-cat-input').value = '';
+  document.getElementById('thread-cat-select').value = 'general';
   document.getElementById('thread-body-input').value = '';
+  document.getElementById('thread-photo-upload').value = '';
+  
+  const statusSpan = document.getElementById('thread-photo-upload-status');
+  if (statusSpan) statusSpan.innerText = '';
+  const workspace = document.getElementById('thread-crop-workspace');
+  if (workspace) workspace.style.display = 'none';
+  State.threadCropState = createCropObject();
   
   closeModal('modal-add-thread');
   renderForumView();
@@ -1020,22 +1373,38 @@ function saveNewForumThread() {
 function saveNewFeedTabPost() {
   if (!requireAuth()) return;
   const content = document.getElementById('feed-tab-post-text').value.trim();
-  const imgVal = document.getElementById('feed-tab-post-img-select').value;
   
   if (!content) {
     showToast("Post content cannot be empty.", "error");
     return;
   }
+
+  if (!checkRateLimit('post')) {
+    showToast("Rate limit exceeded. You can only create 5 posts per hour.", "error");
+    return;
+  }
+  
+  let finalImage = null;
+  if (State.feedTabCropState.img) {
+    const canvas = document.getElementById('feed-tab-crop-canvas');
+    if (canvas) {
+      drawGenericCrop(State.feedTabCropState, canvas, false);
+      finalImage = canvas.toDataURL("image/png");
+    }
+  }
+  
+  const status = State.currentUser.role === 'admin' ? 'approved' : 'pending';
   
   const newPost = {
     id: `post-${Date.now()}`,
     author: { name: State.currentUser.name, avatar: State.currentUser.avatar },
     time: "Just now",
     content,
-    image: imgVal === 'none' ? null : `image_${imgVal}`,
+    image: finalImage,
     likes: 0,
     likedByUser: false,
-    comments: []
+    comments: [],
+    status
   };
   
   State.posts.unshift(newPost);
@@ -1044,11 +1413,18 @@ function saveNewFeedTabPost() {
   
   // Clean inputs
   document.getElementById('feed-tab-post-text').value = '';
-  document.getElementById('feed-tab-post-img-select').value = 'none';
+  document.getElementById('feed-tab-photo-upload').value = '';
+  const statusSpan = document.getElementById('feed-tab-photo-upload-status');
+  if (statusSpan) statusSpan.innerText = '';
+  const workspace = document.getElementById('feed-tab-crop-workspace');
+  if (workspace) workspace.style.display = 'none';
+  State.feedTabCropState = createCropObject();
   
   renderDashboardFeed();
   renderFeedTabPosts();
-  showToast("Update shared with community feed!", "success");
+  
+  const successMsg = status === 'approved' ? "Update shared with community feed!" : "Post submitted! Awaiting admin approval.";
+  showToast(successMsg, "success");
 }
 function switchAuthTab(tab) {
   const btnSignin = document.getElementById('auth-tab-signin');
@@ -1101,4 +1477,91 @@ function viewSpotFromProfile(spotId) {
 function triggerInfoDrawerFromMap(pinId) {
   const pin = State.spots.find(s => s.id === pinId);
   if (pin) openInfoDrawerForSpot(pin);
+}
+
+function requestOnboardingGeolocation() {
+  if (hasAskedGps()) return;
+  cacheGpsAsked();
+
+  if (!navigator.geolocation) {
+    console.warn("Geolocation not supported by browser.");
+    openModal('modal-gps-input');
+    State._onboardingLocationPending = true;
+    return;
+  }
+  
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      
+      cacheLocationPresent(lat, lng, 'My Geolocation');
+      
+      if (State.leafletMap) {
+        State.leafletMap.flyTo([lat, lng], 12);
+        
+        if (State.gpsMarker) {
+          State.gpsMarker.setLatLng([lat, lng]);
+        } else if (typeof L !== 'undefined') {
+          const gpsIcon = L.divIcon({
+            className: 'gps-location-pin',
+            html: '<div class="gps-pin-dot"></div><div class="gps-pin-pulse"></div>',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+          });
+          State.gpsMarker = L.marker([lat, lng], { icon: gpsIcon })
+            .addTo(State.leafletMap)
+            .bindPopup("<strong>Your Location</strong>");
+        }
+      }
+      showToast("Location updated from browser GPS!", "success");
+      
+      setTimeout(() => {
+        triggerSignupOnboardingOnce();
+      }, 800);
+    },
+    (error) => {
+      console.warn("Geolocation failed/denied:", error);
+      openModal('modal-gps-input');
+      State._onboardingLocationPending = true;
+    },
+    { timeout: 8000 }
+  );
+}
+
+function triggerSignupOnboardingOnce() {
+  if (!hasEncouragedSignup()) {
+    cacheSignupEncouraged();
+    switchAuthTab('signup');
+    openModal('modal-auth-required');
+  }
+}
+
+function insertFormatting(textarea, startToken, endToken) {
+  if (!textarea) return;
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const text = textarea.value;
+  const selectedText = text.substring(start, end);
+  const replacement = startToken + selectedText + endToken;
+  textarea.value = text.substring(0, start) + replacement + text.substring(end);
+  
+  textarea.focus();
+  textarea.selectionStart = start + startToken.length;
+  textarea.selectionEnd = start + startToken.length + selectedText.length;
+}
+
+function handleTabCreateButton(modalId) {
+  if (!requireAuth()) return;
+  
+  if (modalId === 'modal-add-listing') {
+    if (localStorage.getItem('vanlyfa_marketplace_agreed') !== 'true') {
+      State._onMarketplaceSafetyAgreed = () => {
+        openModal('modal-add-listing');
+      };
+      openModal('modal-market-safety');
+      return;
+    }
+  }
+  openModal(modalId);
 }

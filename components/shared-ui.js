@@ -66,7 +66,7 @@ function updateSidebarProfileWidget() {
   
   const textarea = document.getElementById('feed-tab-post-text');
   const submitBtn = document.getElementById('feed-tab-post-submit');
-  const imgSelect = document.getElementById('feed-tab-post-img-select');
+  const photoUpload = document.getElementById('feed-tab-photo-upload');
 
   if (State.isSignedIn) {
     avatarEl.src = getAvatarSrc(State.currentUser.avatar);
@@ -91,9 +91,17 @@ function updateSidebarProfileWidget() {
       submitBtn.disabled = false;
       submitBtn.innerHTML = `<i data-lucide="send"></i> <span>Share Update</span>`;
     }
-    if (imgSelect) {
-      imgSelect.disabled = false;
+    if (photoUpload) {
+      photoUpload.disabled = false;
+      const parentLabel = photoUpload.parentElement;
+      if (parentLabel) {
+        parentLabel.style.opacity = '1';
+        parentLabel.style.pointerEvents = 'auto';
+      }
     }
+    document.querySelectorAll('.feed-tab-post-creator .btn-format').forEach(btn => {
+      btn.disabled = false;
+    });
   } else {
     avatarEl.src = getAvatarSrc('avatar_guest');
     nameEl.innerText = "Guest Nomad";
@@ -118,8 +126,28 @@ function updateSidebarProfileWidget() {
       submitBtn.disabled = true;
       submitBtn.innerHTML = `<i data-lucide="lock"></i> <span>Locked</span>`;
     }
-    if (imgSelect) {
-      imgSelect.disabled = true;
+    if (photoUpload) {
+      photoUpload.disabled = true;
+      const parentLabel = photoUpload.parentElement;
+      if (parentLabel) {
+        parentLabel.style.opacity = '0.5';
+        parentLabel.style.pointerEvents = 'none';
+      }
+    }
+    document.querySelectorAll('.feed-tab-post-creator .btn-format').forEach(btn => {
+      btn.disabled = true;
+    });
+  }
+  
+  const adminTab = document.getElementById('sidebar-admin-tab');
+  if (adminTab) {
+    if (State.isSignedIn && State.currentUser.role === 'admin') {
+      adminTab.style.display = 'flex';
+    } else {
+      adminTab.style.display = 'none';
+      if (State.activeTab === 'admin') {
+        switchTab('dashboard');
+      }
     }
   }
   
@@ -194,4 +222,37 @@ function contactHost(hostName, meetupOrJobTitle) {
       }
     }, 100);
   }
+}
+
+function parseMarkdownToHtml(text) {
+  if (!text) return '';
+  // Escape HTML to prevent XSS
+  let escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+  // Bold: **text**
+  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  
+  // Italic: *text*
+  escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  
+  // Inline Code: `code`
+  escaped = escaped.replace(/`(.*?)`/g, '<code>$1</code>');
+  
+  // Blockquotes: Lines starting with >
+  // Note: since we escaped >, they are now &gt;
+  const lines = escaped.split('\n');
+  const processedLines = lines.map(line => {
+    if (line.trim().startsWith('&gt;')) {
+      const content = line.trim().slice(4).trim();
+      return `<blockquote style="border-left: 3px solid var(--accent-green); padding-left: 10px; margin: 6px 0; color: var(--muted-text); font-style: italic;">${content}</blockquote>`;
+    }
+    return line;
+  });
+  
+  return processedLines.join('<br>');
 }

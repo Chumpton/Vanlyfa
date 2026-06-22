@@ -6,20 +6,6 @@ function renderForumSidebar() {
   const sidebar = document.getElementById('forum-categories-sidebar');
   if (!sidebar) return;
   
-  // Extract unique categories from threads, ignoring empty or undefined ones
-  const categories = new Set();
-  State.forum.forEach(thread => {
-    if (thread.category) {
-      const cat = thread.category.trim();
-      if (cat) categories.add(cat.toLowerCase());
-    }
-  });
-  
-  // Convert set to sorted array
-  const sortedCats = Array.from(categories).sort();
-  
-  // Start building the HTML.
-  // The first button is "All Topics"
   let html = `
     <button class="forum-cat-btn ${State.activeForumCategory === 'all' ? 'active' : ''}" data-cat="all">
       <i data-lucide="message-square"></i>
@@ -27,26 +13,16 @@ function renderForumSidebar() {
     </button>
   `;
   
-  // Add a button for each category
-  sortedCats.forEach(cat => {
-    // Capitalize category name for display
-    const displayName = cat.charAt(0).toUpperCase() + cat.slice(1);
-    
-    // Select an icon based on category name if we want, or just use a default hash icon
-    let icon = "hash";
-    if (cat === "electrical") icon = "zap";
-    else if (cat === "destinations" || cat === "spots") icon = "map-pin";
-    else if (cat === "builds" || cat === "campervan") icon = "wrench";
-    else if (cat === "cooking" || cat === "food") icon = "utensils";
-    else if (cat === "pets" || cat === "dog") icon = "heart";
-    
-    html += `
-      <button class="forum-cat-btn ${State.activeForumCategory === cat ? 'active' : ''}" data-cat="${cat}">
-        <i data-lucide="${icon}"></i>
-        <span style="text-transform: capitalize;">${displayName}</span>
-      </button>
-    `;
-  });
+  if (typeof FORUM_CATEGORIES !== 'undefined') {
+    FORUM_CATEGORIES.forEach(cat => {
+      html += `
+        <button class="forum-cat-btn ${State.activeForumCategory === cat.id ? 'active' : ''}" data-cat="${cat.id}">
+          <i data-lucide="${cat.icon}"></i>
+          <span>${cat.name}</span>
+        </button>
+      `;
+    });
+  }
   
   sidebar.innerHTML = html;
   lucide.createIcons();
@@ -107,13 +83,19 @@ function renderThreadsList() {
       `;
     }
     
+    const catObj = typeof FORUM_CATEGORIES !== 'undefined' ? FORUM_CATEGORIES.find(c => c.id === (thread.category || '').toLowerCase()) : null;
+    const catName = catObj ? catObj.name : thread.category;
+
     card.innerHTML = `
-      <div class="thread-main">
-        <h3 class="thread-title">${thread.title}${thread.pendingSync ? ' <span class="sync-badge pending" style="font-size:10px; padding:2px 6px; border-radius:10px; background:rgba(239,68,68,0.1); color:#ef4444; margin-left:8px; font-weight:600; vertical-align:middle;">Pending Sync</span>' : ''}</h3>
-        <div class="thread-meta">
-          <span>Started by <strong onclick="event.stopPropagation(); viewUserProfile('${thread.author.name}')" style="cursor:pointer; hover:underline;">${getUserRoleMarkup(thread.author.name)}</strong></span>
-          <span>•</span>
-          <span style="text-transform: capitalize; color:var(--accent-green); font-weight:600;">${thread.category}</span>
+      <div class="thread-main" style="display: flex; flex-direction: row; gap: 12px; align-items: center;">
+        ${thread.image ? `<img src="${thread.image}" style="width: 60px; height: 60px; border-radius: var(--radius-sm); object-fit: cover; flex-shrink: 0;" />` : ''}
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <h3 class="thread-title">${thread.title}${thread.pendingSync ? ' <span class="sync-badge pending" style="font-size:10px; padding:2px 6px; border-radius:10px; background:rgba(239,68,68,0.1); color:#ef4444; margin-left:8px; font-weight:600; vertical-align:middle;">Pending Sync</span>' : ''}</h3>
+          <div class="thread-meta">
+            <span>Started by <strong onclick="event.stopPropagation(); viewUserProfile('${thread.author.name}')" style="cursor:pointer; hover:underline;">${getUserRoleMarkup(thread.author.name)}</strong></span>
+            <span>•</span>
+            <span style="color:var(--accent-green); font-weight:600;">${catName}</span>
+          </div>
         </div>
       </div>
       <div class="thread-stats">
@@ -150,7 +132,13 @@ function renderThreadDetail() {
   const repliesContainer = document.getElementById('thread-replies-list');
   
   // Render OP
+  let bannerHtml = '';
+  if (thread.image) {
+    bannerHtml = `<div class="thread-detail-banner" style="width: 100%; height: 200px; border-radius: var(--radius-md); overflow: hidden; margin-bottom: 16px;"><img src="${thread.image}" style="width: 100%; height: 100%; object-fit: cover;" /></div>`;
+  }
+
   opContainer.innerHTML = `
+    ${bannerHtml}
     <div class="post-user-info">
       <img src="${getAvatarSrc(thread.author.avatar)}" alt="${thread.author.name}" onclick="viewUserProfile('${thread.author.name}')" style="cursor:pointer;">
       <div class="post-meta">
@@ -159,7 +147,7 @@ function renderThreadDetail() {
       </div>
     </div>
     <h3 style="font-size:18px; font-weight:800; margin-top:8px;">${thread.title}${thread.pendingSync ? ' <span class="sync-badge pending" style="font-size:10px; padding:2px 6px; border-radius:10px; background:rgba(239,68,68,0.1); color:#ef4444; margin-left:8px; font-weight:600; vertical-align:middle;">Pending Sync</span>' : ''}</h3>
-    <p class="post-content" style="font-size:14px; line-height:1.6;">${thread.body}</p>
+    <p class="post-content" style="font-size:14px; line-height:1.6;">${parseMarkdownToHtml(thread.body)}</p>
   `;
   
   // Render Replies
@@ -178,7 +166,7 @@ function renderThreadDetail() {
             <span class="post-time">${reply.date}${reply.pendingSync ? ' <span class="sync-badge pending" style="font-size:9px; padding:1px 4px; border-radius:10px; background:rgba(239,68,68,0.1); color:#ef4444; margin-left:6px; font-weight:600;">Pending Sync</span>' : ''}</span>
           </div>
         </div>
-        <p class="post-content" style="font-size:13px; line-height:1.5;">${reply.body}</p>
+        <p class="post-content" style="font-size:13px; line-height:1.5;">${parseMarkdownToHtml(reply.body)}</p>
       `;
       repliesContainer.appendChild(card);
     });

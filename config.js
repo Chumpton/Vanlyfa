@@ -85,13 +85,414 @@ const AppCopy = {
   }
 };
 
-const DefaultUsers = [];
+const FORUM_CATEGORIES = [
+  { id: "builds", name: "Builds", icon: "wrench" },
+  { id: "electrical", name: "Electrical", icon: "zap" },
+  { id: "mechanics", name: "Mechanics", icon: "truck" },
+  { id: "destinations", name: "Destinations", icon: "map-pin" },
+  { id: "cooking", name: "Cooking", icon: "utensils" },
+  { id: "pets", name: "Pets", icon: "heart" },
+  { id: "recreation", name: "Recreation", icon: "compass" },
+  { id: "guides", name: "Guides", icon: "book-open" },
+  { id: "general", name: "General", icon: "message-square" }
+];
+
+const DefaultUsers = [
+  {
+    name: "Clara Outdoors",
+    handle: "@clara_outdoors",
+    avatar: "avatar_clara",
+    bio: "Driving through Utah, cell signal is spotty but loving the boondocking life.",
+    rig: "Ford Transit Camper",
+    solar: "350W Solar",
+    power: "200Ah Lithium",
+    water: "20 Gal Fresh",
+    gallery: ["image_desert", "image_beach"],
+    visitedSpots: ["usfs-1", "usfs-2"],
+    friends: ["Forest Nomad", "Baja Surfer"],
+    reputation: 24,
+    givenRepTo: [],
+    role: "user",
+    instagram_handle: "clara_outdoors",
+    tiktok_handle: "clara_outdoors"
+  },
+  {
+    name: "Forest Nomad",
+    handle: "@forest_nomad",
+    avatar: "avatar_forest",
+    bio: "Woodworker & designer building off-grid rigs on the road.",
+    rig: "Sprinter 144 DIY",
+    solar: "400W Solar",
+    power: "300Ah Lithium",
+    water: "25 Gal Fresh",
+    gallery: ["image_interior"],
+    visitedSpots: ["usfs-5", "usfs-6"],
+    friends: ["Clara Outdoors"],
+    reputation: 45,
+    givenRepTo: [],
+    role: "user",
+    instagram_handle: "forest_nomad",
+    tiktok_handle: ""
+  },
+  {
+    name: "Baja Surfer",
+    handle: "@baja_surfer",
+    avatar: "avatar_surf",
+    bio: "Salt water, warm sand, and 12V fridges. Currently exploring Baja California.",
+    rig: "Chevy Express 4x4",
+    solar: "200W Solar",
+    power: "100Ah Lithium",
+    water: "15 Gal Fresh",
+    gallery: ["image_beach"],
+    visitedSpots: ["usfs-3"],
+    friends: ["Clara Outdoors"],
+    reputation: 12,
+    givenRepTo: [],
+    role: "user",
+    instagram_handle: "baja_surfer",
+    tiktok_handle: "bajasurfer"
+  },
+  {
+    name: "Solar Explorer",
+    handle: "@solar_explorer",
+    avatar: "avatar_solar",
+    bio: "Rig electrical consultant. Ask me about solar panels, alternators, and inverters.",
+    rig: "Promaster 159 Extended",
+    solar: "800W Solar",
+    power: "600Ah Lithium",
+    water: "30 Gal Fresh",
+    gallery: ["item_solar"],
+    visitedSpots: ["usfs-10"],
+    friends: [],
+    reputation: 89,
+    givenRepTo: [],
+    role: "moderator",
+    instagram_handle: "solar_explorer",
+    tiktok_handle: "solar_explorer"
+  },
+  {
+    name: "Admin User",
+    handle: "@admin",
+    avatar: "avatar_guest",
+    bio: "Vanlyfa Platform Administrator. Direct message for support.",
+    rig: "Command Center Van",
+    solar: "1200W Solar",
+    power: "1000Ah Lithium",
+    water: "50 Gal Fresh",
+    gallery: [],
+    visitedSpots: [],
+    friends: [],
+    reputation: 999,
+    givenRepTo: [],
+    role: "admin",
+    instagram_handle: "vanlyfa_official",
+    tiktok_handle: "vanlyfa_official"
+  }
+];
+
 const DefaultSpots = [];
-const DefaultMeetups = [];
-const DefaultPosts = [];
-const DefaultMarketplace = [];
-const DefaultForum = [];
-const DefaultChats = {};
+
+const DefaultMeetups = [
+  {
+    id: "meetup-1",
+    title: "Moab BLM Fireside Gathering",
+    date: "2026-10-15",
+    time: "6:00 PM",
+    location: "Moab BLM dispersed camping",
+    description: "Bring your camp chairs and wood! Gathering around the campfire to swap stories.",
+    host: { name: "Clara Outdoors", avatar: "avatar_clara" },
+    attendees: ["avatar_clara", "avatar_forest", "avatar_surf"],
+    attendeesCount: 3,
+    comments: [],
+    status: "approved"
+  },
+  {
+    id: "meetup-2",
+    title: "Quartzsite Caravaneers Coffee morning",
+    date: "2026-11-05",
+    time: "9:00 AM",
+    location: "Quartzsite South LTVA",
+    description: "Grab a coffee and meet fellow van lifers in the desert.",
+    host: { name: "Baja Surfer", avatar: "avatar_surf" },
+    attendees: ["avatar_surf", "avatar_solar"],
+    attendeesCount: 2,
+    comments: [],
+    status: "approved"
+  },
+  {
+    id: "meetup-3",
+    title: "Dune Racing Meetup (Pending Admin Approval)",
+    date: "2026-09-01",
+    time: "11:00 PM",
+    location: "Glamis Dunes",
+    description: "Midnight sand dune racing meetup. Safety gear recommended.",
+    host: { name: "Forest Nomad", avatar: "avatar_forest" },
+    attendees: ["avatar_forest"],
+    attendeesCount: 1,
+    comments: [],
+    status: "pending"
+  }
+];
+
+const DefaultPosts = [
+  {
+    id: "post-1",
+    content: "Utah Desert camp vibes! Checking in from near Moab.",
+    image: "image_desert",
+    author: {
+      name: "Clara Outdoors",
+      avatar: "avatar_clara"
+    },
+    likes: 12,
+    likedByUser: false,
+    reposts: 2,
+    shares: 1,
+    time: "2 hours ago",
+    comments: [
+      { user: "Forest Nomad", text: "Looks amazing Clara! Enjoy the silence out there." }
+    ],
+    status: "approved"
+  },
+  {
+    id: "post-2",
+    content: "Woodwork is complete! Working on the Promaster bedroom sliding bed frame today. Dimensions are 60x70 inches. Thoughts?",
+    image: "image_interior",
+    author: {
+      name: "Forest Nomad",
+      avatar: "avatar_forest"
+    },
+    likes: 8,
+    likedByUser: false,
+    reposts: 0,
+    shares: 2,
+    time: "4 hours ago",
+    comments: [
+      { user: "Clara Outdoors", text: "Nice! Cedar tongue & groove makes it look so premium." }
+    ],
+    status: "approved"
+  },
+  {
+    id: "post-3",
+    content: "Free parts alert! I have a spare MaxxFan cover for a fellow traveler. Let me know if you need it. Flagstaff area.",
+    image: "item_fan",
+    author: {
+      name: "Solar Explorer",
+      avatar: "avatar_solar"
+    },
+    likes: 3,
+    likedByUser: false,
+    reposts: 1,
+    shares: 0,
+    time: "1 day ago",
+    comments: [],
+    status: "approved"
+  },
+  {
+    id: "post-4",
+    content: "Hey, check out my new custom crypto tokens for nomads! Buy now for 10x gains (Pending Moderation).",
+    image: "none",
+    author: {
+      name: "Baja Surfer",
+      avatar: "avatar_surf"
+    },
+    likes: 0,
+    likedByUser: false,
+    reposts: 0,
+    shares: 0,
+    time: "Just now",
+    comments: [],
+    status: "pending"
+  }
+];
+
+const DefaultMarketplace = [
+  {
+    id: "market-1",
+    title: "2019 Transit Custom Campervan",
+    price: 54000,
+    category: "campervan",
+    location: "Bend, OR",
+    zip: "97701",
+    description: "Fully converted 148wb Transit. 350W solar, 200Ah Lithium battery, Dometic fridge, water station, outdoor shower, and cozy cedar tongue & groove roof. Ready for the road!",
+    image: "item_van",
+    condition: "Excellent",
+    seller: { name: "Clara Outdoors", avatar: "avatar_clara" },
+    status: "approved"
+  },
+  {
+    id: "market-2",
+    title: "Renogy 100W Solar Panel",
+    price: 80,
+    category: "electrical",
+    location: "Moab, UT",
+    zip: "84532",
+    description: "Brand new Renogy 100W Monocrystalline solar panel in original packaging. Perfect for expanding your rig's array.",
+    image: "item_solar",
+    condition: "New",
+    seller: { name: "Solar Explorer", avatar: "avatar_solar" },
+    status: "approved"
+  },
+  {
+    id: "market-3",
+    title: "Dometic CFX3 45L Compressor Fridge",
+    price: 650,
+    category: "gear",
+    location: "Flagstaff, AZ",
+    zip: "86001",
+    description: "Used Dometic CFX3 45. Excellent condition, runs perfectly on 12V or 110V. Only selling because I upgraded to a larger drawer fridge.",
+    image: "item_gear",
+    condition: "Good",
+    seller: { name: "Baja Surfer", avatar: "avatar_surf" },
+    status: "approved"
+  },
+  {
+    id: "market-4",
+    title: "Free alternator (requires rebuild)",
+    price: 0,
+    category: "parts",
+    location: "Denver, CO",
+    zip: "80202",
+    description: "Stock Ford Transit alternator. Bearings are making noise, needs a rebuild. Free for whoever wants to pick it up.",
+    image: "none",
+    condition: "Fair",
+    seller: { name: "Forest Nomad", avatar: "avatar_forest" },
+    status: "pending"
+  }
+];
+
+const DefaultForum = [
+  {
+    id: "thread-1",
+    title: "Victron Orion-Tr Smart DC-DC Charger setup help",
+    category: "Electrical",
+    body: "I am having issues getting my Orion charger to detect when my engine is running. Any tips on configuring the engine detection settings in the app?",
+    author: { name: "Solar Explorer", avatar: "avatar_solar" },
+    viewsCount: 145,
+    repliesCount: 2,
+    date: "2 days ago",
+    replies: [
+      { author: { name: "Forest Nomad", avatar: "avatar_forest" }, date: "1 day ago", body: "Make sure you check your voltage thresholds. If your alternator is smart, it might dip below the default settings." },
+      { author: { name: "Solar Explorer", avatar: "avatar_solar" }, date: "Yesterday", body: "Thanks! I adjusted the start detection voltage down slightly and it works perfectly now." }
+    ],
+    status: "approved"
+  },
+  {
+    id: "thread-2",
+    title: "Best insulation for winter boondocking in Wyoming?",
+    category: "Builds",
+    body: "Looking to insulate my Promaster for full-time winter living. Should I go with Havelock Wool or Thinsulate? Let me know your experiences with condensation and mold.",
+    author: { name: "Clara Outdoors", avatar: "avatar_clara" },
+    viewsCount: 230,
+    repliesCount: 0,
+    date: "3 days ago",
+    replies: [],
+    status: "approved"
+  },
+  {
+    id: "thread-3",
+    title: "BLM 14-day limit enforcement in Arizona?",
+    category: "Land",
+    body: "Has anyone experienced rangers enforcing the 14-day limit strictly around Quartzsite this season? Planning my route.",
+    author: { name: "Forest Nomad", avatar: "avatar_forest" },
+    viewsCount: 95,
+    repliesCount: 1,
+    date: "4 days ago",
+    replies: [
+      { author: { name: "Baja Surfer", avatar: "avatar_surf" }, date: "3 days ago", body: "Yes, they have been checking camper rigs and placing tags on tires near Scaddan Wash. Best to move 25 miles away after 14 days." }
+    ],
+    status: "approved"
+  },
+  {
+    id: "thread-4",
+    title: "Ford Transit EcoBoost vs naturally aspirated V6 for mountains?",
+    category: "Vehicles",
+    body: "Looking to buy a Transit rig. Is the EcoBoost turbo worth the extra maintenance, or is the standard V6 enough for towing and steep mountain climbs?",
+    author: { name: "Baja Surfer", avatar: "avatar_surf" },
+    viewsCount: 110,
+    repliesCount: 1,
+    date: "5 days ago",
+    replies: [
+      { author: { name: "Solar Explorer", avatar: "avatar_solar" }, date: "4 days ago", body: "EcoBoost makes a huge difference at altitude! Standard V6 will feel sluggish climbing mountain passes over 7,000 feet." }
+    ],
+    status: "approved"
+  },
+  {
+    id: "thread-5",
+    title: "Best surf spots with overnight camping in Baja?",
+    category: "Recreation",
+    body: "Heading south past Ensenada next month. Seeking spots where I can park my high-clearance rig right on the beach close to the breaks.",
+    author: { name: "Baja Surfer", avatar: "avatar_surf" },
+    viewsCount: 132,
+    repliesCount: 0,
+    date: "6 days ago",
+    replies: [],
+    status: "approved"
+  },
+  {
+    id: "thread-6",
+    title: "Step-by-Step Guide: Sanitizing your fresh water tank",
+    category: "Guides",
+    body: "Here is the exact bleach-to-water ratio and procedure I use twice a year to keep my 25-gallon fresh tank clean and taste-free.\n\n**Formula**: Use 1/4 cup of regular household bleach for every 15 gallons of water capacity.\n\n1. Mix bleach with water in a clean container first.\n2. Pour into your gravity fill port.\n3. Top off the tank with fresh water.\n4. Run all taps until you smell chlorine.\n5. Let sit for 4 hours, then drain completely and flush twice.\n\n*Safety first! never drink water while bleach is sitting in the tank.*",
+    author: { name: "Clara Outdoors", avatar: "avatar_clara" },
+    viewsCount: 310,
+    repliesCount: 0,
+    date: "1 week ago",
+    replies: [],
+    status: "approved"
+  },
+  {
+    id: "thread-7",
+    title: "Nomad Crypto Passive Income Strategy",
+    category: "General",
+    body: "Hey guys, buy this crypto token to fund your road life. Guaranteed 100% APR passive income...",
+    author: { name: "Baja Surfer", avatar: "avatar_surf" },
+    viewsCount: 12,
+    repliesCount: 0,
+    date: "Just now",
+    replies: [],
+    status: "pending"
+  }
+];
+
+const DefaultTribes = [
+  {
+    id: "tribe-1",
+    title: "Pacific Northwest Caravaneer",
+    description: "Exploring the beautiful rainforests, coastlines, and mountains of the PNW. Caravans and campsite sharing!",
+    membersCount: 14,
+    banner: "forest",
+    iconLetter: "PN",
+    joined: true,
+    isPublic: true,
+    category: "Regional",
+    state: "OR",
+    ideal: "Off-grid / Boondocking"
+  },
+  {
+    id: "tribe-2",
+    title: "Rig Builders & Solar Geeks",
+    description: "Sharing electrical setups, solar wiring diagrams, plumbing designs, and woodworking tips for DIY van builders.",
+    membersCount: 38,
+    banner: "ocean",
+    iconLetter: "SG",
+    joined: false,
+    isPublic: false,
+    category: "Skill-Share",
+    state: "CA",
+    ideal: "Technical / Engineering"
+  }
+];
+
+const DefaultChats = {
+  "Clara Outdoors": [
+    { id: "m1", sender: "Clara Outdoors", text: "Hey! How is your rig building going?", time: "Yesterday", reaction: false, status: "read" },
+    { id: "m2", sender: "me", text: "Pretty good! Finished the cedar roof panels yesterday.", time: "Yesterday", reaction: false, status: "read" },
+    { id: "m3", sender: "Clara Outdoors", text: "Awesome! Cedars are perfect for ceilings. Smells great too.", time: "Yesterday", reaction: false, status: "read" }
+  ],
+  "Forest Nomad": [
+    { id: "m4", sender: "Forest Nomad", text: "Hey Bob, let me know if you need help with carpentry tips.", time: "Yesterday", reaction: false, status: "read" }
+  ]
+};
 
 const US_CITIES_DATABASE = [
   { name: "Moab, UT (84532)", lat: 38.5733, lng: -109.5498, zip: "84532" },
