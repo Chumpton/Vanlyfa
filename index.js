@@ -27,6 +27,12 @@ function initApp() {
   }
   updateThemeToggleUI();
 
+  const initialWelcomeModal = document.getElementById('welcome-modal');
+  if (initialWelcomeModal && hasDismissedWelcome()) {
+    initialWelcomeModal.classList.remove('active', 'fading');
+    initialWelcomeModal.style.display = 'none';
+  }
+
   // Render sidebar profile details
   updateSidebarProfileWidget();
   
@@ -303,6 +309,8 @@ function initApp() {
   const welcomeModal = document.getElementById('welcome-modal');
   if (welcomeDismissBtn && welcomeModal) {
     welcomeDismissBtn.addEventListener('click', () => {
+      cacheWelcomeDismissal();
+      ensureLocationCacheFallback();
       welcomeModal.classList.add('fading');
       setTimeout(() => {
         welcomeModal.classList.remove('active', 'fading');
@@ -371,6 +379,8 @@ function initApp() {
               .addTo(State.leafletMap)
               .bindPopup("<strong>Your Location</strong>");
           }
+
+          cacheLocationPresent(resolved.lat, resolved.lng, resolved.name || resolved.city || searchVal);
           
           showToast(`Centered on ${resolved.name || resolved.city}!`, "success");
           closeModal('modal-gps-input');

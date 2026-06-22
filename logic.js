@@ -50,6 +50,49 @@ let State = {
   unreadChats: [],
   layerFilters: { dispersed: true, overnight: true, services: true, hosts: true, mechanics: true, meetups: true }
 };
+
+const WELCOME_DISMISSED_STORAGE_KEY = 'vanlyfa_welcome_dismissed_v1';
+const LOCATION_CACHE_STORAGE_KEY = 'vanlyfa_location_cache_v1';
+const DEFAULT_LOCATION_CACHE = { status: 'not-present', lat: 5, lng: 5 };
+
+function hasDismissedWelcome() {
+  return localStorage.getItem(WELCOME_DISMISSED_STORAGE_KEY) === 'true';
+}
+
+function cacheWelcomeDismissal() {
+  localStorage.setItem(WELCOME_DISMISSED_STORAGE_KEY, 'true');
+}
+
+function getCachedLocation() {
+  const saved = localStorage.getItem(LOCATION_CACHE_STORAGE_KEY);
+  if (!saved) return null;
+
+  try {
+    return JSON.parse(saved);
+  } catch (error) {
+    console.warn('Could not load cached location preference', error);
+    return null;
+  }
+}
+
+function cacheLocationNotPresent() {
+  localStorage.setItem(LOCATION_CACHE_STORAGE_KEY, JSON.stringify(DEFAULT_LOCATION_CACHE));
+}
+
+function cacheLocationPresent(lat, lng, label = 'Current location') {
+  localStorage.setItem(LOCATION_CACHE_STORAGE_KEY, JSON.stringify({
+    status: 'present',
+    lat,
+    lng,
+    label
+  }));
+}
+
+function ensureLocationCacheFallback() {
+  if (!getCachedLocation()) {
+    cacheLocationNotPresent();
+  }
+}
 function getSvgDataUri(svgString) {
   return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
 }
@@ -738,4 +781,3 @@ function simulateAutoReply(username, text, delay) {
   
   showToast(`New message from ${username}`);
 }
-
