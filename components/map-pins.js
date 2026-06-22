@@ -430,6 +430,11 @@ function renderLeafletMarkers() {
                          (pin.description && pin.description.toLowerCase().includes(query));
     if (!matchesQuery) return;
     
+    // Check coordinates validity (unless it's a cluster, which has valid coordinates)
+    if (!pin._isCluster && (typeof pin.lat !== 'number' || typeof pin.lng !== 'number' || isNaN(pin.lat) || isNaN(pin.lng))) {
+      return;
+    }
+    
     nextPinsMap.set(pin.id, pin);
   });
 

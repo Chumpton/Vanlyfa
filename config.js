@@ -209,7 +209,9 @@ const DefaultMeetups = [
     attendees: ["avatar_clara", "avatar_forest", "avatar_surf"],
     attendeesCount: 3,
     comments: [],
-    status: "approved"
+    status: "approved",
+    lat: 38.5733,
+    lng: -109.5498
   },
   {
     id: "meetup-2",
@@ -222,7 +224,9 @@ const DefaultMeetups = [
     attendees: ["avatar_surf", "avatar_solar"],
     attendeesCount: 2,
     comments: [],
-    status: "approved"
+    status: "approved",
+    lat: 33.6803,
+    lng: -114.2424
   },
   {
     id: "meetup-3",
@@ -235,7 +239,9 @@ const DefaultMeetups = [
     attendees: ["avatar_forest"],
     attendeesCount: 1,
     comments: [],
-    status: "pending"
+    status: "pending",
+    lat: 32.9975,
+    lng: -115.0722
   }
 ];
 
