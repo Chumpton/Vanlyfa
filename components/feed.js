@@ -224,9 +224,14 @@ function renderSocialFeed(containerId, isSidebar = false) {
     return;
   }
   
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  const defaultLimit = isMobile ? 12 : 30;
+  const limit = State._feedLimit || defaultLimit;
+  const displayItems = filtered.slice(0, limit);
+  
   let feedHtml = '';
   
-  filtered.forEach(post => {
+  displayItems.forEach(post => {
     // Views tracking (once per session)
     if (post.type === 'post' && !isSidebar) {
       if (!State.viewedPostsInSession) {
@@ -375,6 +380,14 @@ function renderSocialFeed(containerId, isSidebar = false) {
       </div>
     `;
   });
+  
+  if (filtered.length > limit) {
+    feedHtml += `
+      <div id="feed-load-more-btn" onclick="State._feedLimit = (State._feedLimit || ${defaultLimit}) + 15; State._cachedFeeds = {}; ${isSidebar ? 'renderDashboardFeed()' : 'renderFeedTabPosts()'};" style="text-align:center; padding:12px; margin: 16px 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); color: var(--accent-green); font-weight: bold; cursor: pointer; font-size: 12px; display: block; width: 100%; box-sizing: border-box;">
+        Show More Updates (${filtered.length - limit} remaining)
+      </div>
+    `;
+  }
   
   container.innerHTML = feedHtml;
   State._cachedFeeds[cacheKey] = feedHtml;

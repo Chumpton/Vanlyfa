@@ -1381,12 +1381,22 @@ const ClusterEngine = {
       s.lat >= sw.lat && s.lat <= ne.lat &&
       s.lng >= sw.lng && s.lng <= ne.lng
     );
-    if (zoom >= 13) return filtered;
-    if (zoom >= 11) return this.clusterByGrid(filtered, 0.05);
-    if (zoom >= 9) return this.clusterByGrid(filtered, 0.15);
-    if (zoom >= 7) return this.clusterByGrid(filtered, 0.4);
-    if (zoom >= 5) return this.clusterByGrid(filtered, 1.2);
-    return this.clusterByGrid(filtered, 3.0);
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    if (isMobile) {
+      if (zoom >= 13) return filtered;
+      if (zoom >= 11) return this.clusterByGrid(filtered, 0.08);
+      if (zoom >= 9) return this.clusterByGrid(filtered, 0.25);
+      if (zoom >= 7) return this.clusterByGrid(filtered, 0.7);
+      if (zoom >= 5) return this.clusterByGrid(filtered, 2.0);
+      return this.clusterByGrid(filtered, 5.0);
+    } else {
+      if (zoom >= 13) return filtered;
+      if (zoom >= 11) return this.clusterByGrid(filtered, 0.05);
+      if (zoom >= 9) return this.clusterByGrid(filtered, 0.15);
+      if (zoom >= 7) return this.clusterByGrid(filtered, 0.4);
+      if (zoom >= 5) return this.clusterByGrid(filtered, 1.2);
+      return this.clusterByGrid(filtered, 3.0);
+    }
   },
   clusterByGrid(spots, cellSize) {
     const cells = {};
