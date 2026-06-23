@@ -339,20 +339,18 @@ body {
   overflow-y: auto;
   padding: 32px;
   box-sizing: border-box;
-  
-  /* Remove global will-change layer generation */
   display: none; 
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Use a basic transition; avoid will-change globally */
+  transition: opacity 0.15s linear; 
 }
 
 .tab-content-pane.active {
   display: block;
   opacity: 1;
   pointer-events: auto;
-  will-change: transform;
-  transform: translateZ(0);
+  contain: content; /* Isolates layout, style, and paint bounds */
 }
 
 
@@ -4082,6 +4080,47 @@ code {
 /* User tags hiding rule */
 .user-tag-hidden {
   display: none !important;
+}
+
+/* ==========================================================================
+   PERFORMANCE & MEMORY OPTIMIZATIONS
+   ========================================================================== */
+
+/* Disable ultra-heavy backdrop filters on mobile views to prevent flashing */
+@media (max-width: 768px) {
+  .modal-overlay,
+  .welcome-modal-overlay,
+  .globe-instructions {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: rgba(35, 33, 30, 0.95) !important; /* Solid fallback */
+  }
+
+  /* Force DOM containment on complex components to save memory */
+  .feed-post-card,
+  .meetup-card,
+  .skill-card,
+  .forum-thread-card {
+    contain: layout style;
+  }
+
+  /* Optimize layout shifts on the navigation bar */
+  .app-sidebar {
+    will-change: auto !important; /* Disable active memory pinning */
+    transform: none !important;
+  }
+  
+  /* Prevent scrolling content underneath from invalidating layers */
+  .app-content {
+    overflow: hidden;
+    position: relative;
+  }
+}
+
+/* Ensure Leaflet Custom Map Icons are lightweight and scale gracefully */
+.custom-map-icon {
+  will-change: auto;
+  transform-origin: center center;
 }
 
 

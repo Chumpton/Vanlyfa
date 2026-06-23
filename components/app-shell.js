@@ -14,6 +14,17 @@ function switchTab(tabName, isPopState = false) {
       return;
     }
   }
+
+  // Virtual Shelving: Unmount currently active tab if it's data-dense
+  if (State.activeTab && ['feed', 'marketplace', 'tribes', 'meetups', 'forum', 'jobs'].includes(State.activeTab)) {
+    const oldPane = document.getElementById(`pane-${State.activeTab}`);
+    if (oldPane && oldPane.firstElementChild) {
+      State._cachedTabElements = State._cachedTabElements || {};
+      State._cachedTabElements[State.activeTab] = oldPane.firstElementChild;
+      oldPane.removeChild(oldPane.firstElementChild);
+    }
+  }
+
   State.activeTab = tabName;
   State.activeThreadId = null; // Reset forum viewing state
   
@@ -38,7 +49,13 @@ function switchTab(tabName, isPopState = false) {
   });
   
   const activePane = document.getElementById(`pane-${tabName}`);
-  if (activePane) activePane.classList.add('active');
+  if (activePane) {
+    // Virtual Shelving: Re-mount if previously unmounted
+    if (State._cachedTabElements && State._cachedTabElements[tabName]) {
+      activePane.appendChild(State._cachedTabElements[tabName]);
+    }
+    activePane.classList.add('active');
+  }
   
   // Update Page Title
   const titles = {

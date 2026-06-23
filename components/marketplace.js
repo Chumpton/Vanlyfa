@@ -67,7 +67,11 @@ function renderMarketplaceListings() {
     return;
   }
   
-  filtered.forEach(item => {
+  const defaultLimit = 12;
+  const limit = State._marketLimit || defaultLimit;
+  const displayItems = filtered.slice(0, limit);
+  
+  displayItems.forEach(item => {
     const card = document.createElement('div');
     card.className = 'market-card';
     
@@ -112,6 +116,17 @@ function renderMarketplaceListings() {
     `;
     grid.appendChild(card);
   });
+  
+  if (filtered.length > limit) {
+    const loadMoreContainer = document.createElement('div');
+    loadMoreContainer.style.cssText = 'grid-column: 1 / -1; text-align: center; padding: 12px; margin: 16px 0;';
+    loadMoreContainer.innerHTML = `
+      <button class="btn btn-primary" onclick="State._marketLimit = (State._marketLimit || 12) + 12; renderMarketplaceListings();" style="width: 100%; justify-content: center; box-sizing: border-box;">
+        Show More Listings (${filtered.length - limit} remaining)
+      </button>
+    `;
+    grid.appendChild(loadMoreContainer);
+  }
   
   lucide.createIcons();
 }

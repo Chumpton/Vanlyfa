@@ -47,13 +47,15 @@ function initLeafletMap() {
   
   // Initialize map centered on SW USA (Moab area)
   State.leafletMap = L.map('leaflet-map', {
-    zoomControl: true
+    zoomControl: true,
+    preferCanvas: true // CRITICAL: Forces Leaflet to draw vector overlays on standard Canvas instead of thousands of SVG DOM components
   }).setView([37.0, -112.0], 5);
   
   // Load high-contrast base tiles
   State.leafletTileLayer = L.tileLayer(getMapTileUrl(), {
     attribution: 'Tiles &copy; Esri &mdash; Source: Esri, USGS, NOAA',
-    maxZoom: 20
+    maxZoom: 20,
+    keepBuffer: 2 // Limits off-screen mobile memory tile allocation caching
   }).addTo(State.leafletMap);
   
   renderLeafletMarkers();
@@ -652,81 +654,100 @@ function getStateFromLatLng(lat, lng) {
   return closestState;
 }
 
+let renderTimeout = null;
 function renderLeafletMarkers() {
+  if (renderTimeout) clearTimeout(renderTimeout);
+  renderTimeout = setTimeout(() => {
+    safeguardedRenderLeafletMarkers();
+  }, 80);
+}
+
+function safeguardedRenderLeafletMarkers() {
   if (!State.leafletMap) return;
   
   const zoom = State.leafletMap.getZoom();
   const bounds = State.leafletMap.getBounds();
+  const isMobile = window.innerWidth <= 768;
   
   let pins = [];
+  
+  // High efficiency filter pass
   if (zoom <= 5) {
     const allSeeded = (typeof ClusterEngine !== 'undefined') ? ClusterEngine.allSpots : [];
     const userSpots = State.spots.filter(s => !s.seeded && s.status !== 'hidden_flagged');
     const rawPins = [...userSpots, ...allSeeded, ...State.meetups];
     
     const stateGroups = {};
+    
     rawPins.forEach(pin => {
       if (!shouldShowByLayerFilter(pin)) return;
-      const query = State.searchQuery;
-      const matchesQuery = pin.title.toLowerCase().includes(query) || 
-                           (pin.description && pin.description.toLowerCase().includes(query));
-      if (!matchesQuery) return;
       
-      let stateName = getStateFromLatLng(pin.lat, pin.lng);
-      
-      // At zoom <= 4, group all Eastern/Midwestern states (longitude > -100) into a single "East Coast" cluster
-      if (zoom <= 4 && stateName !== 'Other') {
-        const stateInfo = StateBboxes[stateName];
-        if (stateInfo && stateInfo.center && stateInfo.center[1] > -100) {
-          stateName = 'East Coast';
-        }
+      // Early search query match check
+      if (State.searchQuery) {
+        const query = State.searchQuery.toLowerCase();
+        if (!pin.title.toLowerCase().includes(query) && (!pin.description || !pin.description.toLowerCase().includes(query))) return;
       }
       
-      if (!stateGroups[stateName]) {
-        stateGroups[stateName] = [];
+      // Fast hardcoded bounding box calculation for major points on mobile viewports
+      let stateName = 'Other';
+      if (pin.lat >= 31.3 && pin.lat <= 37.0 && pin.lng >= -114.8 && pin.lng <= -109.0) stateName = 'Arizona';
+      else if (pin.lat >= 32.5 && pin.lat <= 42.0 && pin.lng >= -124.5 && pin.lng <= -114.1) stateName = 'California';
+      else if (pin.lat >= 31.3 && pin.lat <= 37.0 && pin.lng >= -109.0 && pin.lng <= -103.0) stateName = 'New Mexico';
+      else if (pin.lat >= 37.0 && pin.lat <= 42.0 && pin.lng >= -114.0 && pin.lng <= -109.0) stateName = 'Utah';
+      else if (pin.lat >= 37.0 && pin.lat <= 41.0 && pin.lng >= -109.0 && pin.lng <= -102.0) stateName = 'Colorado';
+      else {
+        // Fall back to centroid calculation if outside high-probability project areas
+        stateName = getStateFromLatLng(pin.lat, pin.lng);
       }
+      
+      if (zoom <= 4 && pin.lng > -100 && stateName !== 'Other') {
+        stateName = 'East Coast';
+      }
+      
+      if (!stateGroups[stateName]) stateGroups[stateName] = [];
       stateGroups[stateName].push(pin);
     });
     
     for (const [stateName, statePins] of Object.entries(stateGroups)) {
       if (stateName === 'Other') continue;
       const stateInfo = StateBboxes[stateName] || { code: 'US', center: [37.0902, -95.7129] };
-      pins.push({
-        id: `state-cluster-${stateName}`,
-        title: `${statePins.length} Spots in ${stateName}`,
-        category: 'cluster',
-        lat: stateInfo.center[0],
-        lng: stateInfo.center[1],
-        _isCluster: true,
-        _isStateCluster: true,
-        _stateCode: stateInfo.code,
-        _clusterCount: statePins.length,
-        _stateName: stateName
-      });
+      if (bounds.contains(stateInfo.center)) {
+        pins.push({
+          id: `state-cluster-${stateName}`,
+          title: `${statePins.length} Spots in ${stateName}`,
+          category: 'cluster',
+          lat: stateInfo.center[0],
+          lng: stateInfo.center[1],
+          _isCluster: true,
+          _isStateCluster: true,
+          _stateCode: stateInfo.code,
+          _clusterCount: statePins.length,
+          _stateName: stateName
+        });
+      }
     }
   } else {
+    // Zoom levels > 5: Bound checking limits the processing queue on mobile screen heights
     let visibleSeeded = [];
     if (typeof ClusterEngine !== 'undefined' && ClusterEngine.allSpots.length > 0) {
       visibleSeeded = ClusterEngine.getVisibleSpots(bounds, zoom);
     }
-    const userSpots = State.spots.filter(s => !s.seeded && s.status !== 'hidden_flagged');
-    pins = [...userSpots, ...visibleSeeded, ...State.meetups];
+    const userSpots = State.spots.filter(s => !s.seeded && s.status !== 'hidden_flagged' && typeof s.lat === 'number' && typeof s.lng === 'number' && bounds.contains([s.lat, s.lng]));
+    pins = [...userSpots, ...visibleSeeded, ...State.meetups.filter(m => typeof m.lat === 'number' && typeof m.lng === 'number' && bounds.contains([m.lat, m.lng]))];
   }
   
+  // Maintain Map State allocations cleanly
   const seen = new Set();
   const nextPinsMap = new Map();
   
   pins.forEach(pin => {
     if (seen.has(pin.id)) return;
     seen.add(pin.id);
-    
     if (!pin._isStateCluster && !shouldShowByLayerFilter(pin)) return;
     
-    if (!pin._isStateCluster) {
-      const query = State.searchQuery;
-      const matchesQuery = pin.title.toLowerCase().includes(query) || 
-                           (pin.description && pin.description.toLowerCase().includes(query));
-      if (!matchesQuery) return;
+    if (!pin._isStateCluster && State.searchQuery) {
+      const query = State.searchQuery.toLowerCase();
+      if (!pin.title.toLowerCase().includes(query) && (!pin.description || !pin.description.toLowerCase().includes(query))) return;
     }
     
     if (!pin._isCluster && (typeof pin.lat !== 'number' || typeof pin.lng !== 'number' || isNaN(pin.lat) || isNaN(pin.lng))) {
@@ -736,10 +757,9 @@ function renderLeafletMarkers() {
     nextPinsMap.set(pin.id, pin);
   });
 
-  if (!State.leafletMarkersMap) {
-    State.leafletMarkersMap = new Map();
-  }
+  if (!State.leafletMarkersMap) State.leafletMarkersMap = new Map();
 
+  // Safely detach unseen entities to release layout contexts instantly
   for (const [pinId, marker] of State.leafletMarkersMap.entries()) {
     if (!nextPinsMap.has(pinId)) {
       State.leafletMap.removeLayer(marker);
@@ -747,6 +767,7 @@ function renderLeafletMarkers() {
     }
   }
 
+  // Pre-calculate offsets for standard nodes that share coordinates
   const coordGroups = new Map();
   nextPinsMap.forEach((pin, pinId) => {
     if (pin._isCluster) return;
@@ -771,32 +792,28 @@ function renderLeafletMarkers() {
     }
   });
 
+  // Generate newly registered markers natively
   for (const [pinId, pin] of nextPinsMap.entries()) {
-    if (State.leafletMarkersMap.has(pinId)) {
-      continue;
-    }
+    if (State.leafletMarkersMap.has(pinId)) continue; // Keep instances alive instead of cycling layers
 
     const { markerColor, typeName, iconSvg } = getMarkerMeta(pin);
     let marker;
 
     if (pin._isCluster) {
       const count = pin._clusterCount;
-      let size = Math.min(18 + Math.log2(count) * 6, 44);
+      let size = pin._isStateCluster ? 52 : Math.min(18 + Math.log2(count) * 6, 44);
       let customIcon;
+      
       if (pin._isStateCluster) {
-        size = 52;
         customIcon = L.divIcon({
-          html: `<div style="background:linear-gradient(135deg, var(--accent-green), #1b681b); width:52px; height:52px; border-radius:50%; border:3px solid white; box-shadow: 0 3px 10px rgba(0,0,0,0.5); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; font-family:Outfit,Inter,sans-serif; line-height:1.1;">
-                        <span style="font-weight:800; font-size:14px; letter-spacing:0.5px;">${pin._stateCode}</span>
-                        <span style="font-weight:600; font-size:10px; opacity:0.9;">${count}</span>
-                      </div>`,
+          html: `<div style="background:linear-gradient(135deg, #3B7A57, #1b681b); width:52px; height:52px; border-radius:50%; border:3px solid white; box-shadow: 0 3px 10px rgba(0,0,0,0.5); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; font-family:Outfit,Inter,sans-serif; line-height:1.1;"><span style="font-weight:800; font-size:14px; letter-spacing:0.5px;">${pin._stateCode}</span><span style="font-weight:600; font-size:10px; opacity:0.9;">${count}</span></div>`,
           className: 'custom-map-icon cluster-icon state-cluster-icon',
           iconSize: [52, 52],
           iconAnchor: [26, 26]
         });
       } else {
         customIcon = L.divIcon({
-          html: `<div style="background:linear-gradient(135deg, #228B22, #10b981); width:${size}px; height:${size}px; border-radius:50%; border:2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; color:white; font-weight:800; font-size:${Math.max(10, size/3.2)}px; font-family:Inter,sans-serif;">${count}</div>`,
+          html: `<div style="background:linear-gradient(135deg, #3B7A57, #10b981); width:${size}px; height:${size}px; border-radius:50%; border:2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; color:white; font-weight:800; font-size:${Math.max(10, size/3.2)}px; font-family:Inter,sans-serif;">${count}</div>`,
           className: 'custom-map-icon cluster-icon',
           iconSize: [size, size],
           iconAnchor: [size/2, size/2]
@@ -804,9 +821,8 @@ function renderLeafletMarkers() {
       }
       
       marker = L.marker([pin.lat, pin.lng], { icon: customIcon }).addTo(State.leafletMap);
-      
-      if (pin._isStateCluster) {
-        marker.on('click', () => {
+      marker.on('click', () => {
+        if (pin._isStateCluster) {
           const stateInfo = StateBboxes[pin._stateName];
           if (stateInfo) {
             if (stateInfo.bbox) {
@@ -820,13 +836,12 @@ function renderLeafletMarkers() {
           } else {
             State.leafletMap.setView([pin.lat, pin.lng], 6);
           }
-        });
-      } else {
-        marker.on('click', () => {
+        } else {
           State.leafletMap.setView([pin.lat, pin.lng], zoom + 2);
-        });
-      }
+        }
+      });
     } else {
+      // Standard Node handling matching native attributes
       let lat = pin.lat;
       let lng = pin.lng;
       const offset = pinOffsets.get(pinId);
@@ -850,25 +865,17 @@ function renderLeafletMarkers() {
       
       marker = L.marker([lat, lng], { icon: customIcon }).addTo(State.leafletMap);
       
-      if (window.innerWidth > 768) {
-        marker.bindPopup(getDetailedPopupHtml(pin), {
-          closeButton: true,
-          minWidth: 300,
-          maxWidth: 340
-        });
+      if (!isMobile) {
+        marker.bindPopup(getDetailedPopupHtml(pin), { closeButton: true, minWidth: 300, maxWidth: 340 });
         marker.on('click', () => {
           marker.openPopup();
         });
       } else {
-        marker.on('click', () => {
-          openInfoDrawerForSpot(pin);
-        });
+        marker.on('click', () => { openInfoDrawerForSpot(pin); });
       }
     }
-    
     State.leafletMarkersMap.set(pinId, marker);
   }
-
   State.mapMarkers = Array.from(State.leafletMarkersMap.values());
 }
 
