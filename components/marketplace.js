@@ -17,7 +17,18 @@ function renderMarketplaceListings() {
     searchCoords = resolveZipCoordinates(zipFilter);
   }
   
+  if (typeof State !== 'undefined' && !State.activeMarketplaceType) {
+    State.activeMarketplaceType = 'items';
+  }
+
   let filtered = State.marketplace.filter(item => {
+    if (item.status === 'hidden_flagged') return false;
+
+    // Marketplace division filtering
+    const isServiceItem = item.category === 'services-offer' || item.category === 'services-want';
+    const matchesType = (State.activeMarketplaceType === 'services') ? isServiceItem : !isServiceItem;
+    if (!matchesType) return false;
+
     const matchesCat = catFilter === 'all' || item.category === catFilter;
     const matchesQuery = item.title.toLowerCase().includes(query) || 
                          item.description.toLowerCase().includes(query) ||
@@ -72,7 +83,10 @@ function renderMarketplaceListings() {
     const isOwner = State.isSignedIn && item.seller.name === State.currentUser.name;
     const actionButton = isOwner ? 
       `<button class="btn btn-sm" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.15); font-size: 11px; cursor: pointer;" onclick="deleteListing('${item.id}')">Delete</button>` :
-      `<button class="btn btn-sm btn-primary" onclick="contactSeller('${item.seller.name}', '${item.title}')">Message</button>`;
+      `<div style="display:flex; gap:6px;">
+        <button class="btn btn-sm btn-primary" onclick="contactSeller('${item.seller.name}', '${item.title}')">Message</button>
+        <button class="btn btn-sm" onclick="flagItem('marketplace', '${item.id}')" title="Flag/Report" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.15); font-size: 11px; cursor: pointer; padding: 4px 8px; display: inline-flex; align-items: center; justify-content: center;"><i data-lucide="flag" style="width:13px; height:13px;"></i></button>
+       </div>`;
       
     card.innerHTML = `
       <div class="market-img-wrapper">
@@ -150,3 +164,70 @@ function deleteListing(itemId) {
     showToast("Listing deleted successfully.", "success");
   }
 }
+
+window.switchMarketplaceType = function(type) {
+  State.activeMarketplaceType = type;
+  
+  // Update Tab buttons visual state
+  const itemsBtn = document.getElementById('market-tab-items');
+  const servicesBtn = document.getElementById('market-tab-services');
+  if (itemsBtn && servicesBtn) {
+    if (type === 'items') {
+      itemsBtn.classList.add('active');
+      servicesBtn.classList.remove('active');
+    } else {
+      servicesBtn.classList.add('active');
+      itemsBtn.classList.remove('active');
+    }
+  }
+  
+  // Dynamically update the category selector options
+  const catFilter = document.getElementById('market-filter-category');
+  if (catFilter) {
+    const prevVal = catFilter.value;
+    catFilter.innerHTML = '';
+    
+    if (type === 'items') {
+      catFilter.innerHTML = `
+        <option value="all">All Categories</option>
+        <option value="campervan">Campervans</option>
+        <option value="electrical">Solar & Electrical</option>
+        <option value="parts">Rig Parts & Hardware</option>
+        <option value="gear">Camping Gear</option>
+      `;
+    } else {
+      catFilter.innerHTML = `
+        <option value="all">All Categories</option>
+        <option value="services-offer">Services Offered</option>
+        <option value="services-want">Services Wanted</option>
+      `;
+    }
+    
+    if (catFilter.querySelector(`option[value="${prevVal}"]`)) {
+      catFilter.value = prevVal;
+    } else {
+      catFilter.value = 'all';
+    }
+  }
+
+  // Filter categories in "Add Listing" modal dropdown
+  const addCategory = document.getElementById('list-category');
+  if (addCategory) {
+    addCategory.innerHTML = '';
+    if (type === 'items') {
+      addCategory.innerHTML = `
+        <option value="campervan">Campervans</option>
+        <option value="electrical">Solar & Electrical</option>
+        <option value="parts">Rig Parts & Hardware</option>
+        <option value="gear">Camping Gear</option>
+      `;
+    } else {
+      addCategory.innerHTML = `
+        <option value="services-offer">Services (Offered)</option>
+        <option value="services-want">Services (Wanted)</option>
+      `;
+    }
+  }
+
+  renderMarketplaceListings();
+};

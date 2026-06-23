@@ -28,6 +28,16 @@ function openModal(id) {
       if (typeof State !== 'undefined') {
         State.listingCropState = createCropObject();
       }
+    } else if (id === 'modal-add-meetup') {
+      const workspace = document.getElementById('meetup-crop-workspace');
+      if (workspace) workspace.style.display = 'none';
+      const fileInput = document.getElementById('meetup-photo-upload');
+      if (fileInput) fileInput.value = '';
+      const statusSpan = document.getElementById('meetup-photo-upload-status');
+      if (statusSpan) statusSpan.innerText = '';
+      if (typeof State !== 'undefined') {
+        State.meetupCropState = createCropObject();
+      }
     }
   }
 }

@@ -57,6 +57,7 @@ let State = {
   threadCropState: { img: null, zoom: 1.0, x: 0, y: 0, isDragging: false, dragStart: { x: 0, y: 0 } },
   tribeIconCropState: { img: null, zoom: 1.0, x: 0, y: 0, isDragging: false, dragStart: { x: 0, y: 0 } },
   tribeBannerCropState: { img: null, zoom: 1.0, x: 0, y: 0, isDragging: false, dragStart: { x: 0, y: 0 } },
+  meetupCropState: { img: null, zoom: 1.0, x: 0, y: 0, isDragging: false, dragStart: { x: 0, y: 0 } },
   feedbacks: [],
   isSelectingMeetupLocation: false
 };
@@ -231,6 +232,15 @@ function getUserReputationBadge(name) {
 
 function requireAuth(action) {
   if (State.isSignedIn) {
+    const userInList = State.users.find(u => u.name === State.currentUser.name);
+    if (userInList && userInList.banned) {
+      State.isSignedIn = false;
+      saveStateToStorage();
+      updateSidebarProfileWidget();
+      showToast("Your account has been deactivated by an administrator.", "error");
+      switchTab('dashboard');
+      return false;
+    }
     if (typeof action === 'function') action();
     return true;
   } else {
@@ -805,6 +815,10 @@ function handleTribeBannerUpload(e) {
   handleGenericPhotoUpload(e, State.tribeBannerCropState, 'tribe-banner-crop-canvas', 'tribe-banner-crop-zoom', 'tribe-banner-crop-workspace', 'tribe-banner-upload-status');
 }
 
+function handleMeetupPhotoUpload(e) {
+  handleGenericPhotoUpload(e, State.meetupCropState, 'meetup-crop-canvas', 'meetup-crop-zoom', 'meetup-crop-workspace', 'meetup-photo-upload-status');
+}
+
 function handlePrivateTribeJoin(tribe, onTriggerRender) {
   if (tribe.pendingJoin) {
     showToast("Join request is already pending approval.", "info");
@@ -1323,3 +1337,92 @@ async function safeFetchData(url, fallbackState) {
     return fallbackState;
   }
 }
+
+function processPremiumPurchase(event) {
+  if (event) event.preventDefault();
+  if (!requireAuth()) return;
+  
+  State.currentUser.isPremium = true;
+  
+  const userInList = State.users.find(u => u.name === State.currentUser.name);
+  if (userInList) {
+    userInList.isPremium = true;
+  }
+  
+  saveStateToStorage();
+  closeModal('modal-premium-pass');
+  
+  // Refresh UI
+  updateSidebarProfileWidget();
+  if (typeof renderUserProfile === 'function') {
+    renderUserProfile();
+  }
+  
+  showToast("Congratulations! You are now a Vanlyfa Premium member!", "success");
+}
+
+function flagItem(type, itemId, commentIndex = null) {
+  if (!requireAuth()) return;
+  if (confirm(`Are you sure you want to report this ${type} for moderation?`)) {
+    let target = null;
+    let parent = null;
+    
+    if (type === 'post') {
+      const result = findPostOrItem(itemId);
+      target = result.target;
+    } else if (type === 'spot') {
+      target = State.spots.find(s => s.id === itemId);
+    } else if (type === 'marketplace') {
+      target = State.marketplace.find(m => String(m.id) === String(itemId));
+    } else if (type === 'comment') {
+      const result = findPostOrItem(itemId);
+      if (result.target && result.target.comments) {
+        target = result.target.comments[commentIndex];
+        parent = result.target;
+      }
+    }
+    
+    if (!target) {
+      showToast("Item not found.", "error");
+      return;
+    }
+    
+    if (!target.flags) target.flags = 0;
+    if (!target.flaggedBy) target.flaggedBy = [];
+    
+    const currentUser = State.currentUser.name;
+    if (target.flaggedBy.includes(currentUser)) {
+      showToast("You have already reported this item.", "info");
+      return;
+    }
+    
+    target.flaggedBy.push(currentUser);
+    target.flags += 1;
+    
+    showToast("Report submitted successfully.", "success");
+    
+    if (target.flags >= 3) {
+      if (type === 'post') {
+        target.status = 'rejected';
+      } else if (type === 'spot') {
+        target.status = 'hidden_flagged';
+      } else if (type === 'marketplace') {
+        target.status = 'hidden_flagged';
+      } else if (type === 'comment') {
+        if (parent && parent.comments) {
+          parent.comments.splice(commentIndex, 1);
+        }
+      }
+      showToast("This item has been hidden pending admin review.", "warning");
+    }
+    
+    saveStateToStorage();
+    State._cachedFeeds = {};
+    
+    if (typeof renderCurrentTab === 'function') renderCurrentTab();
+    if (typeof renderMarketplaceListings === 'function') renderMarketplaceListings();
+    if (typeof renderLeafletMarkers === 'function') renderLeafletMarkers();
+  }
+}
+
+window.flagItem = flagItem;
