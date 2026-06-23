@@ -24,35 +24,54 @@ function showToast(message, type = 'success') {
 
 function updateConnectionUI() {
   const connectionBtn = document.getElementById('connection-status-btn');
-  if (!connectionBtn) return;
-  const dot = connectionBtn.querySelector('.status-indicator-dot');
-  const text = connectionBtn.querySelector('.status-indicator-text');
-  if (!dot || !text) return;
-
+  const popoutDot = document.getElementById('mobile-popout-conn-dot');
+  const popoutText = document.getElementById('mobile-popout-conn-text');
+  
   if (State.isOffline) {
-    dot.style.backgroundColor = '#ef4444'; // Red for offline
-    const pendingCount = State.syncQueue ? State.syncQueue.length : 0;
-    text.innerText = pendingCount > 0 ? `Offline (${pendingCount})` : 'Offline';
-    connectionBtn.title = 'Switch to Online Mode';
-    connectionBtn.style.borderColor = 'rgba(239, 68, 68, 0.4)';
-    connectionBtn.style.background = 'rgba(239, 68, 68, 0.1)';
+    if (connectionBtn) {
+      const dot = connectionBtn.querySelector('.status-indicator-dot');
+      const text = connectionBtn.querySelector('.status-indicator-text');
+      if (dot) dot.style.backgroundColor = '#ef4444';
+      if (text) {
+        const pendingCount = State.syncQueue ? State.syncQueue.length : 0;
+        text.innerText = pendingCount > 0 ? `Offline (${pendingCount})` : 'Offline';
+      }
+      connectionBtn.title = 'Switch to Online Mode';
+      connectionBtn.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+      connectionBtn.style.background = 'rgba(239, 68, 68, 0.1)';
+    }
+    if (popoutDot) popoutDot.style.backgroundColor = '#ef4444';
+    if (popoutText) popoutText.innerText = 'Offline Mode';
   } else {
-    dot.style.backgroundColor = 'var(--accent-green)'; // Green for online
-    text.innerText = 'Online';
-    connectionBtn.title = 'Switch to Offline Mode';
-    connectionBtn.style.borderColor = 'var(--border-color)';
-    connectionBtn.style.background = 'var(--bg-card)';
+    if (connectionBtn) {
+      const dot = connectionBtn.querySelector('.status-indicator-dot');
+      const text = connectionBtn.querySelector('.status-indicator-text');
+      if (dot) dot.style.backgroundColor = 'var(--accent-green)';
+      if (text) text.innerText = 'Online';
+      connectionBtn.title = 'Switch to Offline Mode';
+      connectionBtn.style.borderColor = 'var(--border-color)';
+      connectionBtn.style.background = 'var(--bg-card)';
+    }
+    if (popoutDot) popoutDot.style.backgroundColor = 'var(--accent-green)';
+    if (popoutText) popoutText.innerText = 'Online Mode';
   }
 }
 
 function updateThemeToggleUI() {
   const icon = document.getElementById('theme-icon');
-  if (icon) {
-    if (State.darkMode) {
-      icon.setAttribute('data-lucide', 'sun');
-    } else {
-      icon.setAttribute('data-lucide', 'moon');
-    }
+  const popoutIcon = document.getElementById('mobile-popout-theme-icon');
+  const popoutText = document.getElementById('mobile-popout-theme-text');
+  
+  if (State.darkMode) {
+    if (icon) icon.setAttribute('data-lucide', 'sun');
+    if (popoutIcon) popoutIcon.setAttribute('data-lucide', 'sun');
+    if (popoutText) popoutText.innerText = 'Light Mode';
+  } else {
+    if (icon) icon.setAttribute('data-lucide', 'moon');
+    if (popoutIcon) popoutIcon.setAttribute('data-lucide', 'moon');
+    if (popoutText) popoutText.innerText = 'Dark Mode';
+  }
+  if (window.lucide) {
     lucide.createIcons();
   }
 }
@@ -138,6 +157,36 @@ function updateSidebarProfileWidget() {
       btn.disabled = true;
     });
   }
+
+  // Synchronize mobile top header avatar and popout menu
+  const mobileTopAvatar = document.getElementById('mobile-top-avatar');
+  const mobilePopoutAvatar = document.getElementById('mobile-popout-avatar');
+  const mobilePopoutName = document.getElementById('mobile-popout-name');
+  const mobilePopoutHandle = document.getElementById('mobile-popout-handle');
+  const mobilePopoutAuthBtn = document.getElementById('mobile-popout-auth-btn');
+
+  if (State.isSignedIn) {
+    if (mobileTopAvatar) mobileTopAvatar.src = getAvatarSrc(State.currentUser.avatar);
+    if (mobilePopoutAvatar) mobilePopoutAvatar.src = getAvatarSrc(State.currentUser.avatar);
+    if (mobilePopoutName) mobilePopoutName.innerText = State.currentUser.name;
+    if (mobilePopoutHandle) mobilePopoutHandle.innerText = State.currentUser.handle;
+    if (mobilePopoutAuthBtn) {
+      mobilePopoutAuthBtn.innerHTML = `<i data-lucide="log-out" style="width: 16px; height: 16px;"></i> <span>Sign Out</span>`;
+      mobilePopoutAuthBtn.className = 'btn btn-secondary';
+    }
+  } else {
+    if (mobileTopAvatar) mobileTopAvatar.src = getAvatarSrc('avatar_guest');
+    if (mobilePopoutAvatar) mobilePopoutAvatar.src = getAvatarSrc('avatar_guest');
+    if (mobilePopoutName) mobilePopoutName.innerText = "Guest Nomad";
+    if (mobilePopoutHandle) mobilePopoutHandle.innerText = "@guest";
+    if (mobilePopoutAuthBtn) {
+      mobilePopoutAuthBtn.innerHTML = `<i data-lucide="log-in" style="width: 16px; height: 16px;"></i> <span>Sign In</span>`;
+      mobilePopoutAuthBtn.className = 'btn btn-primary';
+    }
+  }
+  if (window.lucide) {
+    lucide.createIcons();
+  }
   
   const adminTab = document.getElementById('sidebar-admin-tab');
   const mobileAdminTab = document.getElementById('mobile-drawer-admin-tab');
@@ -181,9 +230,12 @@ function getUserRoleMarkup(username) {
     user = State.currentUser;
   }
   
+  // User tags (badgeTag) hidden for now as requested
+  /*
   if (user && user.badgeTag) {
     return `<span class="role-name-custom" style="color: var(--accent-green); font-weight: 700;">${cleanName}</span><span class="role-badge-custom" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 700; margin-left: 4px; vertical-align: middle; text-transform: uppercase;">${user.badgeTag}</span>`;
   }
+  */
   
   if (user) {
     rep = user.reputation || 0;
@@ -258,4 +310,76 @@ function parseMarkdownToHtml(text) {
   });
   
   return processedLines.join('<br>');
+}
+
+/* ==========================================================================
+   NOTIFICATIONS MANAGEMENT
+   ========================================================================== */
+function renderNotifications() {
+  const panel = document.getElementById('notifications-panel');
+  const list = document.getElementById('notifications-list');
+  const badge = document.getElementById('nav-feed-badge');
+  if (!panel || !list) return;
+
+  const unreadCount = State.notifications.filter(n => !n.read).length;
+  
+  if (badge) {
+    if (unreadCount > 0) {
+      badge.innerText = unreadCount;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  list.innerHTML = '';
+  if (State.notifications.length === 0) {
+    panel.style.display = 'none';
+    return;
+  }
+
+  if (State.activeTab === 'feed') {
+    panel.style.display = 'flex';
+  } else {
+    panel.style.display = 'none';
+  }
+
+  State.notifications.forEach(n => {
+    const item = document.createElement('div');
+    item.style.display = 'flex';
+    item.style.justifyContent = 'space-between';
+    item.style.alignItems = 'center';
+    item.style.padding = '8px 12px';
+    item.style.borderRadius = 'var(--radius-sm)';
+    item.style.background = n.read ? 'transparent' : 'rgba(59,122,87,0.08)';
+    item.style.border = '1px solid ' + (n.read ? 'var(--border-color)' : 'var(--accent-green-light)');
+    item.style.fontSize = '12px';
+    item.style.gap = '8px';
+
+    item.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0; text-align: left;">
+        <span style="color: var(--text-main); font-weight: ${n.read ? '500' : '600'};">${n.content}</span>
+        <span style="color: var(--muted-text); font-size: 10px;">${n.time || ''}</span>
+      </div>
+      ${!n.read ? `<button class="btn btn-xs btn-primary" onclick="markNotificationRead('${n.id}')" style="padding: 2px 6px; font-size: 9px; margin-left: 8px; height: auto;">Read</button>` : ''}
+    `;
+    list.appendChild(item);
+  });
+  
+  if (window.lucide) lucide.createIcons();
+}
+
+function clearNotifications() {
+  State.notifications = [];
+  saveStateToStorage();
+  renderNotifications();
+}
+
+function markNotificationRead(id) {
+  const notification = State.notifications.find(n => n.id === id);
+  if (notification) {
+    notification.read = true;
+    saveStateToStorage();
+    renderNotifications();
+  }
 }

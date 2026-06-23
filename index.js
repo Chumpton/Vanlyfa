@@ -301,6 +301,11 @@ function initApp() {
     tribeBannerUpload.addEventListener('change', handleTribeBannerUpload);
   }
 
+  const meetupPhotoUpload = document.getElementById('meetup-photo-upload');
+  if (meetupPhotoUpload) {
+    meetupPhotoUpload.addEventListener('change', handleMeetupPhotoUpload);
+  }
+
   // Formatting toolbar buttons click handlers
   document.querySelectorAll('.btn-format').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -344,6 +349,69 @@ function initApp() {
   if (mobileMenuBtn) {
     mobileMenuBtn.addEventListener('click', () => {
       openMobileDrawer();
+    });
+  }
+  
+  // Mobile Top Avatar Popout Toggle
+  const mobileTopAvatar = document.getElementById('mobile-top-avatar');
+  const mobileProfilePopout = document.getElementById('mobile-profile-popout');
+  if (mobileTopAvatar && mobileProfilePopout) {
+    mobileTopAvatar.addEventListener('click', (e) => {
+      e.stopPropagation();
+      mobileProfilePopout.classList.toggle('open');
+    });
+    document.addEventListener('click', (e) => {
+      if (!mobileProfilePopout.contains(e.target) && e.target !== mobileTopAvatar) {
+        mobileProfilePopout.classList.remove('open');
+      }
+    });
+  }
+
+  // Mobile popout action handlers
+  const popoutProfileBtn = document.getElementById('mobile-popout-profile-btn');
+  if (popoutProfileBtn) {
+    popoutProfileBtn.addEventListener('click', () => {
+      if (!requireAuth()) return;
+      State.activeProfileName = null;
+      switchTab('profile');
+      if (mobileProfilePopout) mobileProfilePopout.classList.remove('open');
+    });
+  }
+
+  const popoutThemeBtn = document.getElementById('mobile-popout-theme-btn');
+  if (popoutThemeBtn) {
+    popoutThemeBtn.addEventListener('click', () => {
+      State.darkMode = !State.darkMode;
+      document.body.classList.toggle('dark-mode', State.darkMode);
+      localStorage.setItem('vanlyfa_dark_mode', State.darkMode);
+      updateThemeToggleUI();
+    });
+  }
+
+  const popoutConnBtn = document.getElementById('mobile-popout-conn-btn');
+  if (popoutConnBtn) {
+    popoutConnBtn.addEventListener('click', () => {
+      State.isOffline = !State.isOffline;
+      updateConnectionUI();
+      if (!State.isOffline) {
+        processSyncQueue();
+      }
+    });
+  }
+
+  const popoutAuthBtn = document.getElementById('mobile-popout-auth-btn');
+  if (popoutAuthBtn) {
+    popoutAuthBtn.addEventListener('click', () => {
+      if (mobileProfilePopout) mobileProfilePopout.classList.remove('open');
+      if (State.isSignedIn) {
+        State.isSignedIn = false;
+        saveStateToStorage();
+        updateSidebarProfileWidget();
+        showToast("Signed out successfully. Browsing as Guest.", "info");
+        switchTab('dashboard');
+      } else {
+        openModal('modal-auth-required');
+      }
     });
   }
   const sidebarBackdrop = document.getElementById('sidebar-backdrop');
@@ -1087,7 +1155,7 @@ function saveNewSpot() {
   document.getElementById('amenity-water').checked = false;
   document.getElementById('amenity-wifi').checked = false;
   document.getElementById('amenity-pets').checked = false;
-  document.getElementById('spot-moochdocking-fields').style.display = 'none';
+  document.getElementById('spot-hosting-fields').style.display = 'none';
   
   closeModal('modal-add-spot');
 }
@@ -1322,6 +1390,16 @@ function saveNewMeetup() {
   
   const status = State.currentUser.role === 'admin' ? 'approved' : 'pending';
   
+  // Extract meetup thumbnail from canvas
+  let thumbnail = 'none';
+  const workspace = document.getElementById('meetup-crop-workspace');
+  if (workspace && workspace.style.display !== 'none') {
+    const canvas = document.getElementById('meetup-crop-canvas');
+    if (canvas) {
+      thumbnail = canvas.toDataURL('image/jpeg', 0.85);
+    }
+  }
+  
   const newMeetup = {
     id: `meetup-${Date.now()}`,
     title,
@@ -1332,8 +1410,10 @@ function saveNewMeetup() {
     location,
     description,
     host: { name: State.currentUser.name, avatar: State.currentUser.avatar },
-    attendees: ['avatar_bob'],
+    attendees: [State.currentUser.avatar || 'avatar_bob'],
     attendeesCount: 1,
+    comments: [],
+    thumbnail,
     status
   };
   
@@ -1351,6 +1431,14 @@ function saveNewMeetup() {
   document.getElementById('meetup-lat').value = '';
   document.getElementById('meetup-lng').value = '';
   document.getElementById('meetup-desc-input').value = '';
+  
+  // Clean photo workspace
+  if (workspace) workspace.style.display = 'none';
+  const fileInput = document.getElementById('meetup-photo-upload');
+  if (fileInput) fileInput.value = '';
+  const statusSpan = document.getElementById('meetup-photo-upload-status');
+  if (statusSpan) statusSpan.innerText = '';
+  State.meetupCropState = createCropObject();
   
   closeModal('modal-add-meetup');
   renderMeetupsList();

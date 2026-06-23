@@ -57,6 +57,7 @@ let State = {
   threadCropState: { img: null, zoom: 1.0, x: 0, y: 0, isDragging: false, dragStart: { x: 0, y: 0 } },
   tribeIconCropState: { img: null, zoom: 1.0, x: 0, y: 0, isDragging: false, dragStart: { x: 0, y: 0 } },
   tribeBannerCropState: { img: null, zoom: 1.0, x: 0, y: 0, isDragging: false, dragStart: { x: 0, y: 0 } },
+  meetupCropState: { img: null, zoom: 1.0, x: 0, y: 0, isDragging: false, dragStart: { x: 0, y: 0 } },
   feedbacks: [],
   isSelectingMeetupLocation: false
 };
@@ -803,6 +804,10 @@ function handleTribeIconUpload(e) {
 
 function handleTribeBannerUpload(e) {
   handleGenericPhotoUpload(e, State.tribeBannerCropState, 'tribe-banner-crop-canvas', 'tribe-banner-crop-zoom', 'tribe-banner-crop-workspace', 'tribe-banner-upload-status');
+}
+
+function handleMeetupPhotoUpload(e) {
+  handleGenericPhotoUpload(e, State.meetupCropState, 'meetup-crop-canvas', 'meetup-crop-zoom', 'meetup-crop-workspace', 'meetup-photo-upload-status');
 }
 
 function handlePrivateTribeJoin(tribe, onTriggerRender) {

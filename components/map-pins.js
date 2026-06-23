@@ -799,11 +799,11 @@ function openInfoDrawerForSpot(pin) {
   lucide.createIcons();
 }
 
-function toggleSpotMoochdockingFields() {
+function toggleSpotHostingFields() {
   const category = document.getElementById('spot-category').value;
-  const moochFields = document.getElementById('spot-moochdocking-fields');
-  if (moochFields) {
-    moochFields.style.display = category === 'driveway-host' ? 'flex' : 'none';
+  const hostingFields = document.getElementById('spot-hosting-fields');
+  if (hostingFields) {
+    hostingFields.style.display = category === 'driveway-host' ? 'flex' : 'none';
   }
 }
 

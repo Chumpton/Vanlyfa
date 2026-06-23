@@ -17,9 +17,15 @@ function switchTab(tabName, isPopState = false) {
   State.activeTab = tabName;
   State.activeThreadId = null; // Reset forum viewing state
   
-  // Reset top-bar scroll hide class
+  // Auto-hide top menu bar on mobile when switching away from dashboard
   const topBar = document.querySelector('.top-bar');
-  if (topBar) topBar.classList.remove('hide-top-bar');
+  if (topBar) {
+    if (window.innerWidth <= 768 && tabName !== 'dashboard') {
+      topBar.classList.add('hide-top-bar');
+    } else {
+      topBar.classList.remove('hide-top-bar');
+    }
+  }
   
   // Update sidebar active class
   document.querySelectorAll('.nav-menu .nav-item').forEach(item => {
@@ -167,6 +173,9 @@ function triggerMainActionButtonModal() {
 }
 
 function renderCurrentTab() {
+  if (typeof renderNotifications === 'function') {
+    renderNotifications();
+  }
   switch (State.activeTab) {
     case "dashboard":
       renderDashboardFeed();
