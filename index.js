@@ -301,11 +301,6 @@ function initApp() {
     tribeBannerUpload.addEventListener('change', handleTribeBannerUpload);
   }
 
-  const meetupPhotoUpload = document.getElementById('meetup-photo-upload');
-  if (meetupPhotoUpload) {
-    meetupPhotoUpload.addEventListener('change', handleMeetupPhotoUpload);
-  }
-
   // Formatting toolbar buttons click handlers
   document.querySelectorAll('.btn-format').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -349,69 +344,6 @@ function initApp() {
   if (mobileMenuBtn) {
     mobileMenuBtn.addEventListener('click', () => {
       openMobileDrawer();
-    });
-  }
-  
-  // Mobile Top Avatar Popout Toggle
-  const mobileTopAvatar = document.getElementById('mobile-top-avatar');
-  const mobileProfilePopout = document.getElementById('mobile-profile-popout');
-  if (mobileTopAvatar && mobileProfilePopout) {
-    mobileTopAvatar.addEventListener('click', (e) => {
-      e.stopPropagation();
-      mobileProfilePopout.classList.toggle('open');
-    });
-    document.addEventListener('click', (e) => {
-      if (!mobileProfilePopout.contains(e.target) && e.target !== mobileTopAvatar) {
-        mobileProfilePopout.classList.remove('open');
-      }
-    });
-  }
-
-  // Mobile popout action handlers
-  const popoutProfileBtn = document.getElementById('mobile-popout-profile-btn');
-  if (popoutProfileBtn) {
-    popoutProfileBtn.addEventListener('click', () => {
-      if (!requireAuth()) return;
-      State.activeProfileName = null;
-      switchTab('profile');
-      if (mobileProfilePopout) mobileProfilePopout.classList.remove('open');
-    });
-  }
-
-  const popoutThemeBtn = document.getElementById('mobile-popout-theme-btn');
-  if (popoutThemeBtn) {
-    popoutThemeBtn.addEventListener('click', () => {
-      State.darkMode = !State.darkMode;
-      document.body.classList.toggle('dark-mode', State.darkMode);
-      localStorage.setItem('vanlyfa_dark_mode', State.darkMode);
-      updateThemeToggleUI();
-    });
-  }
-
-  const popoutConnBtn = document.getElementById('mobile-popout-conn-btn');
-  if (popoutConnBtn) {
-    popoutConnBtn.addEventListener('click', () => {
-      State.isOffline = !State.isOffline;
-      updateConnectionUI();
-      if (!State.isOffline) {
-        processSyncQueue();
-      }
-    });
-  }
-
-  const popoutAuthBtn = document.getElementById('mobile-popout-auth-btn');
-  if (popoutAuthBtn) {
-    popoutAuthBtn.addEventListener('click', () => {
-      if (mobileProfilePopout) mobileProfilePopout.classList.remove('open');
-      if (State.isSignedIn) {
-        State.isSignedIn = false;
-        saveStateToStorage();
-        updateSidebarProfileWidget();
-        showToast("Signed out successfully. Browsing as Guest.", "info");
-        switchTab('dashboard');
-      } else {
-        openModal('modal-auth-required');
-      }
     });
   }
   const sidebarBackdrop = document.getElementById('sidebar-backdrop');
@@ -624,27 +556,25 @@ function initApp() {
   }
 
   // Top-bar scroll disappear/re-appear listener for mobile
+  let lastScrollTop = 0;
   document.querySelectorAll('.tab-content-pane').forEach(pane => {
-    pane._lastScrollTop = 0;
     pane.addEventListener('scroll', (e) => {
       if (window.innerWidth <= 768) {
         const scrollTop = e.target.scrollTop;
         const topBar = document.querySelector('.top-bar');
         if (!topBar) return;
         
-        const lastScroll = e.target._lastScrollTop || 0;
-        
         // Threshold to prevent bounce artifacts
-        if (Math.abs(lastScroll - scrollTop) <= 5) return;
+        if (Math.abs(lastScrollTop - scrollTop) <= 5) return;
         
-        if (scrollTop > lastScroll && scrollTop > 64) {
+        if (scrollTop > lastScrollTop && scrollTop > 64) {
           // Scroll Down - hide top-bar
           topBar.classList.add('hide-top-bar');
         } else {
           // Scroll Up - show top-bar
           topBar.classList.remove('hide-top-bar');
         }
-        e.target._lastScrollTop = scrollTop;
+        lastScrollTop = scrollTop;
       }
     });
   });
@@ -855,11 +785,6 @@ function handleAuthSignIn(event) {
       else if (user.handle === "@solar_explorer") expectedPassword = "SolarPass123!";
       else if (user.handle === "@nomad_bob") expectedPassword = "NomadPass123!";
       else expectedPassword = "password"; // Default fallback
-    }
-    
-    if (user.banned) {
-      showToast("Your account has been deactivated by an administrator.", "error");
-      return;
     }
     
     if (passwordVal !== expectedPassword) {
@@ -1162,7 +1087,7 @@ function saveNewSpot() {
   document.getElementById('amenity-water').checked = false;
   document.getElementById('amenity-wifi').checked = false;
   document.getElementById('amenity-pets').checked = false;
-  document.getElementById('spot-hosting-fields').style.display = 'none';
+  document.getElementById('spot-moochdocking-fields').style.display = 'none';
   
   closeModal('modal-add-spot');
 }
@@ -1295,15 +1220,7 @@ function saveNewListing() {
     State.listingCropState = createCropObject();
     
     closeModal('modal-add-listing');
-    
-    const isService = category === 'services-offer' || category === 'services-want';
-    const activeType = isService ? 'services' : 'items';
-    if (typeof window.switchMarketplaceType === 'function') {
-      window.switchMarketplaceType(activeType);
-    } else {
-      State.activeMarketplaceType = activeType;
-      renderMarketplaceListings();
-    }
+    renderMarketplaceListings();
     
     const successMsg = status === 'approved' ? "Marketplace listing published!" : "Listing submitted! Awaiting admin approval.";
     showToast(successMsg, "success");
@@ -1405,16 +1322,6 @@ function saveNewMeetup() {
   
   const status = State.currentUser.role === 'admin' ? 'approved' : 'pending';
   
-  // Extract meetup thumbnail from canvas
-  let thumbnail = 'none';
-  const workspace = document.getElementById('meetup-crop-workspace');
-  if (workspace && workspace.style.display !== 'none') {
-    const canvas = document.getElementById('meetup-crop-canvas');
-    if (canvas) {
-      thumbnail = canvas.toDataURL('image/jpeg', 0.85);
-    }
-  }
-  
   const newMeetup = {
     id: `meetup-${Date.now()}`,
     title,
@@ -1425,10 +1332,8 @@ function saveNewMeetup() {
     location,
     description,
     host: { name: State.currentUser.name, avatar: State.currentUser.avatar },
-    attendees: [State.currentUser.avatar || 'avatar_bob'],
+    attendees: ['avatar_bob'],
     attendeesCount: 1,
-    comments: [],
-    thumbnail,
     status
   };
   
@@ -1446,14 +1351,6 @@ function saveNewMeetup() {
   document.getElementById('meetup-lat').value = '';
   document.getElementById('meetup-lng').value = '';
   document.getElementById('meetup-desc-input').value = '';
-  
-  // Clean photo workspace
-  if (workspace) workspace.style.display = 'none';
-  const fileInput = document.getElementById('meetup-photo-upload');
-  if (fileInput) fileInput.value = '';
-  const statusSpan = document.getElementById('meetup-photo-upload-status');
-  if (statusSpan) statusSpan.innerText = '';
-  State.meetupCropState = createCropObject();
   
   closeModal('modal-add-meetup');
   renderMeetupsList();

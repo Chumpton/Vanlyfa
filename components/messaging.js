@@ -211,29 +211,14 @@ function renderActiveChats() {
           </div>
         ` : '';
 
-        let contentHtml = msg.text;
-        if (msg.isImage || msg.text.startsWith('data:image') || msg.text.startsWith('http://') || msg.text.startsWith('https://')) {
-          const src = msg.text;
-          contentHtml = `<img src="${src}" style="max-width: 200px; max-height: 150px; border-radius: var(--radius-sm); object-fit: cover; cursor: pointer; display: block; margin: 2px 0;" onclick="window.expandChatImage('${src}')">`;
-        }
-
         messagesHtml += `
           <div class="chat-msg-row ${isMe ? 'outgoing' : 'incoming'}">
             ${!isMe ? `<img src="${getAvatarSrc(contact.avatar)}" alt="${contact.name}" class="chat-msg-avatar" onclick="viewUserProfile('${contact.name}')" style="cursor:pointer;">` : ''}
             <div class="chat-msg-bubble-wrap" style="display: flex; flex-direction: column; width: max-content; max-width: 75%; align-items: ${isMe ? 'flex-end' : 'flex-start'};">
-              <div class="chat-msg-bubble-container" style="position: relative; width: fit-content; max-width: 100%;">
-                <div class="chat-msg-bubble" style="cursor:pointer; padding: 8px 12px; width: fit-content; max-width: 100%; word-break: break-word;" onclick="window.toggleReactionTray('${msg.id}', event)">
-                  ${contentHtml}
-                </div>
-                ${msg.reaction ? `<div class="chat-bubble-reaction" onclick="window.toggleReactionTray('${msg.id}', event)" style="position: absolute; bottom: -8px; ${isMe ? 'left: 8px;' : 'right: 8px;'}; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); z-index: 2;">${msg.reaction}</div>` : ''}
-                
-                <!-- Reaction Tray -->
-                <div class="message-reaction-tray" id="reaction-tray-${msg.id}" style="display: none; position: absolute; top: -32px; ${isMe ? 'right: 0;' : 'left: 0;'} background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); padding: 4px 8px; z-index: 10; gap: 8px; align-items: center; justify-content: center;">
-                  ${['👍', '❤️', '😂', '🔥', '😮', '✕'].map(emoji => `
-                    <span onclick="window.reactToMessage('${username}', '${msg.id}', '${emoji === '✕' ? '' : emoji}', event)" style="cursor: pointer; font-size: 14px; padding: 2px 4px; display: inline-block;">${emoji}</span>
-                  `).join('')}
-                </div>
+              <div class="chat-msg-bubble" style="cursor:pointer; padding: 8px 12px; width: fit-content; max-width: 100%; word-break: break-word;" onclick="toggleHeartReaction('${username}', '${msg.id}')" title="Click to react with Heart">
+                ${msg.text}
               </div>
+              ${msg.reaction ? `<div class="chat-bubble-reaction" onclick="toggleHeartReaction('${username}', '${msg.id}')" style="margin-top: -8px; z-index: 1;">❤️</div>` : ''}
               ${statusMarkup}
             </div>
           </div>
@@ -271,27 +256,17 @@ function renderActiveChats() {
       
       <div class="chat-footer">
         <div class="chat-footer-top">
-          <!-- Hidden Photo Input -->
-          <input type="file" accept="image/*" id="chat-photo-input-${username}" style="display:none;" onchange="window.handleChatPhotoUpload(event, '${username}')">
-          <button class="chat-footer-action-btn" title="Photos" onclick="document.getElementById('chat-photo-input-${username}').click()"><i data-lucide="image"></i></button>
-          
+          <button class="chat-footer-action-btn" title="Photos" onclick="showToast('Media attachment not supported in chat.', 'info')"><i data-lucide="image"></i></button>
           <button class="chat-footer-action-btn" title="Stickers" onclick="showToast('Stickers not loaded.', 'info')"><i data-lucide="smile"></i></button>
           
           <div class="chat-input-wrapper">
             <input type="text" class="chat-input-field" placeholder="Aa" onkeypress="handleChatKeyPress(event, '${username}')" onfocus="setTimeout(adjustChatContainerForVisualViewport, 300)" onblur="setTimeout(adjustChatContainerForVisualViewport, 100)">
-            <button class="chat-input-emoji-btn" title="Emoji" onclick="window.toggleEmojiPicker('${username}', event)">
+            <button class="chat-input-emoji-btn" title="Emoji" onclick="insertSampleEmoji('${username}')">
               <i data-lucide="smile-plus"></i>
             </button>
-            
-            <!-- Emoji Picker Dropdown -->
-            <div class="emoji-picker-dropdown" id="emoji-picker-${username}" style="display: none; position: absolute; bottom: 42px; right: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: 0 4px 12px rgba(0,0,0,0.25); padding: 6px; z-index: 100; grid-template-columns: repeat(5, 1fr); gap: 4px; width: max-content;">
-              ${['👍', '❤️', '😂', '🔥', '😮', '🚐', '🌲', '⛺', '☀️', '🌊'].map(emoji => `
-                <span onclick="window.appendEmojiToChat('${username}', '${emoji}', event)" style="font-size: 16px; cursor: pointer; text-align: center; display: inline-block; padding: 4px; border-radius: 4px;">${emoji}</span>
-              `).join('')}
-            </div>
           </div>
           
-          <button class="chat-footer-action-btn chat-send-btn" title="Like" onclick="window.sendThumbsUp('${username}')"><i data-lucide="thumbs-up"></i></button>
+          <button class="chat-footer-action-btn chat-send-btn" title="Like" onclick="sendPlantSticker('${username}')"><i data-lucide="thumbs-up"></i></button>
         </div>
       </div>
     `;
@@ -358,119 +333,3 @@ function insertSampleEmoji(username) {
     input.focus();
   }
 }
-
-// Global Chat Action Helpers
-
-window.sendThumbsUp = function(username) {
-  if (typeof sendChatMessage === 'function') {
-    sendChatMessage(username, "👍");
-  }
-};
-
-window.toggleEmojiPicker = function(username, event) {
-  if (event) event.stopPropagation();
-  const picker = document.getElementById(`emoji-picker-${username}`);
-  if (picker) {
-    const isVisible = picker.style.display === 'grid';
-    // Close other pickers
-    document.querySelectorAll('.emoji-picker-dropdown').forEach(p => p.style.display = 'none');
-    picker.style.display = isVisible ? 'none' : 'grid';
-  }
-};
-
-window.appendEmojiToChat = function(username, emoji, event) {
-  if (event) event.stopPropagation();
-  const input = document.querySelector(`.chat-window[data-username="${username}"] .chat-input-field`);
-  if (input) {
-    input.value += emoji;
-    input.focus();
-  }
-  const picker = document.getElementById(`emoji-picker-${username}`);
-  if (picker) {
-    picker.style.display = 'none';
-  }
-};
-
-window.toggleReactionTray = function(msgId, event) {
-  if (event) event.stopPropagation();
-  const trays = document.querySelectorAll('.message-reaction-tray');
-  trays.forEach(t => {
-    if (t.id !== `reaction-tray-${msgId}`) {
-      t.style.display = 'none';
-    }
-  });
-  const tray = document.getElementById(`reaction-tray-${msgId}`);
-  if (tray) {
-    const isVisible = tray.style.display === 'flex';
-    tray.style.display = isVisible ? 'none' : 'flex';
-  }
-};
-
-window.reactToMessage = function(username, msgId, emoji, event) {
-  if (event) event.stopPropagation();
-  const messages = State.chats[username] || [];
-  const msg = messages.find(m => m.id === msgId);
-  if (msg) {
-    msg.reaction = emoji || null;
-    saveStateToStorage();
-    renderActiveChats();
-  }
-};
-
-window.handleChatPhotoUpload = function(event, username) {
-  const file = event.target.files[0];
-  if (!file) return;
-  
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const dataUrl = e.target.result;
-    const messages = State.chats[username] || [];
-    const newMsg = {
-      id: `msg-${Date.now()}`,
-      sender: State.currentUser.name,
-      text: dataUrl,
-      isImage: true,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      reaction: null,
-      status: 'sent'
-    };
-    
-    messages.push(newMsg);
-    saveStateToStorage();
-    renderActiveChats();
-    renderContactsSidebar();
-    
-    setTimeout(() => {
-      const replies = [
-        "Wow, nice picture!",
-        "That looks amazing!",
-        "Cool! Is that where you are parked?",
-        "Love it!"
-      ];
-      const randomReply = replies[Math.floor(Math.random() * replies.length)];
-      if (typeof simulateAutoReply === 'function') {
-        simulateAutoReply(username, randomReply, 1200);
-      }
-    }, 1500);
-  };
-  reader.readAsDataURL(file);
-};
-
-window.expandChatImage = function(src) {
-  let modal = document.getElementById('modal-chat-image-preview');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'modal-chat-image-preview';
-    modal.className = 'modal-overlay';
-    modal.style.zIndex = '9999';
-    modal.innerHTML = `
-      <div class="modal-content" style="max-width: 90%; background: transparent; border: none; box-shadow: none; display: flex; align-items: center; justify-content: center; position: relative;">
-        <img id="chat-preview-img" src="" style="max-width: 100%; max-height: 85vh; border-radius: var(--radius-md); box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-        <button onclick="closeModal('modal-chat-image-preview')" style="position: absolute; top: 16px; right: 16px; background: rgba(0,0,0,0.5); border: none; border-radius: 50%; color: white; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3);">✕</button>
-      </div>
-    `;
-    document.body.appendChild(modal);
-  }
-  document.getElementById('chat-preview-img').src = src;
-  openModal('modal-chat-image-preview');
-};

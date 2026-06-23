@@ -5,9 +5,6 @@
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
--- Enable PostGIS extension for geospatial queries
-create extension if not exists "postgis";
-
 -- ==========================================
 -- Admin / Moderation Security Helper
 -- ==========================================
@@ -39,8 +36,6 @@ create table public.profiles (
   role text default 'user' not null, -- 'admin', 'moderator', 'pro', 'user'
   avatar_crop jsonb default '{"x":0,"y":0,"zoom":1}'::jsonb not null, -- Store crop positioning
   gallery text[] default '{}'::text[], -- Array of image URLs
-  is_premium boolean default false not null, -- Premium lifetime status
-  banned boolean default false not null, -- Banned status
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
@@ -64,36 +59,18 @@ create table public.spots (
   category text not null, -- 'wild-camping', 'driveway-host', 'water-station', 'service-mechanic'
   lat numeric not null,
   lng numeric not null,
-  geom geography(Point, 4326), -- PostGIS coordinates geography column
   description text,
   author_id uuid references public.profiles(id) on delete cascade not null,
   vouches integer default 0 not null,
-  status text default 'pending' not null, -- 'pending', 'approved', 'rejected', 'hidden_flagged'
-  flags_count integer default 0 not null, -- Crowdsourced report counter
+  status text default 'pending' not null, -- 'pending', 'approved', 'rejected'
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
--- Create spatial index for fast geospatial search
-create index spots_geom_idx on public.spots using gist (geom);
-
--- Trigger to auto-update geometry column from lat and lng
-create or replace function public.update_spot_geom()
-returns trigger as $$
-begin
-  new.geom := st_setsrid(st_makepoint(new.lng, new.lat), 4326)::geography;
-  return new;
-end;
-$$ language plpgsql;
-
-create trigger trigger_update_spot_geom
-  before insert or update on public.spots
-  for each row execute procedure public.update_spot_geom();
-
 alter table public.spots enable row level security;
 
-create policy "Spots are viewable by everyone if approved and not flagged out, or by owner/admin" 
+create policy "Spots are viewable by everyone if approved, or by the owner/admin" 
   on public.spots for select 
-  using ((status = 'approved' and flags_count < 3) or auth.uid() = author_id or public.is_admin());
+  using (status = 'approved' or auth.uid() = author_id or public.is_admin());
 
 create policy "Authenticated users can create spots" 
   on public.spots for insert 
@@ -137,15 +114,14 @@ create table public.meetups (
   description text,
   host_id uuid references public.profiles(id) on delete cascade not null,
   status text default 'pending' not null, -- 'pending', 'approved', 'rejected'
-  flags_count integer default 0 not null,
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
 alter table public.meetups enable row level security;
 
-create policy "Meetups are viewable by everyone if approved and not flagged, or by host/admin" 
+create policy "Meetups are viewable by everyone if approved, or by host/admin" 
   on public.meetups for select 
-  using ((status = 'approved' and flags_count < 3) or auth.uid() = host_id or public.is_admin());
+  using (status = 'approved' or auth.uid() = host_id or public.is_admin());
 
 create policy "Authenticated users can host meetups" 
   on public.meetups for insert 
@@ -185,15 +161,14 @@ create table public.posts (
   author_id uuid references public.profiles(id) on delete cascade not null,
   likes integer default 0 not null,
   status text default 'pending' not null, -- 'pending', 'approved', 'rejected'
-  flags_count integer default 0 not null,
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
 alter table public.posts enable row level security;
 
-create policy "Posts are viewable by everyone if approved and not flagged, or by author/admin" 
+create policy "Posts are viewable by everyone if approved, or by author/admin" 
   on public.posts for select 
-  using ((status = 'approved' and flags_count < 3) or auth.uid() = author_id or public.is_admin());
+  using (status = 'approved' or auth.uid() = author_id or public.is_admin());
 
 create policy "Authenticated users can create posts" 
   on public.posts for insert 
@@ -231,15 +206,14 @@ create table public.comments (
   post_id uuid references public.posts(id) on delete cascade not null,
   text text not null,
   author_id uuid references public.profiles(id) on delete cascade not null,
-  flags_count integer default 0 not null,
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
 alter table public.comments enable row level security;
 
-create policy "Comments are viewable by everyone if not flagged out" 
+create policy "Comments are viewable by everyone" 
   on public.comments for select 
-  using (flags_count < 3 or auth.uid() = author_id or public.is_admin());
+  using (true);
 
 create policy "Authenticated users can comment" 
   on public.comments for insert 
@@ -256,23 +230,21 @@ create table public.marketplace (
   id uuid default gen_random_uuid() primary key,
   title text not null,
   price numeric not null,
-  category text not null, -- 'campervan', 'electrical', 'parts', 'gear', 'services-offer', 'services-want'
-  listing_type text default 'item' not null, -- 'item' or 'service'
+  category text not null, -- 'campervan', 'electrical', 'parts', 'gear'
   location text not null,
   zip text not null,
   description text,
   image text, -- SVG mockup key or public URL
   seller_id uuid references public.profiles(id) on delete cascade not null,
-  status text default 'pending' not null, -- 'pending', 'approved', 'rejected', 'hidden_flagged'
-  flags_count integer default 0 not null,
+  status text default 'pending' not null, -- 'pending', 'approved', 'rejected'
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
 alter table public.marketplace enable row level security;
 
-create policy "Listings are viewable by everyone if approved and not flagged, or by seller/admin" 
+create policy "Listings are viewable by everyone if approved, or by seller/admin" 
   on public.marketplace for select 
-  using ((status = 'approved' and flags_count < 3) or auth.uid() = seller_id or public.is_admin());
+  using (status = 'approved' or auth.uid() = seller_id or public.is_admin());
 
 create policy "Authenticated users can post listings" 
   on public.marketplace for insert 
@@ -283,7 +255,36 @@ create policy "Sellers or admins can manage listings"
   using (auth.uid() = seller_id or public.is_admin());
 
 -- ==========================================
--- 10. Forum Threads
+-- 10. Skill Trade Directory
+-- ==========================================
+create table public.skills (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  type text not null, -- 'offer', 'want'
+  category text not null, -- 'electrical', 'woodworking', 'mechanical', 'plumbing', 'digital'
+  tags text[] default '{}'::text[],
+  description text,
+  author_id uuid references public.profiles(id) on delete cascade not null,
+  status text default 'pending' not null, -- 'pending', 'approved', 'rejected'
+  created_at timestamptz default timezone('utc'::text, now()) not null
+);
+
+alter table public.skills enable row level security;
+
+create policy "Skill trades are viewable by everyone if approved, or by author/admin" 
+  on public.skills for select 
+  using (status = 'approved' or auth.uid() = author_id or public.is_admin());
+
+create policy "Authenticated users can post skill listings" 
+  on public.skills for insert 
+  with check (auth.role() = 'authenticated');
+
+create policy "Authors or admins can manage skill listings" 
+  on public.skills for all 
+  using (auth.uid() = author_id or public.is_admin());
+
+-- ==========================================
+-- 11. Forum Threads
 -- ==========================================
 create table public.forum_threads (
   id uuid default gen_random_uuid() primary key,
@@ -292,16 +293,15 @@ create table public.forum_threads (
   body text not null,
   author_id uuid references public.profiles(id) on delete cascade not null,
   views_count integer default 0 not null,
-  status text default 'approved' not null, -- 'pending', 'approved', 'rejected'
-  flags_count integer default 0 not null,
+  status text default 'approved' not null, -- 'pending', 'approved', 'rejected' (default approved for forum)
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
 alter table public.forum_threads enable row level security;
 
-create policy "Threads are viewable by everyone if approved and not flagged, or by author/admin" 
+create policy "Threads are viewable by everyone if approved, or by author/admin" 
   on public.forum_threads for select 
-  using ((status = 'approved' and flags_count < 3) or auth.uid() = author_id or public.is_admin());
+  using (status = 'approved' or auth.uid() = author_id or public.is_admin());
 
 create policy "Authenticated users can create threads" 
   on public.forum_threads for insert 
@@ -312,22 +312,21 @@ create policy "Authors or admins can edit or delete threads"
   using (auth.uid() = author_id or public.is_admin());
 
 -- ==========================================
--- 11. Forum Thread Replies
+-- 12. Forum Thread Replies
 -- ==========================================
 create table public.forum_replies (
   id uuid default gen_random_uuid() primary key,
   thread_id uuid references public.forum_threads(id) on delete cascade not null,
   body text not null,
   author_id uuid references public.profiles(id) on delete cascade not null,
-  flags_count integer default 0 not null,
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
 alter table public.forum_replies enable row level security;
 
-create policy "Replies are viewable by everyone if not flagged" 
+create policy "Replies are viewable by everyone" 
   on public.forum_replies for select 
-  using (flags_count < 3 or auth.uid() = author_id or public.is_admin());
+  using (true);
 
 create policy "Authenticated users can write replies" 
   on public.forum_replies for insert 
@@ -338,7 +337,7 @@ create policy "Authors or admins can edit or delete replies"
   using (auth.uid() = author_id or public.is_admin());
 
 -- ==========================================
--- 12. Friendships (Many-to-Many symmetrical relation)
+-- 13. Friendships (Many-to-Many symmetrical relation)
 -- ==========================================
 create table public.friendships (
   profile_id_1 uuid references public.profiles(id) on delete cascade not null,
@@ -359,7 +358,7 @@ create policy "Users can establish or end their own friendships"
   using (auth.uid() = profile_id_1 or auth.uid() = profile_id_2 or public.is_admin());
 
 -- ==========================================
--- 13. Routes & Trips Table (Featured or Shared)
+-- 14. Routes & Trips Table (Featured or Shared)
 -- ==========================================
 create table public.routes (
   id uuid default gen_random_uuid() primary key,
@@ -387,7 +386,7 @@ create policy "Authors or admins can modify routes"
   using (auth.uid() = author_id or public.is_admin());
 
 -- ==========================================
--- 14. Direct Messages Table
+-- 15. Direct Messages Table
 -- ==========================================
 create table public.messages (
   id uuid default gen_random_uuid() primary key,
@@ -413,28 +412,6 @@ create policy "Users can send messages to other profiles"
 create policy "Users can update reaction and read states on messages they are involved in"
   on public.messages for update
   using (auth.uid() = sender_id or auth.uid() = receiver_id or public.is_admin());
-
--- ==========================================
--- 15. Reports Table (For Crowdsourced Flags)
--- ==========================================
-create table public.reports (
-  id uuid default gen_random_uuid() primary key,
-  reporter_id uuid references public.profiles(id) on delete cascade not null,
-  content_type text not null, -- 'post', 'comment', 'spot', 'marketplace'
-  content_id uuid not null, -- UUID of the reported item
-  reason text,
-  created_at timestamptz default timezone('utc'::text, now()) not null
-);
-
-alter table public.reports enable row level security;
-
-create policy "Admins can view reports"
-  on public.reports for select
-  using (public.is_admin());
-
-create policy "Authenticated users can submit reports"
-  on public.reports for insert
-  with check (auth.role() = 'authenticated' and auth.uid() = reporter_id);
 
 -- =========================================================================
 -- Automatically create profile records when new users sign up on Supabase

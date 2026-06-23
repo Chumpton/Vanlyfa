@@ -276,7 +276,7 @@ function renderSocialFeed(containerId, isSidebar = false) {
     if (post.comments && post.comments.length > 0) {
       commentsMarkup = `
         <div class="thread-replies-list" style="margin-top:10px; border-left: 2px solid var(--border-color); padding-left:12px; display:flex; flex-direction:column; gap:8px;">
-          ${post.comments.map((c, index) => {
+          ${post.comments.map(c => {
             const commenter = State.users ? State.users.find(u => u.name === c.user) : null;
             const avatar = commenter ? commenter.avatar : 'avatar_bob';
             return `
@@ -285,10 +285,7 @@ function renderSocialFeed(containerId, isSidebar = false) {
                 <div class="reply-content-box" style="background:var(--bg-sand); padding:6px 10px; border-radius:var(--radius-sm); flex-grow:1; text-align:left;">
                   <div class="reply-user-meta" style="display:flex; justify-content:space-between; margin-bottom:2px;">
                     <span class="reply-username" style="font-weight:700; color:var(--text-charcoal); cursor:pointer;" onclick="viewUserProfile('${c.user}')">${getUserRoleMarkup(c.user)}</span>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                      <span class="reply-time" style="font-size:10px; color:var(--muted-text);">Reply</span>
-                      <button onclick="window.flagItem('comment', '${post.id}', ${index})" title="Flag/Report" style="background:none; border:none; padding:0; color:#ef4444; cursor:pointer; display:inline-flex; align-items:center;"><i data-lucide="flag" style="width:11px; height:11px;"></i></button>
-                    </div>
+                    <span class="reply-time" style="font-size:10px; color:var(--muted-text);">Reply</span>
                   </div>
                   <p class="reply-text" style="color:var(--text-main); margin:0; line-height:1.3;">${parseMarkdownToHtml(c.text)}</p>
                 </div>
@@ -365,9 +362,6 @@ function renderSocialFeed(containerId, isSidebar = false) {
               <button class="thread-action-icon-btn" onclick="sharePost('${post.id}')" title="Share Link" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer;">
                 <i data-lucide="share" style="width:15px; height:15px;"></i>
                 <span>${post.shares || 0}</span>
-              </button>
-              <button class="thread-action-icon-btn" onclick="window.flagItem('post', '${post.id}')" title="Flag/Report" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer; margin-left: auto;">
-                <i data-lucide="flag" style="width:15px; height:15px; color:#ef4444;"></i>
               </button>
             </div>
             

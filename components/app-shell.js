@@ -17,11 +17,9 @@ function switchTab(tabName, isPopState = false) {
   State.activeTab = tabName;
   State.activeThreadId = null; // Reset forum viewing state
   
-  // Ensure the top menu bar starts visible when switching tabs
+  // Reset top-bar scroll hide class
   const topBar = document.querySelector('.top-bar');
-  if (topBar) {
-    topBar.classList.remove('hide-top-bar');
-  }
+  if (topBar) topBar.classList.remove('hide-top-bar');
   
   // Update sidebar active class
   document.querySelectorAll('.nav-menu .nav-item').forEach(item => {
@@ -169,9 +167,6 @@ function triggerMainActionButtonModal() {
 }
 
 function renderCurrentTab() {
-  if (typeof renderNotifications === 'function') {
-    renderNotifications();
-  }
   switch (State.activeTab) {
     case "dashboard":
       renderDashboardFeed();

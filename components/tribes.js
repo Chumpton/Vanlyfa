@@ -190,14 +190,9 @@ function renderTribeHubHeader(tribeId) {
             </span>
           </span>
         </div>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-outline" onclick="window.shareTribe('${tribe.id}')" style="display: inline-flex; align-items: center; gap: 4px;">
-            <i data-lucide="share-2" style="width: 14px; height: 14px;"></i> Share
-          </button>
-          <button class="btn ${joinBtnClass}" ${joinBtnDisabled} onclick="toggleTribeHubMembership('${tribe.id}')">
-            ${joinBtnText}
-          </button>
-        </div>
+        <button class="btn ${joinBtnClass}" ${joinBtnDisabled} onclick="toggleTribeHubMembership('${tribe.id}')">
+          ${joinBtnText}
+        </button>
       </div>
       <p style="font-size: 14px; color: var(--text-charcoal); margin-top: 12px; line-height: 1.5;">${tribe.description}</p>
     </div>
@@ -363,20 +358,10 @@ function renderTribeHubForum(tribeId) {
 
 function openTribeNewThreadModal() {
   if (!requireAuth()) return;
-  document.getElementById('tribe-thread-title').value = '';
-  document.getElementById('tribe-thread-body').value = '';
-  openModal('modal-add-tribe-thread');
-}
-
-window.saveNewTribeThread = function() {
-  if (!requireAuth()) return;
-  const title = document.getElementById('tribe-thread-title').value.trim();
-  const body = document.getElementById('tribe-thread-body').value.trim();
-  
-  if (!title || !body) {
-    showToast("Please fill out both the title and details fields.", "error");
-    return;
-  }
+  const title = prompt("Enter Discussion Title:");
+  if (!title || title.trim() === '') return;
+  const question = prompt("Enter Question or Message:");
+  if (!question || question.trim() === '') return;
   
   const tribeId = State.activeTribeId;
   if (!tribeId) return;
@@ -384,23 +369,16 @@ window.saveNewTribeThread = function() {
   if (!State.tribeThreads) State.tribeThreads = {};
   if (!State.tribeThreads[tribeId]) State.tribeThreads[tribeId] = [];
   
-  State.tribeThreads[tribeId].unshift({
+  State.tribeThreads[tribeId].push({
     id: 'tthread-' + Date.now(),
-    title: title,
-    body: body,
+    title: title.trim(),
+    body: question.trim(),
     author: State.currentUser.name,
     time: 'Just now',
     replies: []
   });
   
   saveStateToStorage();
-  closeModal('modal-add-tribe-thread');
   renderTribeHubForum(tribeId);
   showToast("Discussion thread posted!", "success");
-};
-
-window.shareTribe = function(tribeId) {
-  const shareUrl = `${window.location.origin}${window.location.pathname}?tribe=${tribeId}`;
-  navigator.clipboard.writeText(shareUrl);
-  showToast("Tribe invite link copied to clipboard!", "success");
-};
+}
