@@ -17,14 +17,10 @@ function switchTab(tabName, isPopState = false) {
   State.activeTab = tabName;
   State.activeThreadId = null; // Reset forum viewing state
   
-  // Auto-hide top menu bar on mobile when switching away from dashboard
+  // Ensure the top menu bar starts visible when switching tabs
   const topBar = document.querySelector('.top-bar');
   if (topBar) {
-    if (window.innerWidth <= 768 && tabName !== 'dashboard') {
-      topBar.classList.add('hide-top-bar');
-    } else {
-      topBar.classList.remove('hide-top-bar');
-    }
+    topBar.classList.remove('hide-top-bar');
   }
   
   // Update sidebar active class

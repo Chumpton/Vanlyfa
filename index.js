@@ -624,25 +624,27 @@ function initApp() {
   }
 
   // Top-bar scroll disappear/re-appear listener for mobile
-  let lastScrollTop = 0;
   document.querySelectorAll('.tab-content-pane').forEach(pane => {
+    pane._lastScrollTop = 0;
     pane.addEventListener('scroll', (e) => {
       if (window.innerWidth <= 768) {
         const scrollTop = e.target.scrollTop;
         const topBar = document.querySelector('.top-bar');
         if (!topBar) return;
         
-        // Threshold to prevent bounce artifacts
-        if (Math.abs(lastScrollTop - scrollTop) <= 5) return;
+        const lastScroll = e.target._lastScrollTop || 0;
         
-        if (scrollTop > lastScrollTop && scrollTop > 64) {
+        // Threshold to prevent bounce artifacts
+        if (Math.abs(lastScroll - scrollTop) <= 5) return;
+        
+        if (scrollTop > lastScroll && scrollTop > 64) {
           // Scroll Down - hide top-bar
           topBar.classList.add('hide-top-bar');
         } else {
           // Scroll Up - show top-bar
           topBar.classList.remove('hide-top-bar');
         }
-        lastScrollTop = scrollTop;
+        e.target._lastScrollTop = scrollTop;
       }
     });
   });
@@ -853,6 +855,11 @@ function handleAuthSignIn(event) {
       else if (user.handle === "@solar_explorer") expectedPassword = "SolarPass123!";
       else if (user.handle === "@nomad_bob") expectedPassword = "NomadPass123!";
       else expectedPassword = "password"; // Default fallback
+    }
+    
+    if (user.banned) {
+      showToast("Your account has been deactivated by an administrator.", "error");
+      return;
     }
     
     if (passwordVal !== expectedPassword) {
@@ -1288,7 +1295,15 @@ function saveNewListing() {
     State.listingCropState = createCropObject();
     
     closeModal('modal-add-listing');
-    renderMarketplaceListings();
+    
+    const isService = category === 'services-offer' || category === 'services-want';
+    const activeType = isService ? 'services' : 'items';
+    if (typeof window.switchMarketplaceType === 'function') {
+      window.switchMarketplaceType(activeType);
+    } else {
+      State.activeMarketplaceType = activeType;
+      renderMarketplaceListings();
+    }
     
     const successMsg = status === 'approved' ? "Marketplace listing published!" : "Listing submitted! Awaiting admin approval.";
     showToast(successMsg, "success");

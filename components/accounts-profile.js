@@ -45,12 +45,18 @@ function renderUserProfile() {
   const friendBtn = document.getElementById('profile-friend-btn');
   const repBtn = document.getElementById('profile-rep-btn');
   
+  const premiumBtn = document.getElementById('profile-premium-btn');
+  
   if (isOwner) {
     if (editBtn) editBtn.style.display = 'inline-flex';
     if (visitorActions) visitorActions.style.display = 'none';
+    if (premiumBtn) {
+      premiumBtn.style.display = user.isPremium ? 'none' : 'inline-flex';
+    }
   } else {
     if (editBtn) editBtn.style.display = 'none';
     if (visitorActions) visitorActions.style.display = 'flex';
+    if (premiumBtn) premiumBtn.style.display = 'none';
     
     // Update Friend button text based on relationship
     const currentUserObj = State.users.find(u => u.name === State.currentUser.name);
@@ -249,6 +255,67 @@ function renderUserProfile() {
     }
   }
   
+  // Render Active Marketplace Listings
+  const profileListingsSection = document.getElementById('profile-listings-section');
+  const profileListingsList = document.getElementById('profile-listings-list');
+  if (profileListingsSection && profileListingsList) {
+    profileListingsList.innerHTML = '';
+    const userListings = State.marketplace.filter(item => item.seller && item.seller.name === user.name);
+    
+    if (userListings.length === 0) {
+      profileListingsList.innerHTML = `<div style="font-size:12px; color:var(--muted-text); font-style:italic;">No active marketplace listings.</div>`;
+    } else {
+      userListings.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'visited-spot-row';
+        row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid var(--border-color); font-size:13px;";
+        
+        const isService = item.category === 'services-offer' || item.category === 'services-want';
+        const displayPrice = (isService || item.price === 0) ? 'Trade / Barter' : `$${item.price}`;
+        const categoryLabel = item.category === 'services-offer' ? 'Service (Offered)' : 
+                             (item.category === 'services-want' ? 'Service (Wanted)' : 'Item');
+        
+        row.innerHTML = `
+          <div>
+            <strong style="color:var(--text-charcoal); cursor:pointer;" class="profile-listing-title-link">${item.title}</strong>
+            <span style="font-size:11px; color:var(--muted-text); margin-left:8px;">(${categoryLabel})</span>
+          </div>
+          <span style="font-weight:700; color:var(--accent-green);">${displayPrice}</span>
+        `;
+        
+        const titleLink = row.querySelector('.profile-listing-title-link');
+        titleLink.addEventListener('click', () => {
+          switchTab('marketplace');
+          if (isService) {
+            if (window.switchMarketplaceType) {
+              window.switchMarketplaceType('services');
+            } else {
+              State.activeMarketplaceType = 'services';
+            }
+          } else {
+            if (window.switchMarketplaceType) {
+              window.switchMarketplaceType('items');
+            } else {
+              State.activeMarketplaceType = 'items';
+            }
+          }
+          const catFilter = document.getElementById('market-filter-category');
+          if (catFilter) {
+            catFilter.value = 'all';
+          }
+          State.searchQuery = item.title.toLowerCase();
+          const searchInputEl = document.getElementById('global-search');
+          if (searchInputEl) {
+            searchInputEl.value = item.title;
+          }
+          renderMarketplaceListings();
+        });
+        
+        profileListingsList.appendChild(row);
+      });
+    }
+  }
+  
   // Initialize Profile Map
   initProfileMap(user);
   
@@ -296,7 +363,8 @@ function initProfileMap(user) {
       zoomControl: true
     }).setView([37.0, -112.0], 5);
     
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+    const tileUrl = (typeof getMapTileUrl === 'function') ? getMapTileUrl() : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
+    State.profileTileLayer = L.tileLayer(tileUrl, {
       attribution: 'Tiles &copy; Esri &mdash; Source: Esri, USGS, NOAA',
       maxZoom: 20
     }).addTo(State.profileMap);

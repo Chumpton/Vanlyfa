@@ -74,6 +74,9 @@ function updateThemeToggleUI() {
   if (window.lucide) {
     lucide.createIcons();
   }
+  if (window.updateMapTheme) {
+    window.updateMapTheme();
+  }
 }
 
 function updateSidebarProfileWidget() {
@@ -165,6 +168,8 @@ function updateSidebarProfileWidget() {
   const mobilePopoutHandle = document.getElementById('mobile-popout-handle');
   const mobilePopoutAuthBtn = document.getElementById('mobile-popout-auth-btn');
 
+  const mobilePopoutPremiumBtn = document.getElementById('mobile-popout-premium-btn');
+
   if (State.isSignedIn) {
     if (mobileTopAvatar) mobileTopAvatar.src = getAvatarSrc(State.currentUser.avatar);
     if (mobilePopoutAvatar) mobilePopoutAvatar.src = getAvatarSrc(State.currentUser.avatar);
@@ -174,6 +179,9 @@ function updateSidebarProfileWidget() {
       mobilePopoutAuthBtn.innerHTML = `<i data-lucide="log-out" style="width: 16px; height: 16px;"></i> <span>Sign Out</span>`;
       mobilePopoutAuthBtn.className = 'btn btn-secondary';
     }
+    if (mobilePopoutPremiumBtn) {
+      mobilePopoutPremiumBtn.style.display = State.currentUser.isPremium ? 'none' : 'flex';
+    }
   } else {
     if (mobileTopAvatar) mobileTopAvatar.src = getAvatarSrc('avatar_guest');
     if (mobilePopoutAvatar) mobilePopoutAvatar.src = getAvatarSrc('avatar_guest');
@@ -182,6 +190,9 @@ function updateSidebarProfileWidget() {
     if (mobilePopoutAuthBtn) {
       mobilePopoutAuthBtn.innerHTML = `<i data-lucide="log-in" style="width: 16px; height: 16px;"></i> <span>Sign In</span>`;
       mobilePopoutAuthBtn.className = 'btn btn-primary';
+    }
+    if (mobilePopoutPremiumBtn) {
+      mobilePopoutPremiumBtn.style.display = 'none';
     }
   }
   if (window.lucide) {
@@ -230,26 +241,26 @@ function getUserRoleMarkup(username) {
     user = State.currentUser;
   }
   
-  // User tags (badgeTag) hidden for now as requested
-  /*
-  if (user && user.badgeTag) {
-    return `<span class="role-name-custom" style="color: var(--accent-green); font-weight: 700;">${cleanName}</span><span class="role-badge-custom" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 700; margin-left: 4px; vertical-align: middle; text-transform: uppercase;">${user.badgeTag}</span>`;
-  }
-  */
-  
   if (user) {
     rep = user.reputation || 0;
   }
   
+  let baseMarkup = '';
   if (rep >= 30) {
-    return `<span class="role-name-elite" style="color: #F59E0B; font-weight: 700; text-shadow: 0 0 2px rgba(245, 158, 11, 0.2);">${cleanName}</span><span class="role-badge-elite" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid #F59E0B; border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 700; margin-left: 4px; vertical-align: middle;">★ ELITE</span>`;
+    baseMarkup = `<span class="role-name-elite" style="color: #F59E0B; font-weight: 700; text-shadow: 0 0 2px rgba(245, 158, 11, 0.2);">${cleanName}</span><span class="role-badge-elite" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid #F59E0B; border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 700; margin-left: 4px; vertical-align: middle;">★ ELITE</span>`;
   } else if (rep >= 20) {
-    return `<span class="role-name-veteran" style="color: #F97316; font-weight: 700;">${cleanName}</span><span class="role-badge-veteran" style="background: rgba(249, 115, 22, 0.15); color: #F97316; border: 1px solid #F97316; border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 700; margin-left: 4px; vertical-align: middle;">VET</span>`;
+    baseMarkup = `<span class="role-name-veteran" style="color: #F97316; font-weight: 700;">${cleanName}</span><span class="role-badge-veteran" style="background: rgba(249, 115, 22, 0.15); color: #F97316; border: 1px solid #F97316; border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 700; margin-left: 4px; vertical-align: middle;">VET</span>`;
   } else if (rep >= 10) {
-    return `<span class="role-name-explorer" style="color: #3B82F6; font-weight: 600;">${cleanName}</span><span class="role-badge-explorer" style="background: rgba(59, 130, 246, 0.15); color: #3B82F6; border: 1px solid #3B82F6; border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 600; margin-left: 4px; vertical-align: middle;">EXPLORER</span>`;
+    baseMarkup = `<span class="role-name-explorer" style="color: #3B82F6; font-weight: 600;">${cleanName}</span><span class="role-badge-explorer" style="background: rgba(59, 130, 246, 0.15); color: #3B82F6; border: 1px solid #3B82F6; border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 600; margin-left: 4px; vertical-align: middle;">EXPLORER</span>`;
   } else {
-    return `<span class="role-name-nomad" style="color: var(--text-main); font-weight: 500;">${cleanName}</span><span class="role-badge-nomad" style="background: rgba(120, 120, 120, 0.1); color: var(--muted-text); border: 1px solid rgba(120, 120, 120, 0.2); border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 500; margin-left: 4px; vertical-align: middle;">NOMAD</span>`;
+    baseMarkup = `<span class="role-name-nomad" style="color: var(--text-main); font-weight: 500;">${cleanName}</span><span class="role-badge-nomad" style="background: rgba(120, 120, 120, 0.1); color: var(--muted-text); border: 1px solid rgba(120, 120, 120, 0.2); border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 500; margin-left: 4px; vertical-align: middle;">NOMAD</span>`;
   }
+
+  if (user && user.isPremium) {
+    baseMarkup += `<span class="role-badge-premium" style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid #10B981; border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 700; margin-left: 4px; vertical-align: middle; display: inline-flex; align-items: center; gap: 2px;">✔ VERIFIED</span>`;
+  }
+
+  return baseMarkup;
 }
 
 function contactHost(hostName, meetupOrJobTitle) {
