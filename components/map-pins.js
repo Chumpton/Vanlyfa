@@ -25,13 +25,6 @@ function updateVouchUI(spot) {
 }
 
 function getMapTileUrl() {
-  if (window.innerWidth <= 768) {
-    if (State.darkMode) {
-      return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
-    } else {
-      return 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
-    }
-  }
   // Esri World Topo Map is used for both themes. Dark mode uses CSS filters on the tile pane.
   return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
 }
@@ -57,9 +50,9 @@ function initLeafletMap() {
     zoomControl: true
   }).setView([37.0, -112.0], 5);
   
-  // Load high-contrast base tiles with combined attribution
+  // Load high-contrast base tiles
   State.leafletTileLayer = L.tileLayer(getMapTileUrl(), {
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, USGS, NOAA | &copy; CartoDB &copy; OpenStreetMap',
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, USGS, NOAA',
     maxZoom: 20
   }).addTo(State.leafletMap);
   

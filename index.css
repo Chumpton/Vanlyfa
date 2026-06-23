@@ -4077,12 +4077,6 @@ code {
     padding: 8px !important;
     width: fit-content !important;
   }
-
-  /* Disable map filters on mobile so CartoDB tiles render natively */
-  #leaflet-map .leaflet-tile-pane, 
-  #profile-map .leaflet-tile-pane {
-    filter: none !important;
-  }
 }
 
 /* User tags hiding rule */

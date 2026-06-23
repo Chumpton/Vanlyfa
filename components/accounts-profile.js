@@ -365,7 +365,7 @@ function initProfileMap(user) {
     
     const tileUrl = (typeof getMapTileUrl === 'function') ? getMapTileUrl() : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
     State.profileTileLayer = L.tileLayer(tileUrl, {
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, USGS, NOAA | &copy; CartoDB &copy; OpenStreetMap',
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, USGS, NOAA',
       maxZoom: 20
     }).addTo(State.profileMap);
   }
