@@ -330,7 +330,6 @@ body {
   height: 16px;
 }
 
-/* Optimized Pane Switching Engine */
 .tab-content-pane {
   position: absolute;
   top: 64px;
@@ -341,19 +340,21 @@ body {
   padding: 32px;
   box-sizing: border-box;
   
-  /* Force GPU layer virtualization */
-  will-change: opacity, transform;
+  /* Remove global will-change layer generation */
+  display: none; 
   opacity: 0;
   pointer-events: none;
-  transform: translateZ(0); 
   transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Simply fade and activate input handling */
 .tab-content-pane.active {
+  display: block;
   opacity: 1;
   pointer-events: auto;
+  will-change: transform;
+  transform: translateZ(0);
 }
+
 
 /* ==========================================================================
    DASHBOARD TABS (Globe & Map & Social Feed Split Layout)
@@ -1974,8 +1975,15 @@ body {
 }
 
 @media (max-width: 768px) {
+  body {
+    height: 100vh;
+    height: 100dvh;
+  }
+  
   .app-container {
     flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
   }
   
   /* Mobile modal adjustments to make them full-screen and scrollable */
@@ -2147,6 +2155,7 @@ body {
     left: 0;
     width: 280px;
     height: 100vh;
+    height: 100dvh;
     z-index: 1200;
     background-color: var(--card-bg);
     border-right: 1px solid var(--border-color);
@@ -2302,6 +2311,7 @@ body {
   
   .app-content {
     height: calc(100vh - 64px);
+    height: calc(100dvh - 64px);
     margin-bottom: 64px; /* Offset bottom navigation bar height */
   }
   
@@ -2378,6 +2388,8 @@ body {
   .tab-content-pane {
     padding: 16px;
     overflow-y: auto;
+    height: calc(100vh - 64px);
+    height: calc(100dvh - 64px);
   }
   
   .meetup-card {
@@ -2498,6 +2510,7 @@ body {
     width: 100vw !important;
     max-width: none !important;
     height: 100vh;
+    height: 100dvh;
     z-index: 2500 !important;
     background-color: var(--card-bg) !important;
     display: none !important;
@@ -2853,6 +2866,7 @@ body:not(.dark-mode) #profile-map .leaflet-tile-pane {
   right: -300px;
   width: 290px;
   height: 100vh;
+  height: 100dvh;
   background-color: var(--card-bg);
   border-left: 1px solid var(--border-color);
   box-shadow: var(--shadow-lg);
@@ -4062,6 +4076,12 @@ code {
     gap: 10px !important;
     padding: 8px !important;
     width: fit-content !important;
+  }
+
+  /* Disable map filters on mobile so CartoDB tiles render natively */
+  #leaflet-map .leaflet-tile-pane, 
+  #profile-map .leaflet-tile-pane {
+    filter: none !important;
   }
 }
 

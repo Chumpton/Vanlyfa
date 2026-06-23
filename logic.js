@@ -1147,31 +1147,29 @@ function createCropObject() {
 }
 
 function compressCanvasToJpeg(canvas, maxDimension = 800) {
-  const width = canvas.width;
-  const height = canvas.height;
-  let targetWidth = width;
-  let targetHeight = height;
-  
+  let width = canvas.width;
+  let height = canvas.height;
+
+  // Scale down oversized media arrays bounds
   if (width > maxDimension || height > maxDimension) {
     if (width > height) {
-      targetWidth = maxDimension;
-      targetHeight = Math.round((height * maxDimension) / width);
+      height = Math.round((height * maxDimension) / width);
+      width = maxDimension;
     } else {
-      targetHeight = maxDimension;
-      targetWidth = Math.round((width * maxDimension) / height);
+      width = Math.round((width * maxDimension) / height);
+      height = maxDimension;
     }
+    
+    // Virtualize step-down container mapping
+    const scalingCanvas = document.createElement('canvas');
+    scalingCanvas.width = width;
+    scalingCanvas.height = height;
+    const scalingCtx = scalingCanvas.getContext('2d');
+    scalingCtx.drawImage(canvas, 0, 0, width, height);
+    return scalingCanvas.toDataURL('image/jpeg', 0.70); // Lossy compression map target
   }
   
-  const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = targetWidth;
-  tempCanvas.height = targetHeight;
-  const tempCtx = tempCanvas.getContext('2d');
-  
-  // Draw the original canvas onto the temp canvas with scaling
-  tempCtx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
-  
-  // Export as compressed JPEG
-  return tempCanvas.toDataURL("image/jpeg", 0.7);
+  return canvas.toDataURL('image/jpeg', 0.75);
 }
 
 function drawGenericCrop(cropObj, canvas, drawOverlay = true) {

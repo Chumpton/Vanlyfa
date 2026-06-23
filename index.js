@@ -306,9 +306,13 @@ function initApp() {
     meetupPhotoUpload.addEventListener('change', handleMeetupPhotoUpload);
   }
 
-  // Formatting toolbar buttons click handlers
-  document.querySelectorAll('.btn-format').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+  // Formatting toolbar buttons click handlers (delegated to .app-content to avoid leaks)
+  const appContent = document.querySelector('.app-content');
+  if (appContent) {
+    appContent.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-format');
+      if (!btn) return;
+      
       e.preventDefault();
       const format = btn.getAttribute('data-format');
       const targetId = btn.getAttribute('data-target') || 'post-text';
@@ -332,7 +336,7 @@ function initApp() {
       }
       insertFormatting(textarea, startToken, endToken);
     });
-  });
+  }
 
   // Contacts Sidebar Drawer Event Listeners
   document.getElementById('contacts-toggle-btn').addEventListener('click', () => {
@@ -1411,7 +1415,7 @@ function saveNewMeetup() {
   if (workspace && workspace.style.display !== 'none') {
     const canvas = document.getElementById('meetup-crop-canvas');
     if (canvas) {
-      thumbnail = canvas.toDataURL('image/jpeg', 0.85);
+      thumbnail = compressCanvasToJpeg(canvas);
     }
   }
   
