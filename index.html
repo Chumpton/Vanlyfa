@@ -46,14 +46,14 @@
           <i data-lucide="scroll-text"></i>
           <span>Forum</span>
         </div>
+        <div class="nav-item" data-tab="jobs" id="sidebar-jobs-tab">
+          <i data-lucide="briefcase"></i>
+          <span>Work</span>
+        </div>
         <div class="nav-item" data-tab="messages" style="position: relative;">
           <i data-lucide="message-circle"></i>
           <span>Messages</span>
           <span class="nav-unread-badge" id="nav-messages-badge" style="display: none;">0</span>
-        </div>
-        <div class="nav-item" data-tab="jobs" id="sidebar-jobs-tab">
-          <i data-lucide="briefcase"></i>
-          <span>Work & Stay</span>
         </div>
         <div class="nav-item" data-tab="profile">
           <i data-lucide="user"></i>
@@ -178,22 +178,22 @@
               <div id="leaflet-map"></div>
               
               <!-- Floating Layers Panel Toggle Button -->
-              <button class="btn" id="map-layers-toggle-btn" title="Map Layers" style="position: absolute; top: 16px; left: 56px; z-index: 1000; box-shadow: var(--shadow-md); padding: 8px; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer;">
+              <button class="btn" id="map-layers-toggle-btn" title="Map Layers" style="position: absolute; top: 16px; left: 56px; z-index: 1010; box-shadow: var(--shadow-md); padding: 8px; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer;">
                 <i data-lucide="layers" style="width: 16px; height: 16px;"></i>
               </button>
 
               <!-- Floating GPS Locate Button -->
-              <button class="btn" id="map-locate-btn" title="Find My Location" style="position: absolute; top: 16px; left: 96px; z-index: 1000; box-shadow: var(--shadow-md); padding: 8px; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer;">
+              <button class="btn" id="map-locate-btn" title="Find My Location" style="position: absolute; top: 16px; left: 96px; z-index: 1010; box-shadow: var(--shadow-md); padding: 8px; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer;">
                 <i data-lucide="locate" style="width: 16px; height: 16px;"></i>
               </button>
 
               <!-- Floating Zoom Out / Show All Button -->
-              <button class="btn" id="map-show-all-btn" title="Show Entire US Map" style="position: absolute; top: 16px; left: 136px; z-index: 1000; box-shadow: var(--shadow-md); padding: 8px; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer;">
+              <button class="btn" id="map-show-all-btn" title="Show Entire US Map" style="position: absolute; top: 16px; left: 136px; z-index: 1010; box-shadow: var(--shadow-md); padding: 8px; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer;">
                 <i data-lucide="globe" style="width: 16px; height: 16px;"></i>
               </button>
 
               <!-- Floating Routes Button -->
-              <button class="btn" id="map-routes-toggle-btn" title="Featured Routes" style="position: absolute; top: 16px; left: 176px; z-index: 1000; box-shadow: var(--shadow-md); padding: 8px; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer;">
+              <button class="btn" id="map-routes-toggle-btn" title="Featured Routes" style="position: absolute; top: 16px; left: 176px; z-index: 1010; box-shadow: var(--shadow-md); padding: 8px; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer;">
                 <i data-lucide="map" style="width: 16px; height: 16px;"></i>
               </button>
 
@@ -494,8 +494,10 @@
                 <div class="formatting-toolbar" style="display: flex; gap: 4px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
                   <button type="button" class="btn btn-sm btn-format" data-format="bold" data-target="feed-tab-post-text" title="Bold" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="bold" style="width: 14px; height: 14px;"></i></button>
                   <button type="button" class="btn btn-sm btn-format" data-format="italic" data-target="feed-tab-post-text" title="Italic" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="italic" style="width: 14px; height: 14px;"></i></button>
+                  <button type="button" class="btn btn-sm btn-format" data-format="link" data-target="feed-tab-post-text" title="Insert Link" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="link-2" style="width: 14px; height: 14px;"></i></button>
+                  <button type="button" class="btn btn-sm btn-format" data-format="strikethrough" data-target="feed-tab-post-text" title="Strikethrough" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="strikethrough" style="width: 14px; height: 14px;"></i></button>
                   <button type="button" class="btn btn-sm btn-format" data-format="quote" data-target="feed-tab-post-text" title="Quote" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="quote-right" style="width: 14px; height: 14px;"></i></button>
-                  <button type="button" class="btn btn-sm btn-format" data-format="code" data-target="feed-tab-post-text" title="Code Block" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="code" style="width: 14px; height: 14px;"></i></button>
+                  <button type="button" class="btn btn-sm btn-format" data-format="code" data-target="feed-tab-post-text" title="Code Block" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="terminal" style="width: 14px; height: 14px;"></i></button>
                 </div>
                 <textarea id="feed-tab-post-text" placeholder="What's happening on the road? Share campsite views, solar upgrades, or camper hacks..."></textarea>
                 
@@ -538,24 +540,33 @@
             </div>
           </div>
 
-          <!-- Feed Filters -->
-          <div class="filter-row" style="margin-top: 16px; margin-bottom: 16px; justify-content: flex-start; display: flex; width: 100%;">
-            <select class="select-filter" id="feed-filter-area">
-              <option value="all">All Areas</option>
-              <option value="near">Near Me (< 150 mi)</option>
-              <option value="moab">Moab, UT</option>
-              <option value="bend">Bend, OR</option>
-              <option value="flagstaff">Flagstaff, AZ</option>
-              <option value="baja">Baja California</option>
-            </select>
-            <select class="select-filter" id="feed-filter-sort">
-              <option value="trending">Trending (Hot)</option>
-              <option value="recent">Recent</option>
-            </select>
-            <select class="select-filter" id="feed-filter-saved">
-              <option value="all">All Updates</option>
-              <option value="saved">Bookmarked</option>
-            </select>
+          <!-- Feed Filters (Inline Organic Chips) -->
+          <div class="feed-filters-chips" style="margin-top: 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; width: 100%;">
+            <!-- Area Filter Chips -->
+            <div class="filter-chip-group" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+              <span style="font-size: 11px; font-weight: 700; color: var(--muted-text); min-width: 45px;">Area:</span>
+              <button class="filter-chip active" data-filter-type="area" data-value="all">All</button>
+              <button class="filter-chip" data-filter-type="area" data-value="near">Near Me</button>
+              <button class="filter-chip" data-filter-type="area" data-value="moab">Moab</button>
+              <button class="filter-chip" data-filter-type="area" data-value="bend">Bend</button>
+              <button class="filter-chip" data-filter-type="area" data-value="flagstaff">Flagstaff</button>
+              <button class="filter-chip" data-filter-type="area" data-value="baja">Baja</button>
+            </div>
+            
+            <!-- Sort & Saved Filters -->
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 8px;">
+              <div class="filter-chip-group" style="display: flex; gap: 6px; align-items: center;">
+                <span style="font-size: 11px; font-weight: 700; color: var(--muted-text); min-width: 45px;">Sort:</span>
+                <button class="filter-chip active" data-filter-type="sort" data-value="trending">Trending</button>
+                <button class="filter-chip" data-filter-type="sort" data-value="recent">Recent</button>
+              </div>
+              <div class="filter-chip-group" style="display: flex; gap: 6px; align-items: center;">
+                <span style="font-size: 11px; font-weight: 700; color: var(--muted-text); min-width: 45px;">Filter:</span>
+                <button class="filter-chip active" data-filter-type="saved" data-value="all">All Updates</button>
+                <button class="filter-chip" data-filter-type="saved" data-value="following">Following</button>
+                <button class="filter-chip" data-filter-type="saved" data-value="saved">Bookmarked</button>
+              </div>
+            </div>
           </div>
 
           <!-- Feed Posts List -->
@@ -925,34 +936,10 @@
           </div>
           
           <div class="profile-details-right">
-            <!-- Rig Specs -->
-            <div class="profile-card-section" id="profile-rig-section">
-              <h3>Vehicle / Rig Details</h3>
-              <p id="profile-rig-desc" style="font-size: 13px; line-height: 1.4; color: var(--text-charcoal); margin-bottom: 16px; white-space: pre-wrap;"></p>
-              <div class="rig-details-grid">
-                <div class="rig-detail-box">
-                  <div class="rig-detail-title">Rig Model</div>
-                  <div class="rig-detail-value" id="profile-rig-model">Sprinter 144 AWD</div>
-                </div>
-                <div class="rig-detail-box">
-                  <div class="rig-detail-title">Solar Capacity</div>
-                  <div class="rig-detail-value" id="profile-rig-solar">400W Solar</div>
-                </div>
-                <div class="rig-detail-box">
-                  <div class="rig-detail-title">Power Bank</div>
-                  <div class="rig-detail-value" id="profile-rig-power">300Ah Lithium</div>
-                </div>
-                <div class="rig-detail-box">
-                  <div class="rig-detail-title">Water Capacity</div>
-                  <div class="rig-detail-value" id="profile-rig-water">25 Gal Fresh</div>
-                </div>
-              </div>
-            </div>
-
             <!-- Rig Gallery -->
             <div class="profile-card-section" id="profile-gallery-section">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
-                <h3 style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">Rig Image Gallery</h3>
+                <h3 style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">Travel Photo Gallery</h3>
                 <label id="profile-gallery-upload-btn" class="btn btn-sm" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
                   <i data-lucide="upload" style="width: 14px; height: 14px;"></i>
                   <span>Upload Image</span>
@@ -1069,6 +1056,19 @@
       </div>
       
       <div class="modal-body auth-modal-body">
+        <!-- Social Login: Google -->
+        <div class="social-auth-container" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+          <button type="button" class="btn google-auth-btn" onclick="handleGoogleSignIn()" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; background: white; border: 1px solid #DCD6C5; color: #2D2D2D; font-weight: 600; border-radius: var(--radius-md); cursor: pointer; transition: background-color 0.2s;">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            <span>Continue with Google</span>
+          </button>
+          <div class="auth-divider" style="display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted-text); font-size: 11px;">
+            <span style="flex-grow: 1; height: 1px; background-color: var(--border-color);"></span>
+            <span>OR</span>
+            <span style="flex-grow: 1; height: 1px; background-color: var(--border-color);"></span>
+          </div>
+        </div>
+        
         <!-- Form: Sign In -->
         <form id="auth-form-signin" onsubmit="handleAuthSignIn(event)" class="flex flex-col gap-md">
           <div class="form-group">
@@ -1079,17 +1079,11 @@
             <label for="signin-password">Password</label>
             <input type="password" id="signin-password" placeholder="••••••••" required class="auth-input w-full p-sm">
           </div>
-          <div style="font-size: 11px; color: var(--muted-text); margin-top: 4px; line-height: 1.4; padding: 8px 10px; background: rgba(59, 122, 87, 0.08); border-radius: var(--radius-sm); border: 1px dashed var(--accent-green-light); display: flex; flex-direction: column; gap: 2px; text-align: left;">
-            <strong style="color: var(--accent-green); font-size: 12px; margin-bottom: 2px;">Sandbox Test Credentials:</strong>
-            <div>• Admin: <code style="background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 3px;">admin</code> / <code style="background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 3px;">AdminPass123!</code></div>
-            <div>• Bob (User): <code style="background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 3px;">bob</code> / <code style="background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 3px;">NomadPass123!</code></div>
-            <div>• Clara (User): <code style="background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 3px;">clara</code> / <code style="background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 3px;">ClaraPass123!</code></div>
-          </div>
           <button type="submit" class="btn btn-primary m-t-sm w-full justify-center p-sm">Sign In</button>
         </form>
         
         <!-- Form: Sign Up -->
-        <form id="auth-form-signup" onsubmit="handleAuthSignUp(event)" style="display: none;" class="flex flex-col gap-md">
+        <form id="auth-form-signup" onsubmit="handleAuthSignUp(event)" class="flex flex-col gap-md hidden">
           <div class="form-group">
             <label for="signup-username">Username</label>
             <input type="text" id="signup-username" placeholder="e.g. wanderlust_wanderer" required class="auth-input w-full p-sm">
@@ -1214,41 +1208,20 @@
           <input type="text" id="edit-profile-name">
         </div>
         <div class="form-group">
+          <label for="edit-profile-handle">Profile Handle (@)</label>
+          <input type="text" id="edit-profile-handle" placeholder="e.g. @wanderer">
+        </div>
+        <div class="form-group" id="edit-profile-role-group" style="display: none;">
+          <label for="edit-profile-role">Account Role (Testing only)</label>
+          <select id="edit-profile-role" style="padding: 10px; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-weight: 600; width: 100%;">
+            <option value="user">Standard User (Requires approval)</option>
+            <option value="admin">Platform Admin (Immediate approval + Mod board)</option>
+            <option value="moderator">Moderator (Requires approval)</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label for="edit-profile-bio">Bio</label>
           <textarea id="edit-profile-bio"></textarea>
-        </div>
-        
-        <!-- Toggle Rig Section -->
-        <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
-          <input type="checkbox" id="edit-profile-show-rig" style="accent-color: var(--accent-green); cursor: pointer; width: 18px; height: 18px;">
-          <label for="edit-profile-show-rig" style="cursor: pointer; font-weight: 700; margin-bottom: 0;">Include Rig Profile & Specs</label>
-        </div>
-
-        <div id="edit-profile-rig-fields-container">
-          <div class="form-group">
-            <label for="edit-profile-rig-desc">Rig Description</label>
-            <textarea id="edit-profile-rig-desc" placeholder="Describe your rig build, layout, setup, and off-grid capabilities..."></textarea>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="edit-profile-rig">Rig Model</label>
-              <input type="text" id="edit-profile-rig" placeholder="e.g. Ford Transit 148">
-            </div>
-            <div class="form-group">
-              <label for="edit-profile-solar">Solar Capacity</label>
-              <input type="text" id="edit-profile-solar" placeholder="e.g. 400W Solar">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="edit-profile-power">Battery Power</label>
-              <input type="text" id="edit-profile-power" placeholder="e.g. 200Ah Lithium">
-            </div>
-            <div class="form-group">
-              <label for="edit-profile-water">Water Capacity</label>
-              <input type="text" id="edit-profile-water" placeholder="e.g. 20 Gallons">
-            </div>
-          </div>
         </div>
 
         <div class="form-row">
@@ -1359,8 +1332,10 @@
           <div class="formatting-toolbar" style="display: flex; gap: 4px; margin-bottom: 6px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
             <button type="button" class="btn btn-sm btn-format" data-format="bold" data-target="post-text" title="Bold" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="bold" style="width: 14px; height: 14px;"></i></button>
             <button type="button" class="btn btn-sm btn-format" data-format="italic" data-target="post-text" title="Italic" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="italic" style="width: 14px; height: 14px;"></i></button>
+            <button type="button" class="btn btn-sm btn-format" data-format="link" data-target="post-text" title="Insert Link" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="link-2" style="width: 14px; height: 14px;"></i></button>
+            <button type="button" class="btn btn-sm btn-format" data-format="strikethrough" data-target="post-text" title="Strikethrough" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="strikethrough" style="width: 14px; height: 14px;"></i></button>
             <button type="button" class="btn btn-sm btn-format" data-format="quote" data-target="post-text" title="Quote" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="quote-right" style="width: 14px; height: 14px;"></i></button>
-            <button type="button" class="btn btn-sm btn-format" data-format="code" data-target="post-text" title="Code Block" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="code" style="width: 14px; height: 14px;"></i></button>
+            <button type="button" class="btn btn-sm btn-format" data-format="code" data-target="post-text" title="Code Block" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="terminal" style="width: 14px; height: 14px;"></i></button>
           </div>
           <textarea id="post-text" placeholder="Share advice, check-in updates, or campsite views..."></textarea>
         </div>
@@ -1515,6 +1490,26 @@
         <div class="form-group">
           <label for="tribe-thread-body">Topic details / Question</label>
           <textarea id="tribe-thread-body" placeholder="Ask a question, share advice, or post a notice to the tribe..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="tribe-thread-photo-upload" style="cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px dashed var(--border-color); border-radius: var(--radius-md); text-align: center; justify-content: center; background: var(--bg-sand);">
+            <i data-lucide="camera" style="width: 16px; height: 16px;"></i>
+            <span>Upload Photo (Optional)</span>
+            <input type="file" id="tribe-thread-photo-upload" accept="image/*" style="display: none;">
+          </label>
+          <span id="tribe-thread-photo-upload-status" style="font-size: 11px; color: var(--muted-text); text-align: center; display: block; margin-top: 4px;"></span>
+          
+          <div id="tribe-thread-crop-workspace" style="display: none; flex-direction: column; align-items: center; gap: 8px; margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.15); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Crop Photo (Drag image to reposition)</div>
+            <div style="position: relative; width: 200px; height: 200px; border-radius: var(--radius-sm); overflow: hidden; border: 2px solid var(--accent-green); background: #000; display: flex; align-items: center; justify-content: center;">
+              <canvas id="tribe-thread-crop-canvas" width="200" height="200" style="cursor: grab; width: 100%; height: 100%;"></canvas>
+            </div>
+            <div class="flex items-center gap-sm w-full m-t-sm">
+              <i data-lucide="zoom-out" style="width: 14px; height: 14px;"></i>
+              <input type="range" id="tribe-thread-crop-zoom" min="1.0" max="3.0" step="0.05" value="1.0" class="flex-grow">
+              <i data-lucide="zoom-in" style="width: 14px; height: 14px;"></i>
+            </div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -1898,13 +1893,13 @@
           <i data-lucide="scroll-text"></i>
           <span>Forum</span>
         </div>
+        <div class="mobile-drawer-item" data-tab="jobs" onclick="switchTab('jobs'); closeMobileDrawer();">
+          <i data-lucide="briefcase"></i>
+          <span>Work</span>
+        </div>
         <div class="mobile-drawer-item" data-tab="messages" onclick="switchTab('messages'); closeMobileDrawer();">
           <i data-lucide="message-circle"></i>
           <span>Messages</span>
-        </div>
-        <div class="mobile-drawer-item" data-tab="jobs" onclick="switchTab('jobs'); closeMobileDrawer();">
-          <i data-lucide="briefcase"></i>
-          <span>Work & Stay</span>
         </div>
         <div class="mobile-drawer-item" data-tab="profile" onclick="switchTab('profile'); closeMobileDrawer();">
           <i data-lucide="user"></i>

@@ -51,7 +51,7 @@ function renderUserProfile() {
     if (editBtn) editBtn.style.display = 'inline-flex';
     if (visitorActions) visitorActions.style.display = 'none';
     if (premiumBtn) {
-      premiumBtn.style.display = user.isPremium ? 'none' : 'inline-flex';
+      premiumBtn.style.display = 'none';
     }
   } else {
     if (editBtn) editBtn.style.display = 'none';
@@ -86,29 +86,9 @@ function renderUserProfile() {
     }
   }
   
-  // Render vehicle specs optionally
-  const showRig = user.showRigProfile !== false;
-  const rigSection = document.getElementById('profile-rig-section');
+  // Render photo gallery unconditionally
   const gallerySection = document.getElementById('profile-gallery-section');
-  
-  if (rigSection) rigSection.style.display = showRig ? 'block' : 'none';
-  if (gallerySection) gallerySection.style.display = showRig ? 'block' : 'none';
-  
-  if (showRig) {
-    const rigDesc = document.getElementById('profile-rig-desc');
-    if (rigDesc) {
-      if (user.rig_desc) {
-        rigDesc.innerText = user.rig_desc;
-        rigDesc.style.display = 'block';
-      } else {
-        rigDesc.style.display = 'none';
-      }
-    }
-    document.getElementById('profile-rig-model').innerText = user.rig || "N/A";
-    document.getElementById('profile-rig-solar').innerText = user.solar || "N/A";
-    document.getElementById('profile-rig-power').innerText = user.power || "N/A";
-    document.getElementById('profile-rig-water').innerText = user.water || "N/A";
-  }
+  if (gallerySection) gallerySection.style.display = 'block';
   
   // Render Friends List
   const friendsCountSpan = document.getElementById('profile-friends-title');
@@ -412,21 +392,21 @@ function openProfileEditModal() {
   document.getElementById('edit-profile-name').value = State.currentUser.name;
   document.getElementById('edit-profile-bio').value = State.currentUser.bio;
   
-  const showRigCb = document.getElementById('edit-profile-show-rig');
-  if (showRigCb) {
-    showRigCb.checked = State.currentUser.showRigProfile !== false;
-    toggleEditProfileRigFields(showRigCb.checked);
+  const roleGroup = document.getElementById('edit-profile-role-group');
+  if (roleGroup) {
+    if (State.currentUser.handle === '@google_traveler' || State.currentUser.role === 'admin') {
+      roleGroup.style.display = 'block';
+      const roleSelect = document.getElementById('edit-profile-role');
+      if (roleSelect) roleSelect.value = State.currentUser.role || 'admin';
+    } else {
+      roleGroup.style.display = 'none';
+    }
   }
   
-  const rigDescInput = document.getElementById('edit-profile-rig-desc');
-  if (rigDescInput) {
-    rigDescInput.value = State.currentUser.rig_desc || "";
+  const handleInput = document.getElementById('edit-profile-handle');
+  if (handleInput) {
+    handleInput.value = State.currentUser.handle || "";
   }
-  
-  document.getElementById('edit-profile-rig').value = State.currentUser.rig || "";
-  document.getElementById('edit-profile-solar').value = State.currentUser.solar || "";
-  document.getElementById('edit-profile-power').value = State.currentUser.power || "";
-  document.getElementById('edit-profile-water').value = State.currentUser.water || "";
   
   // Populate social handles
   document.getElementById('edit-profile-instagram').value = State.currentUser.instagram_handle || "";
@@ -439,11 +419,4 @@ function openProfileEditModal() {
   if (fileInput) fileInput.value = '';
   
   openModal('modal-edit-profile');
-}
-
-function toggleEditProfileRigFields(show) {
-  const container = document.getElementById('edit-profile-rig-fields-container');
-  if (container) {
-    container.style.display = show ? 'block' : 'none';
-  }
 }

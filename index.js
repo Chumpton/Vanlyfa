@@ -113,13 +113,40 @@ function initApp() {
   if (marketRad) marketRad.addEventListener('change', renderMarketplaceListings);
 
 
-  // Feed Filter Listeners
-  const feedFilterArea = document.getElementById('feed-filter-area');
-  if (feedFilterArea) feedFilterArea.addEventListener('change', () => { State._cachedFeeds = {}; renderFeedTabPosts(); });
-  const feedFilterSort = document.getElementById('feed-filter-sort');
-  if (feedFilterSort) feedFilterSort.addEventListener('change', () => { State._cachedFeeds = {}; renderFeedTabPosts(); });
-  const feedFilterSaved = document.getElementById('feed-filter-saved');
-  if (feedFilterSaved) feedFilterSaved.addEventListener('change', () => { State._cachedFeeds = {}; renderFeedTabPosts(); });
+  // Feed Filter Listeners (Chips)
+  State.feedFilterArea = State.feedFilterArea || 'all';
+  State.feedFilterSort = State.feedFilterSort || 'trending';
+  State.feedFilterSaved = State.feedFilterSaved || 'all';
+
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    const type = chip.getAttribute('data-filter-type');
+    const val = chip.getAttribute('data-value');
+    const activeVal = type === 'area' ? State.feedFilterArea : 
+                      (type === 'sort' ? State.feedFilterSort : State.feedFilterSaved);
+    if (val === activeVal) {
+      chip.classList.add('active');
+    } else {
+      chip.classList.remove('active');
+    }
+
+    chip.addEventListener('click', (e) => {
+      const typeAttr = e.currentTarget.getAttribute('data-filter-type');
+      const valAttr = e.currentTarget.getAttribute('data-value');
+      
+      document.querySelectorAll(`.filter-chip[data-filter-type="${typeAttr}"]`).forEach(btn => {
+        btn.classList.remove('active');
+      });
+      e.currentTarget.classList.add('active');
+      
+      if (typeAttr === 'area') State.feedFilterArea = valAttr;
+      else if (typeAttr === 'sort') State.feedFilterSort = valAttr;
+      else if (typeAttr === 'saved') State.feedFilterSaved = valAttr;
+      
+      saveStateToStorage();
+      State._cachedFeeds = {};
+      renderFeedTabPosts();
+    });
+  });
 
   // Meetup Filter Listeners
   const meetupFilterArea = document.getElementById('meetup-filter-area');
@@ -327,6 +354,12 @@ function initApp() {
       } else if (format === 'italic') {
         startToken = '*';
         endToken = '*';
+      } else if (format === 'link') {
+        startToken = '[';
+        endToken = '](url)';
+      } else if (format === 'strikethrough') {
+        startToken = '~~';
+        endToken = '~~';
       } else if (format === 'quote') {
         startToken = '\n> ';
         endToken = '\n';
@@ -641,12 +674,19 @@ function initApp() {
         // Threshold to prevent bounce artifacts
         if (Math.abs(lastScroll - scrollTop) <= 5) return;
         
+        const sidebar = document.querySelector('.app-sidebar');
+        const fab = document.getElementById('mobile-action-fab');
+
         if (scrollTop > lastScroll && scrollTop > 64) {
-          // Scroll Down - hide top-bar
+          // Scroll Down - hide top-bar & bottom navigation
           topBar.classList.add('hide-top-bar');
+          if (sidebar) sidebar.classList.add('hide-bottom-bar');
+          if (fab) fab.classList.add('hide-bottom-bar');
         } else {
-          // Scroll Up - show top-bar
+          // Scroll Up - show top-bar & bottom navigation
           topBar.classList.remove('hide-top-bar');
+          if (sidebar) sidebar.classList.remove('hide-bottom-bar');
+          if (fab) fab.classList.remove('hide-bottom-bar');
         }
         e.target._lastScrollTop = scrollTop;
       }
@@ -802,6 +842,61 @@ function setupModalHandlers() {
   }
 }
 
+function handleGoogleSignIn() {
+  showToast("Connecting to Google Auth...", "info");
+  setTimeout(() => {
+    let user = State.users.find(u => u.handle === "@google_traveler");
+    if (!user) {
+      user = {
+        name: "Google Traveler",
+        handle: "@google_traveler",
+        email: "google.traveler@gmail.com",
+        avatar: "avatar_surf",
+        bio: "Signed in via Google Auth.",
+        role: "admin",
+        avatar_crop: { x: 0, y: 0, zoom: 1 },
+        showRigProfile: true,
+        rig: "Adventure Van",
+        solar: "300W Solar",
+        power: "200Ah Lithium",
+        water: "20 Gal Fresh",
+        gallery: [],
+        visitedSpots: [],
+        friends: [],
+        reputation: 5,
+        givenRepTo: []
+      };
+      State.users.push(user);
+    }
+    
+    State.currentUser = {
+      name: user.name,
+      handle: user.handle,
+      avatar: user.avatar,
+      bio: user.bio || "",
+      showRigProfile: user.showRigProfile !== false,
+      rig_desc: user.rig_desc || "",
+      rig: user.rig || "",
+      solar: user.solar || "",
+      power: user.power || "",
+      water: user.water || "",
+      reputation: user.reputation || 0,
+      givenRepTo: user.givenRepTo || [],
+      role: user.role || "admin",
+      instagram_handle: user.instagram_handle || "",
+      tiktok_handle: user.tiktok_handle || "",
+      avatar_crop: user.avatar_crop || { x: 0, y: 0, zoom: 1 }
+    };
+    State.isSignedIn = true;
+    saveStateToStorage();
+    updateSidebarProfileWidget();
+    closeModal('modal-auth-required');
+    showToast("Signed in successfully via Google!", "success");
+    renderCurrentTab();
+  }, 1000);
+}
+window.handleGoogleSignIn = handleGoogleSignIn;
+
 function handleAuthSignIn(event) {
   event.preventDefault();
   const inputVal = document.getElementById('signin-email').value.trim();
@@ -809,64 +904,22 @@ function handleAuthSignIn(event) {
   
   if (!inputVal) return;
   
-  // Normalizing input to match handle or name
-  let searchName = inputVal.toLowerCase();
-  if (searchName === 'bob') searchName = '@nomad_bob';
-  if (searchName === 'clara') searchName = '@clara_outdoors';
-  if (searchName === 'forest') searchName = '@forest_nomad';
-  if (searchName === 'baja') searchName = '@baja_surfer';
-  if (searchName === 'solar') searchName = '@solar_explorer';
-  if (searchName === 'admin') searchName = '@admin';
+  const searchName = inputVal.toLowerCase();
 
   // Find user in database simulator
-  let user = State.users.find(u => u.name.toLowerCase() === searchName || 
+  const user = State.users.find(u => u.name.toLowerCase() === searchName || 
                                      u.handle.toLowerCase() === searchName ||
-                                     u.handle.toLowerCase() === `@${searchName}`);
-                                     
-  // For testing convenience, if 'bob' or '@nomad_bob' doesn't exist in users yet, create him
-  if (!user && (searchName === '@nomad_bob' || searchName === 'bob')) {
-    user = {
-      name: "Nomad Bob",
-      handle: "@nomad_bob",
-      avatar: "avatar_bob",
-      bio: "Rig builder and highway traveler.",
-      rig: "Camper Rig",
-      solar: "200W Solar",
-      power: "100Ah Lithium",
-      water: "15 Gal Fresh",
-      gallery: [],
-      visitedSpots: [],
-      friends: [],
-      reputation: 5,
-      givenRepTo: [],
-      role: "user",
-      instagram_handle: "nomad_bob",
-      tiktok_handle: "nomad_bob",
-      password: "NomadPass123!"
-    };
-    State.users.push(user);
-    saveStateToStorage();
-  }
+                                     u.handle.toLowerCase() === `@${searchName}` ||
+                                     (u.email && u.email.toLowerCase() === searchName));
   
   if (user) {
-    // Password validation rules
-    let expectedPassword = user.password;
-    if (!expectedPassword) {
-      if (user.handle === "@admin") expectedPassword = "AdminPass123!";
-      else if (user.handle === "@clara_outdoors") expectedPassword = "ClaraPass123!";
-      else if (user.handle === "@forest_nomad") expectedPassword = "ForestPass123!";
-      else if (user.handle === "@baja_surfer") expectedPassword = "BajaPass123!";
-      else if (user.handle === "@solar_explorer") expectedPassword = "SolarPass123!";
-      else if (user.handle === "@nomad_bob") expectedPassword = "NomadPass123!";
-      else expectedPassword = "password"; // Default fallback
-    }
-    
     if (user.banned) {
       showToast("Your account has been deactivated by an administrator.", "error");
       return;
     }
     
-    if (passwordVal !== expectedPassword) {
+    // Check password
+    if (user.password && passwordVal !== user.password) {
       showToast("Incorrect password. Please try again.", "error");
       return;
     }
@@ -893,52 +946,17 @@ function handleAuthSignIn(event) {
     saveStateToStorage();
     updateSidebarProfileWidget();
     closeModal('modal-auth-required');
-    showToast(`Welcome back, ${user.name}! (${user.role})`, "success");
+    showToast(`Welcome back, ${user.name}!`, "success");
     
     // Check if admin to refresh UI tabs
-    if (user.role === 'admin') {
-      const adminTab = document.getElementById('sidebar-admin-tab');
-      if (adminTab) adminTab.style.display = 'flex';
-    } else {
-      const adminTab = document.getElementById('sidebar-admin-tab');
-      if (adminTab) adminTab.style.display = 'none';
+    const adminTab = document.getElementById('sidebar-admin-tab');
+    if (adminTab) {
+      adminTab.style.display = user.role === 'admin' ? 'flex' : 'none';
     }
     
     renderCurrentTab();
   } else {
-    // Autocreate account for convenience in mockup
-    const newUsername = inputVal;
-    const newHandle = `@${inputVal.replace(/\s+/g, '_').toLowerCase()}`;
-    const newUser = {
-      name: newUsername,
-      handle: newHandle,
-      avatar: "avatar_bob",
-      bio: "Living the dream on four wheels.",
-      showRigProfile: true,
-      rig_desc: "",
-      rig: "Camper Rig",
-      solar: "200W Solar",
-      power: "100Ah Lithium",
-      water: "15 Gal Fresh",
-      gallery: [],
-      visitedSpots: [],
-      friends: [],
-      reputation: 3,
-      givenRepTo: [],
-      role: "user",
-      instagram_handle: "",
-      tiktok_handle: "",
-      password: passwordVal || "password",
-      avatar_crop: { x: 0, y: 0, zoom: 1 }
-    };
-    State.users.push(newUser);
-    State.currentUser = { ...newUser };
-    State.isSignedIn = true;
-    saveStateToStorage();
-    updateSidebarProfileWidget();
-    closeModal('modal-auth-required');
-    showToast(`Signed up and logged in as ${newUsername}!`, "success");
-    renderCurrentTab();
+    showToast("User not found. Please check your credentials or Sign Up.", "error");
   }
 }
 
@@ -1008,14 +1026,9 @@ function saveUserProfileEdit() {
     State.users.push(user);
   }
   
-  user.name = newName;
-  user.bio = document.getElementById('edit-profile-bio').value.trim() || user.bio;
-  user.showRigProfile = document.getElementById('edit-profile-show-rig').checked;
-  user.rig_desc = document.getElementById('edit-profile-rig-desc').value.trim();
-  user.rig = document.getElementById('edit-profile-rig').value.trim() || user.rig;
-  user.solar = document.getElementById('edit-profile-solar').value.trim() || user.solar;
-  user.power = document.getElementById('edit-profile-power').value.trim() || user.power;
-  user.water = document.getElementById('edit-profile-water').value.trim() || user.water;
+  // Track old avatar
+  const oldAvatar = State.currentUser.avatar;
+  let newAvatar = oldAvatar;
   
   // Crop avatar processing
   const cropWorkspace = document.getElementById('avatar-crop-workspace');
@@ -1024,9 +1037,10 @@ function saveUserProfileEdit() {
     if (canvas && typeof drawCropImage === 'function') {
       // Draw image WITHOUT the helper circle border before export
       drawCropImage(canvas, false);
-      const croppedDataUrl = compressCanvasToJpeg(canvas, 200);
+      const croppedDataUrl = compressCanvasToJpeg(canvas, 120); // Compressed, lightweight avatar
       user.avatar = croppedDataUrl;
       State.currentUser.avatar = croppedDataUrl;
+      newAvatar = croppedDataUrl;
       
       // Store offsets
       if (typeof cropState !== 'undefined') {
@@ -1042,49 +1056,144 @@ function saveUserProfileEdit() {
     user.avatar = State.currentUser.avatar;
   }
   
+  // Bio
+  user.bio = document.getElementById('edit-profile-bio').value.trim() || user.bio;
+  State.currentUser.bio = user.bio;
+  
   // Social handles
   user.instagram_handle = document.getElementById('edit-profile-instagram').value.trim();
   user.tiktok_handle = document.getElementById('edit-profile-tiktok').value.trim();
-  
-  State.currentUser.name = newName;
-  State.currentUser.bio = user.bio;
-  State.currentUser.showRigProfile = user.showRigProfile;
-  State.currentUser.rig_desc = user.rig_desc;
-  State.currentUser.rig = user.rig;
-  State.currentUser.solar = user.solar;
-  State.currentUser.power = user.power;
-  State.currentUser.water = user.water;
   State.currentUser.instagram_handle = user.instagram_handle;
   State.currentUser.tiktok_handle = user.tiktok_handle;
   
-  if (oldName !== newName) {
+  // Handle validation and 14-day limit check
+  let handleSaved = true;
+  let handleSavedMsg = "";
+  let newHandleInput = document.getElementById('edit-profile-handle').value.trim();
+  let newHandle = newHandleInput;
+  if (newHandle && !newHandle.startsWith('@')) {
+    newHandle = '@' + newHandle;
+  }
+  
+  const oldHandle = State.currentUser.handle;
+  
+  if (newHandle !== oldHandle) {
+    if (!/^@[a-zA-Z0-9_]{2,15}$/.test(newHandle)) {
+      showToast("Handle must start with @ and be 2-15 alphanumeric/underscore characters.", "error");
+      return;
+    }
+    
+    const taken = State.users.some(u => u.handle && u.handle.toLowerCase() === newHandle.toLowerCase() && u.name !== oldName);
+    if (taken) {
+      showToast("This handle is already taken by another user.", "error");
+      return;
+    }
+    
+    const now = Date.now();
+    const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+    if (user.lastHandleChangeTimestamp && (now - user.lastHandleChangeTimestamp < fourteenDaysMs)) {
+      const msLeft = fourteenDaysMs - (now - user.lastHandleChangeTimestamp);
+      const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
+      const hoursLeft = Math.ceil(msLeft / (60 * 60 * 1000));
+      const timeStr = daysLeft > 1 ? `${daysLeft} days` : `${hoursLeft} hours`;
+      handleSaved = false;
+      handleSavedMsg = `Handle change blocked (can only change once every 14 days. Re-try in ${timeStr}).`;
+    } else {
+      user.handle = newHandle;
+      State.currentUser.handle = newHandle;
+      user.lastHandleChangeTimestamp = now;
+      State.currentUser.lastHandleChangeTimestamp = now;
+    }
+  }
+  
+  // Role Select
+  const roleSelect = document.getElementById('edit-profile-role');
+  if (roleSelect && (State.currentUser.handle === '@google_traveler' || State.currentUser.role === 'admin')) {
+    user.role = roleSelect.value;
+    State.currentUser.role = roleSelect.value;
+  }
+  
+  // Set new display name
+  user.name = newName;
+  State.currentUser.name = newName;
+  
+  // Optimistic UI updates propagation across all data structures
+  const nameChanged = oldName !== newName;
+  const avatarChanged = oldAvatar !== newAvatar;
+  
+  if (nameChanged || avatarChanged) {
+    // 1. Update posts and comments
     State.posts.forEach(p => {
-      if (p.author.name === oldName) p.author.name = newName;
+      if (p.author && p.author.name === oldName) {
+        if (nameChanged) p.author.name = newName;
+        if (avatarChanged) p.author.avatar = newAvatar;
+      }
       if (p.comments) {
         p.comments.forEach(c => {
-          if (c.user === oldName) c.user = newName;
+          if (c.user === oldName) {
+            if (nameChanged) c.user = newName;
+          }
         });
       }
     });
+    
+    // 2. Update spots
     State.spots.forEach(s => {
-      if (s.author.name === oldName) s.author.name = newName;
+      if (s.author && s.author.name === oldName) {
+        if (nameChanged) s.author.name = newName;
+        if (avatarChanged) s.author.avatar = newAvatar;
+      }
     });
+    
+    // 3. Update meetups & attendees
     State.meetups.forEach(m => {
-      if (m.host.name === oldName) m.host.name = newName;
+      if (m.host && m.host.name === oldName) {
+        if (nameChanged) m.host.name = newName;
+        if (avatarChanged) m.host.avatar = newAvatar;
+      }
+      if (m.attendees && avatarChanged) {
+        const idx = m.attendees.indexOf(oldAvatar);
+        if (idx !== -1) {
+          m.attendees[idx] = newAvatar;
+        }
+      }
     });
+    
+    // 4. Update marketplace seller
     State.marketplace.forEach(m => {
-      if (m.seller.name === oldName) m.seller.name = newName;
+      if (m.seller && m.seller.name === oldName) {
+        if (nameChanged) m.seller.name = newName;
+        if (avatarChanged) m.seller.avatar = newAvatar;
+      }
     });
+    
+    // 5. Update forum threads & replies
     State.forum.forEach(t => {
-      if (t.author.name === oldName) t.author.name = newName;
+      if (t.author && t.author.name === oldName) {
+        if (nameChanged) t.author.name = newName;
+        if (avatarChanged) t.author.avatar = newAvatar;
+      }
       if (t.replies) {
         t.replies.forEach(r => {
-          if (r.author.name === oldName) r.author.name = newName;
+          if (r.author && r.author.name === oldName) {
+            if (nameChanged) r.author.name = newName;
+            if (avatarChanged) r.author.avatar = newAvatar;
+          }
         });
       }
     });
+    
+    // 6. Update direct message/chats keys
+    if (nameChanged && State.chats) {
+      if (State.chats[oldName]) {
+        State.chats[newName] = State.chats[oldName];
+        delete State.chats[oldName];
+      }
+    }
+    
+    // 7. Update friends arrays
     State.users.forEach(u => {
-      if (u.friends) {
+      if (u.friends && nameChanged) {
         u.friends = u.friends.map(f => f === oldName ? newName : f);
       }
     });
@@ -1098,10 +1207,19 @@ function saveUserProfileEdit() {
   const statusSpan = document.getElementById('profile-photo-upload-status');
   if (statusSpan) statusSpan.innerText = "";
   
-  showToast("Profile details updated!", "success");
+  if (!handleSaved) {
+    showToast(`Profile details updated! ${handleSavedMsg}`, "warning");
+  } else {
+    showToast("Profile details updated!", "success");
+  }
 }
 
 function saveNewSpot() {
+  if (!requireAuth()) return;
+  if (!checkRateLimit('spot')) {
+    showToast("Rate limit exceeded. You can only add 5 spots per hour.", "error");
+    return;
+  }
   const title = document.getElementById('spot-title').value.trim();
   const category = document.getElementById('spot-category').value;
   const lat = parseFloat(document.getElementById('spot-lat').value);
@@ -1147,14 +1265,22 @@ function saveNewSpot() {
     saveStateToStorage();
     updateConnectionUI();
     showToast("Offline mode: campsite queued for sync!", "warning");
+    renderLeafletMarkers();
   } else {
+    newSpot.pendingSync = true;
     State.spots.push(newSpot);
     saveStateToStorage();
-    showToast(successMsg, "success");
+    renderLeafletMarkers();
+
+    const sql = `INSERT INTO campsites (id, title, category, latitude, longitude, description, author_id, vouches, status) VALUES ('${newSpot.id}', '${newSpot.title.replace(/'/g, "''")}', '${newSpot.category}', ${newSpot.lat}, ${newSpot.lng}, '${newSpot.description.replace(/'/g, "''")}', '${State.currentUser.name}', 1, '${newSpot.status}');`;
+    const rls = `CREATE POLICY "Enable insert for authenticated users only" ON campsites FOR INSERT TO authenticated WITH CHECK (auth.uid() = author_id);`;
+
+    window.simulateDatabaseWrite(newSpot, 'spot', sql, rls, () => {
+      saveStateToStorage();
+      renderLeafletMarkers();
+      showToast(successMsg, "success");
+    });
   }
-  
-  // Reload maps
-  renderLeafletMarkers();
   
   // Clean inputs
   document.getElementById('spot-title').value = '';
@@ -1209,8 +1335,10 @@ function saveNewPost() {
     lng: loc && loc.status === 'present' ? loc.lng : null
   };
   
+  newPost.pendingSync = true;
   State.posts.unshift(newPost);
   saveStateToStorage();
+  renderDashboardFeed();
   
   // Clean inputs
   document.getElementById('post-text').value = '';
@@ -1222,9 +1350,16 @@ function saveNewPost() {
   State.postCropState = createCropObject();
   
   closeModal('modal-add-post');
-  renderDashboardFeed();
-  const successMsg = newPost.status === 'approved' ? "Update shared with community feed!" : "Post submitted! Awaiting admin approval.";
-  showToast(successMsg, "success");
+
+  const sql = `INSERT INTO posts (id, content, image_url, author_id, likes, status, latitude, longitude) VALUES ('${newPost.id}', '${newPost.content.replace(/'/g, "''")}', ${newPost.image ? "'[image_data]'" : "NULL"}, '${State.currentUser.name}', 0, '${newPost.status}', ${newPost.lat || 'NULL'}, ${newPost.lng || 'NULL'});`;
+  const rls = `CREATE POLICY "Enable insert for authenticated users" ON posts FOR INSERT TO authenticated WITH CHECK (auth.uid() = author_id);`;
+
+  window.simulateDatabaseWrite(newPost, 'post', sql, rls, () => {
+    saveStateToStorage();
+    renderDashboardFeed();
+    const successMsg = newPost.status === 'approved' ? "Update shared with community feed!" : "Post submitted! Awaiting admin approval.";
+    showToast(successMsg, "success");
+  });
 }
 
 function saveNewListing() {
@@ -1282,33 +1417,41 @@ function saveNewListing() {
     status
   };
   
-  // Save listing using Backend Client Simulator
-  Backend.createListing(newListing).then(() => {
-    // Clean inputs
-    document.getElementById('list-title').value = '';
-    document.getElementById('list-price').value = '';
-    document.getElementById('list-location').value = '';
-    document.getElementById('list-zip').value = '';
-    document.getElementById('list-desc').value = '';
-    document.getElementById('list-photo-upload').value = '';
-    
-    const statusSpan = document.getElementById('list-photo-upload-status');
-    if (statusSpan) statusSpan.innerText = '';
-    const workspace = document.getElementById('list-crop-workspace');
-    if (workspace) workspace.style.display = 'none';
-    State.listingCropState = createCropObject();
-    
-    closeModal('modal-add-listing');
-    
-    const isService = category === 'services-offer' || category === 'services-want';
-    const activeType = isService ? 'services' : 'items';
-    if (typeof window.switchMarketplaceType === 'function') {
-      window.switchMarketplaceType(activeType);
-    } else {
-      State.activeMarketplaceType = activeType;
-      renderMarketplaceListings();
-    }
-    
+  newListing.pendingSync = true;
+  State.marketplace.push(newListing);
+  saveStateToStorage();
+  
+  const isService = category === 'services-offer' || category === 'services-want';
+  const activeType = isService ? 'services' : 'items';
+  if (typeof window.switchMarketplaceType === 'function') {
+    window.switchMarketplaceType(activeType);
+  } else {
+    State.activeMarketplaceType = activeType;
+  }
+  renderMarketplaceListings();
+  
+  // Clean inputs
+  document.getElementById('list-title').value = '';
+  document.getElementById('list-price').value = '';
+  document.getElementById('list-location').value = '';
+  document.getElementById('list-zip').value = '';
+  document.getElementById('list-desc').value = '';
+  document.getElementById('list-photo-upload').value = '';
+  
+  const statusSpan = document.getElementById('list-photo-upload-status');
+  if (statusSpan) statusSpan.innerText = '';
+  const workspace = document.getElementById('list-crop-workspace');
+  if (workspace) workspace.style.display = 'none';
+  State.listingCropState = createCropObject();
+  
+  closeModal('modal-add-listing');
+
+  const sql = `INSERT INTO listings (id, title, price, category, location, zip, latitude, longitude, condition, description, seller_id, image_url, status) VALUES ('${newListing.id}', '${newListing.title.replace(/'/g, "''")}', ${newListing.price}, '${newListing.category}', '${newListing.location.replace(/'/g, "''")}', '${newListing.zip}', ${newListing.lat}, ${newListing.lng}, '${newListing.condition}', '${newListing.description.replace(/'/g, "''")}', '${State.currentUser.name}', '[image_data]', '${newListing.status}');`;
+  const rls = `CREATE POLICY "Enable insert for authenticated sellers" ON listings FOR INSERT TO authenticated WITH CHECK (auth.uid() = seller_id);`;
+
+  window.simulateDatabaseWrite(newListing, 'marketplace listing', sql, rls, () => {
+    saveStateToStorage();
+    renderMarketplaceListings();
     const successMsg = status === 'approved' ? "Marketplace listing published!" : "Listing submitted! Awaiting admin approval.";
     showToast(successMsg, "success");
   });
@@ -1316,6 +1459,10 @@ function saveNewListing() {
 
 function saveNewTribe() {
   if (!requireAuth()) return;
+  if (!checkRateLimit('meetup')) { // Tribes are similar in complexity to meetups, so check against meetup limit
+    showToast("Rate limit exceeded. You can only create 3 groups per hour.", "error");
+    return;
+  }
   const title = document.getElementById('tribe-name-input').value.trim();
   const description = document.getElementById('tribe-desc-input').value.trim();
   const isPublic = document.getElementById('tribe-privacy-input').checked;
@@ -1364,8 +1511,10 @@ function saveNewTribe() {
     ideal: "Off-grid / Boondocking"
   };
   
+  newTribe.pendingSync = true;
   State.tribes.push(newTribe);
   saveStateToStorage();
+  renderTribesList();
   
   // Clean inputs
   document.getElementById('tribe-name-input').value = '';
@@ -1388,12 +1537,23 @@ function saveNewTribe() {
   State.tribeBannerCropState = createCropObject();
   
   closeModal('modal-add-tribe');
-  renderTribesList();
-  showToast(`"${title}" Tribe formed! You are the first member.`, "success");
+
+  const sql = `INSERT INTO tribes (id, title, description, banner_url, icon_url, icon_letter, is_public, members_count) VALUES ('${newTribe.id}', '${newTribe.title.replace(/'/g, "''")}', '${newTribe.description.replace(/'/g, "''")}', '[banner_data]', '[icon_data]', '${newTribe.iconLetter}', ${newTribe.isPublic}, 1);`;
+  const rls = `CREATE POLICY "Enable insert for authenticated users" ON tribes FOR INSERT TO authenticated WITH CHECK (true);`;
+
+  window.simulateDatabaseWrite(newTribe, 'tribe', sql, rls, () => {
+    saveStateToStorage();
+    renderTribesList();
+    showToast(`"${title}" Tribe formed! You are the first member.`, "success");
+  });
 }
 
 function saveNewMeetup() {
   if (!requireAuth()) return;
+  if (!checkRateLimit('meetup')) {
+    showToast("Rate limit exceeded. You can only host 3 meetups per hour.", "error");
+    return;
+  }
   const title = document.getElementById('meetup-title-input').value.trim();
   const date = document.getElementById('meetup-date-input').value;
   const time = document.getElementById('meetup-time-input').value.trim();
@@ -1436,11 +1596,13 @@ function saveNewMeetup() {
     status
   };
   
+  newMeetup.pendingSync = true;
   State.meetups.push(newMeetup);
   saveStateToStorage();
   
   // Reload maps
   renderLeafletMarkers();
+  renderMeetupsList();
   
   // Clean inputs
   document.getElementById('meetup-title-input').value = '';
@@ -1460,14 +1622,25 @@ function saveNewMeetup() {
   State.meetupCropState = createCropObject();
   
   closeModal('modal-add-meetup');
-  renderMeetupsList();
-  
-  const successMsg = status === 'approved' ? "Meetup hosted and pinned on global map!" : "Meetup submitted! Awaiting admin approval.";
-  showToast(successMsg, "success");
+
+  const sql = `INSERT INTO meetups (id, title, latitude, longitude, date, time, location, description, host_id, thumbnail_url, status) VALUES ('${newMeetup.id}', '${newMeetup.title.replace(/'/g, "''")}', ${newMeetup.lat}, ${newMeetup.lng}, '${newMeetup.date}', '${newMeetup.time}', '${newMeetup.location.replace(/'/g, "''")}', '${newMeetup.description.replace(/'/g, "''")}', '${State.currentUser.name}', ${newMeetup.thumbnail !== 'none' ? "'[thumbnail_data]'" : "NULL"}, '${newMeetup.status}');`;
+  const rls = `CREATE POLICY "Enable insert for authenticated hosts" ON meetups FOR INSERT TO authenticated WITH CHECK (auth.uid() = host_id);`;
+
+  window.simulateDatabaseWrite(newMeetup, 'meetup', sql, rls, () => {
+    saveStateToStorage();
+    renderLeafletMarkers();
+    renderMeetupsList();
+    const successMsg = status === 'approved' ? "Meetup hosted and pinned on global map!" : "Meetup submitted! Awaiting admin approval.";
+    showToast(successMsg, "success");
+  });
 }
 
 function saveNewForumThread() {
   if (!requireAuth()) return;
+  if (!checkRateLimit('forum')) {
+    showToast("Rate limit exceeded. You can only create 5 threads per hour.", "error");
+    return;
+  }
   const title = document.getElementById('thread-title-input').value.trim();
   const category = document.getElementById('thread-cat-select').value;
   const body = document.getElementById('thread-body-input').value.trim();
@@ -1506,10 +1679,21 @@ function saveNewForumThread() {
     saveStateToStorage();
     updateConnectionUI();
     showToast("Offline mode: thread queued for sync!", "warning");
+    renderForumView();
   } else {
+    newThread.pendingSync = true;
     State.forum.unshift(newThread);
     saveStateToStorage();
-    showToast("Thread published to discussion board!", "success");
+    renderForumView();
+
+    const sql = `INSERT INTO forum_threads (id, title, category, author_id, body, image_url, replies_count, views_count) VALUES ('${newThread.id}', '${newThread.title.replace(/'/g, "''")}', '${newThread.category}', '${State.currentUser.name}', '${newThread.body.replace(/'/g, "''")}', ${newThread.image ? "'[image_data]'" : "NULL"}, 0, 1);`;
+    const rls = `CREATE POLICY "Enable insert for authenticated authors" ON forum_threads FOR INSERT TO authenticated WITH CHECK (auth.uid() = author_id);`;
+
+    window.simulateDatabaseWrite(newThread, 'forum thread', sql, rls, () => {
+      saveStateToStorage();
+      renderForumView();
+      showToast("Thread published to discussion board!", "success");
+    });
   }
   
   State.activeForumCategory = 'all'; // reset to all to see the new thread
@@ -1527,7 +1711,6 @@ function saveNewForumThread() {
   State.threadCropState = createCropObject();
   
   closeModal('modal-add-thread');
-  renderForumView();
 }
 
 function saveNewFeedTabPost() {
@@ -1570,9 +1753,12 @@ function saveNewFeedTabPost() {
     lng: loc && loc.status === 'present' ? loc.lng : null
   };
   
+  newPost.pendingSync = true;
   State.posts.unshift(newPost);
   State._cachedFeeds = {};
   saveStateToStorage();
+  renderDashboardFeed();
+  renderFeedTabPosts();
   
   // Clean inputs
   document.getElementById('feed-tab-post-text').value = '';
@@ -1582,12 +1768,18 @@ function saveNewFeedTabPost() {
   const workspace = document.getElementById('feed-tab-crop-workspace');
   if (workspace) workspace.style.display = 'none';
   State.feedTabCropState = createCropObject();
-  
-  renderDashboardFeed();
-  renderFeedTabPosts();
-  
-  const successMsg = status === 'approved' ? "Update shared with community feed!" : "Post submitted! Awaiting admin approval.";
-  showToast(successMsg, "success");
+
+  const sql = `INSERT INTO posts (id, content, image_url, author_id, likes, status, latitude, longitude) VALUES ('${newPost.id}', '${newPost.content.replace(/'/g, "''")}', ${newPost.image ? "'[image_data]'" : "NULL"}, '${State.currentUser.name}', 0, '${newPost.status}', ${newPost.lat || 'NULL'}, ${newPost.lng || 'NULL'});`;
+  const rls = `CREATE POLICY "Enable insert for authenticated users" ON posts FOR INSERT TO authenticated WITH CHECK (auth.uid() = author_id);`;
+
+  window.simulateDatabaseWrite(newPost, 'post', sql, rls, () => {
+    saveStateToStorage();
+    State._cachedFeeds = {};
+    renderDashboardFeed();
+    renderFeedTabPosts();
+    const successMsg = status === 'approved' ? "Update shared with community feed!" : "Post submitted! Awaiting admin approval.";
+    showToast(successMsg, "success");
+  });
 }
 function switchAuthTab(tab) {
   const btnSignin = document.getElementById('auth-tab-signin');
@@ -1608,8 +1800,8 @@ function switchAuthTab(tab) {
     btnSignup.style.color = 'var(--muted-text)';
     btnSignup.style.boxShadow = 'none';
     
-    formSignin.style.display = 'flex';
-    formSignup.style.display = 'none';
+    formSignin.classList.remove('hidden');
+    formSignup.classList.add('hidden');
   } else {
     btnSignup.classList.add('active');
     btnSignup.style.background = 'var(--card-bg)';
@@ -1621,8 +1813,8 @@ function switchAuthTab(tab) {
     btnSignin.style.color = 'var(--muted-text)';
     btnSignin.style.boxShadow = 'none';
     
-    formSignup.style.display = 'flex';
-    formSignin.style.display = 'none';
+    formSignup.classList.remove('hidden');
+    formSignin.classList.add('hidden');
   }
 }
 /* ==========================================================================

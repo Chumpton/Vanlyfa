@@ -98,7 +98,7 @@ function renderMarketplaceListings() {
         <span class="market-badge ${badgeClass}">${item.condition}</span>
       </div>
       <div class="market-details">
-        <h3 class="market-title">${item.title}</h3>
+        <h3 class="market-title">${item.title}${item.pendingSync ? ' <span class="sync-spinner" title="Syncing with database..."></span>' : ''}</h3>
         <div class="market-price">${displayPrice}</div>
         <div class="market-location">
           <i data-lucide="map-pin"></i>

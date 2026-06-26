@@ -58,7 +58,7 @@ function renderTribesList() {
           <div class="tribe-icon-overlap" style="width:36px; height:36px; font-size:14px; bottom:-12px; left:12px; overflow:hidden; border-radius:50%; display:flex; align-items:center; justify-content:center;">${iconHtml}</div>
         </div>
         <div class="tribe-details" style="padding: 16px 12px 12px 12px;">
-          <h3 class="tribe-title" style="margin-top: 4px; font-size: 13px;">${tribe.title}</h3>
+          <h3 class="tribe-title" style="margin-top: 4px; font-size: 13px;">${tribe.title}${tribe.pendingSync ? ' <span class="sync-spinner" title="Syncing with database..."></span>' : ''}</h3>
           <div class="tribe-meta" style="font-size:11px; margin-bottom:8px;">
             <span>${tribe.membersCount} Members</span>
           </div>
@@ -102,7 +102,7 @@ function renderTribesList() {
         <div class="tribe-icon-overlap" style="overflow:hidden; border-radius:50%; display:flex; align-items:center; justify-content:center;">${iconHtml}</div>
       </div>
       <div class="tribe-details">
-        <h3 class="tribe-title" style="margin-top: 12px;">${tribe.title}</h3>
+        <h3 class="tribe-title" style="margin-top: 12px;">${tribe.title}${tribe.pendingSync ? ' <span class="sync-spinner" title="Syncing with database..."></span>' : ''}</h3>
         <div class="tribe-meta" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <span>${tribe.membersCount} Members</span>
           <div style="display:flex; gap:4px; align-items:center;">

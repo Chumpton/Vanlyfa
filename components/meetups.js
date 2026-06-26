@@ -92,7 +92,11 @@ function renderMeetupsList() {
         <span class="meetup-date-day">${day}</span>
       </div>
       <div class="meetup-info" style="flex-grow: 1;">
-        <h3 class="meetup-title">${meetup.title}</h3>
+        <h3 class="meetup-title" style="display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="calendar" class="meetup-mobile-icon" style="display: none; width: 16px; height: 16px; color: var(--accent-green); flex-shrink: 0;"></i>
+          <span>${meetup.title}</span>
+          ${meetup.pendingSync ? ' <span class="sync-spinner" title="Syncing with database..."></span>' : ''}
+        </h3>
         <div style="display:flex; align-items:center; gap:6px; margin: 4px 0 8px 0;">
           <img src="${getAvatarSrc(meetup.host.avatar)}" style="width:20px; height:20px; border-radius:50%; object-fit:cover;" />
           <span style="font-size:11px; font-weight:600; color:var(--text-charcoal);">${getUserRoleMarkup(meetup.host.name)}</span>
@@ -174,6 +178,10 @@ function renderMeetupsList() {
 function saveMeetupComment(event, meetupId) {
   event.preventDefault();
   if (!requireAuth()) return;
+  if (!checkRateLimit('comment')) {
+    showToast("Rate limit exceeded. You can only comment 10 times per hour.", "error");
+    return;
+  }
   const input = document.getElementById(`meetup-comment-input-${meetupId}`);
   if (!input) return;
   const text = input.value.trim();

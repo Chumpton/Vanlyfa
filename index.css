@@ -2103,8 +2103,8 @@ body {
   
   .app-sidebar .nav-item {
     flex-direction: column;
-    gap: 4px;
-    padding: 6px 4px;
+    gap: 2px;
+    padding: 4px 1px;
     font-size: 10px;
     border-radius: var(--radius-sm);
     justify-content: center;
@@ -2113,6 +2113,12 @@ body {
     background: transparent !important;
     color: var(--muted-text);
     border: none !important;
+    min-width: 0;
+  }
+  
+  .app-sidebar .nav-item i, .app-sidebar .nav-item svg {
+    width: 16px !important;
+    height: 16px !important;
   }
   
   .app-sidebar .nav-item:hover {
@@ -2131,12 +2137,15 @@ body {
   
   .app-sidebar .nav-item span {
     display: block; /* Show label under icon */
-    font-size: 9px;
+    font-size: 7.5px !important;
     font-weight: 600;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.1;
+    word-break: break-word;
   }
 
   /* Limit bottom nav to primary targets on mobile */
-  .app-sidebar .nav-item[data-tab="forum"],
   .app-sidebar .nav-item[data-tab="profile"] {
     display: none !important;
   }
@@ -2665,21 +2674,7 @@ body {
   }
 }
 
-/* Dark Mode Leaflet Map Topography Filter */
-#leaflet-map .leaflet-tile-pane,
-#profile-map .leaflet-tile-pane {
-  transition: filter 0.3s ease;
-}
-
-body.dark-mode #leaflet-map .leaflet-tile-pane,
-body.dark-mode #profile-map .leaflet-tile-pane {
-  filter: invert(90%) hue-rotate(180deg) brightness(86%) contrast(100%) saturate(100%);
-}
-
-body:not(.dark-mode) #leaflet-map .leaflet-tile-pane,
-body:not(.dark-mode) #profile-map .leaflet-tile-pane {
-  filter: contrast(118%) brightness(97%) saturate(110%);
-}
+/* Dark Mode Leaflet Map Topography Filter is disabled since we use native dark basemaps */
 
 /* ==========================================================================
    FEED TAB & SHELVING STYLES
@@ -2690,7 +2685,7 @@ body:not(.dark-mode) #profile-map .leaflet-tile-pane {
 
 .feed-tab-layout {
   max-width: 800px;
-  margin: 0;
+  margin: 0 auto;
   padding: 32px;
   display: flex;
   flex-direction: column;
@@ -3715,9 +3710,6 @@ body.dark-mode .chat-messages-area {
   display: flex;
 }
 @media (max-width: 768px) {
-  #sidebar-jobs-tab {
-    display: none !important;
-  }
   #sidebar-about-btn {
     display: none !important;
   }
@@ -3729,6 +3721,7 @@ body.dark-mode .chat-messages-area {
 .w-full { width: 100% !important; }
 .h-full { height: 100% !important; }
 .flex { display: flex !important; }
+.hidden { display: none !important; }
 .inline-flex { display: inline-flex !important; }
 .flex-col { flex-direction: column !important; }
 .flex-row { flex-direction: row !important; }
@@ -4121,6 +4114,98 @@ code {
 .custom-map-icon {
   will-change: auto;
   transform-origin: center center;
+}
+
+/* --- Inline Organic Filter Chips --- */
+.filter-chip {
+  background: var(--bg-sand);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+}
+.filter-chip:hover {
+  border-color: var(--accent-green-light);
+  background: rgba(59, 122, 87, 0.04);
+}
+.filter-chip.active {
+  background: var(--accent-green);
+  color: white;
+  border-color: var(--accent-green);
+  box-shadow: var(--shadow-sm);
+}
+
+.hashtag {
+  transition: color 0.2s ease;
+}
+.hashtag:hover {
+  color: var(--accent-green-light) !important;
+  text-decoration: underline;
+}
+
+/* Tribe Chat Box Squishing responsive properties */
+.tribe-chat-box {
+  height: 450px !important;
+  max-height: 60vh !important;
+}
+@media (max-width: 768px) {
+  .tribe-chat-box {
+    height: calc(100vh - 240px) !important;
+    min-height: 200px !important;
+    max-height: none !important;
+  }
+  
+  .meetup-mobile-icon {
+    display: inline-block !important;
+  }
+  .meetup-title {
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    line-height: 1.3 !important;
+  }
+  .meetup-description {
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+  }
+}
+
+/* Mobile navigation scroll-hide behavior classes */
+.app-sidebar {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.app-sidebar.hide-bottom-bar {
+  transform: translateY(100%) !important;
+}
+.mobile-action-fab {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.mobile-action-fab.hide-bottom-bar {
+  transform: translateY(160px) !important;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.sync-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(59, 122, 87, 0.2);
+  border-top-color: var(--accent-green);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-left: 6px;
 }
 
 

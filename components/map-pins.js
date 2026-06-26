@@ -25,8 +25,11 @@ function updateVouchUI(spot) {
 }
 
 function getMapTileUrl() {
-  // Esri World Topo Map is used for both themes. Dark mode uses CSS filters on the tile pane.
-  return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
+  if (document.body.classList.contains('dark-mode') || State.darkMode) {
+    return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+  } else {
+    return 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+  }
 }
 
 window.getMapTileUrl = getMapTileUrl;
@@ -427,13 +430,13 @@ function getMarkerMeta(pin) {
   let typeName = 'Wild Camping';
   let iconSvg = '<div style="background-color:white; width:6px; height:6px; border-radius:50%;"></div>';
   
-  const tentSvg = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2-10 18h20L12 2Z"></path></svg>`;
-  const houseSvg = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>`;
-  const dropSvg = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-11-7-11S5 11 5 15a7 7 0 0 0 7 7z"></path></svg>`;
-  const flameSvg = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>`;
-  const bedSvg = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8v9M10 8V11a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V8"></path></svg>`;
-  const wrenchSvg = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>`;
-  const usersSvg = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>`;
+  const tentSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2-10 18h20L12 2Z"></path></svg>`;
+  const houseSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>`;
+  const dropSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-11-7-11S5 11 5 15a7 7 0 0 0 7 7z"></path></svg>`;
+  const flameSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>`;
+  const bedSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8v9M10 8V11a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V8"></path></svg>`;
+  const wrenchSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>`;
+  const usersSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>`;
 
   const isVerified = pin.verified === true;
   
@@ -672,7 +675,7 @@ function safeguardedRenderLeafletMarkers() {
   let pins = [];
   
   // High efficiency filter pass
-  if (zoom <= 5) {
+  if (zoom <= 4) {
     const allSeeded = (typeof ClusterEngine !== 'undefined') ? ClusterEngine.allSpots : [];
     const userSpots = State.spots.filter(s => !s.seeded && s.status !== 'hidden_flagged');
     const rawPins = [...userSpots, ...allSeeded, ...State.meetups];
@@ -711,7 +714,10 @@ function safeguardedRenderLeafletMarkers() {
     for (const [stateName, statePins] of Object.entries(stateGroups)) {
       if (stateName === 'Other') continue;
       const stateInfo = StateBboxes[stateName] || { code: 'US', center: [37.0902, -95.7129] };
-      if (bounds.contains(stateInfo.center)) {
+      
+      // Only render state cluster if the state has pins within the visible bounds
+      const hasVisiblePins = statePins.some(pin => bounds.contains([pin.lat, pin.lng]));
+      if (hasVisiblePins) {
         pins.push({
           id: `state-cluster-${stateName}`,
           title: `${statePins.length} Spots in ${stateName}`,
@@ -727,7 +733,7 @@ function safeguardedRenderLeafletMarkers() {
       }
     }
   } else {
-    // Zoom levels > 5: Bound checking limits the processing queue on mobile screen heights
+    // Zoom levels > 4: Bound checking limits the processing queue on mobile screen heights
     let visibleSeeded = [];
     if (typeof ClusterEngine !== 'undefined' && ClusterEngine.allSpots.length > 0) {
       visibleSeeded = ClusterEngine.getVisibleSpots(bounds, zoom);
@@ -998,7 +1004,7 @@ function openInfoDrawerForSpot(pin) {
 
   // --- Action Button Group ---
   document.getElementById('drawer-directions-btn').onclick = () => {
-    plotRouteToSpot(pin);
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${pin.lat},${pin.lng}`, '_blank');
   };
   document.getElementById('drawer-share-btn').onclick = () => {
     const shareUrl = `${window.location.origin}${window.location.pathname}?spot=${pin.id}`;

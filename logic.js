@@ -173,6 +173,7 @@ function loadStateFromStorage() {
       if (State.currentUser) {
         State.currentUser.savedPostIds = State.currentUser.savedPostIds || [];
         State.currentUser.savedMeetupIds = State.currentUser.savedMeetupIds || [];
+        State.currentUser.blockedUsers = State.currentUser.blockedUsers || [];
       }
       State.users = parsed.users || State.users;
       State.chats = parsed.chats || State.chats;
@@ -374,20 +375,38 @@ function toggleLike(postId) {
 function submitComment(e, postId) {
   e.preventDefault();
   if (!requireAuth()) return;
+  if (!checkRateLimit('comment')) {
+    showToast("Rate limit exceeded. You can only comment 10 times per hour.", "error");
+    return;
+  }
   const input = document.getElementById(`comment-input-${postId}`);
   if (input && input.value.trim() !== '') {
     const { target } = findPostOrItem(postId);
     if (target) {
       if (!target.comments) target.comments = [];
-      target.comments.push({
+      const commentText = input.value.trim();
+      const newComment = {
         user: State.currentUser.name,
-        text: input.value.trim()
-      });
+        text: commentText,
+        pendingSync: true
+      };
+      target.comments.push(newComment);
       input.value = '';
       State._cachedFeeds = {};
       saveStateToStorage();
       renderDashboardFeed();
       renderFeedTabPosts();
+
+      const sql = `INSERT INTO comments (post_id, user_id, text) VALUES ('${postId}', '${State.currentUser.name}', '${commentText.replace(/'/g, "''")}');`;
+      const rls = `CREATE POLICY "Enable insert for authenticated commenters" ON comments FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);`;
+
+      window.simulateDatabaseWrite(newComment, 'comment', sql, rls, () => {
+        saveStateToStorage();
+        State._cachedFeeds = {};
+        renderDashboardFeed();
+        renderFeedTabPosts();
+        showToast("Comment posted!", "success");
+      });
     }
   }
 }
@@ -445,6 +464,12 @@ function submitForumReply() {
   const body = textInput.value.trim();
   if (body === '') return;
   
+  if (!requireAuth()) return;
+  if (!checkRateLimit('comment')) {
+    showToast("Rate limit exceeded. You can only reply 10 times per hour.", "error");
+    return;
+  }
+  
   const thread = State.forum.find(t => t.id === State.activeThreadId);
   if (thread) {
     const newReply = {
@@ -464,15 +489,25 @@ function submitForumReply() {
       saveStateToStorage();
       updateConnectionUI();
       showToast("Offline mode: reply queued for sync!", "warning");
+      textInput.value = '';
+      renderThreadDetail();
     } else {
+      newReply.pendingSync = true;
       thread.replies.push(newReply);
       thread.repliesCount++;
       saveStateToStorage();
-      showToast("Reply published!", "success");
+      textInput.value = '';
+      renderThreadDetail();
+
+      const sql = `INSERT INTO forum_replies (thread_id, author_id, body) VALUES ('${State.activeThreadId}', '${State.currentUser.name}', '${body.replace(/'/g, "''")}');`;
+      const rls = `CREATE POLICY "Enable insert for authenticated repliers" ON forum_replies FOR INSERT TO authenticated WITH CHECK (auth.uid() = author_id);`;
+
+      window.simulateDatabaseWrite(newReply, 'forum reply', sql, rls, () => {
+        saveStateToStorage();
+        renderThreadDetail();
+        showToast("Reply published!", "success");
+      });
     }
-    
-    textInput.value = '';
-    renderThreadDetail();
   }
 }
 
@@ -1102,9 +1137,17 @@ function simulateAutoReply(username, text, delay) {
     }
   });
   
+  State.notifications.unshift({
+    id: `notif-${Date.now()}`,
+    content: `💬 Message from ${username}: "${text.substring(0, 45)}${text.length > 45 ? '...' : ''}"`,
+    time: "Just now",
+    read: false
+  });
+  
   saveStateToStorage();
   renderActiveChats();
   renderContactsSidebar();
+  if (typeof renderNotifications === 'function') renderNotifications();
   
   showToast(`New message from ${username}`);
 }
@@ -1423,4 +1466,78 @@ function flagItem(type, itemId, commentIndex = null) {
   }
 }
 
+function checkRateLimit(type) {
+  if (!State.isSignedIn) return true;
+  
+  const now = Date.now();
+  if (!State._userActionTimestamps) {
+    State._userActionTimestamps = {};
+  }
+  const username = State.currentUser.name;
+  if (!State._userActionTimestamps[username]) {
+    State._userActionTimestamps[username] = [];
+  }
+  
+  // Clean up older timestamps (last 1 hour)
+  const oneHour = 60 * 60 * 1000;
+  State._userActionTimestamps[username] = State._userActionTimestamps[username].filter(item => now - item.ts < oneHour);
+  
+  // Filter by action type
+  const typeActions = State._userActionTimestamps[username].filter(item => item.type === type);
+  
+  let limit = 5; // Default limit
+  if (type === 'post') limit = 5;
+  else if (type === 'marketplace') limit = 3;
+  else if (type === 'spot') limit = 5;
+  else if (type === 'meetup') limit = 3;
+  else if (type === 'comment') limit = 10;
+  else if (type === 'forum') limit = 5;
+  
+  if (typeActions.length >= limit) {
+    return false;
+  }
+  
+  State._userActionTimestamps[username].push({ type, ts: now });
+  saveStateToStorage();
+  return true;
+}
+
 window.flagItem = flagItem;
+window.checkRateLimit = checkRateLimit;
+
+function blockUser(username) {
+  if (!requireAuth()) return;
+  if (username === State.currentUser.name) {
+    showToast("You cannot block yourself.", "error");
+    return;
+  }
+  if (confirm(`Are you sure you want to block ${username}? You will no longer see their posts or comments.`)) {
+    if (!State.currentUser.blockedUsers) {
+      State.currentUser.blockedUsers = [];
+    }
+    if (!State.currentUser.blockedUsers.includes(username)) {
+      State.currentUser.blockedUsers.push(username);
+    }
+    saveStateToStorage();
+    State._cachedFeeds = {};
+    showToast(`Blocked ${username}`, "success");
+    if (typeof renderCurrentTab === 'function') renderCurrentTab();
+    if (typeof renderDashboardFeed === 'function') renderDashboardFeed();
+    if (typeof renderFeedTabPosts === 'function') renderFeedTabPosts();
+  }
+}
+window.blockUser = blockUser;
+
+// --- Simulated Database Write Layer (Supabase Prep) ---
+window.simulateDatabaseWrite = function(item, type, sql, rls, callback) {
+  item.pendingSync = true;
+  console.log(`%c[Supabase Sim] Writing new ${type}...`, 'color: #3ecf8e; font-weight: bold;');
+  console.log(`%cSQL Query: %c${sql}`, 'color: #3b82f6; font-weight: bold;', 'color: #c084fc; font-family: monospace;');
+  console.log(`%cRLS Policy Evaluated: %c${rls}`, 'color: #eab308; font-weight: bold;', 'color: #fb923c;');
+  
+  setTimeout(() => {
+    item.pendingSync = false;
+    if (callback) callback();
+  }, 1000);
+};
+

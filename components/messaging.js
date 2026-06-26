@@ -203,7 +203,7 @@ function renderActiveChats() {
         }
         
         const statusMarkup = isMe ? `
-          <div class="chat-msg-status-area" style="display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 9px; opacity: 0.65; justify-content: flex-end; width: 100%;">
+          <div class="chat-msg-status-area" style="display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 9px; opacity: 0.65; align-self: flex-end;">
             <span style="font-size: 8px;">${msg.time || ''}</span>
             <span class="chat-msg-ticks" id="ticks-${msg.id}">
               <i data-lucide="${tickIcon}" style="width: 11px; height: 11px; color: ${tickColor}; display: inline-block;"></i>
@@ -220,9 +220,9 @@ function renderActiveChats() {
         messagesHtml += `
           <div class="chat-msg-row ${isMe ? 'outgoing' : 'incoming'}">
             ${!isMe ? `<img src="${getAvatarSrc(contact.avatar)}" alt="${contact.name}" class="chat-msg-avatar" onclick="viewUserProfile('${contact.name}')" style="cursor:pointer;">` : ''}
-            <div class="chat-msg-bubble-wrap" style="display: flex; flex-direction: column; width: max-content; max-width: 75%; align-items: ${isMe ? 'flex-end' : 'flex-start'};">
+            <div class="chat-msg-bubble-wrap" style="display: flex; flex-direction: column; max-width: 75%; align-items: ${isMe ? 'flex-end' : 'flex-start'};">
               <div class="chat-msg-bubble-container" style="position: relative; width: fit-content; max-width: 100%;">
-                <div class="chat-msg-bubble" style="cursor:pointer; padding: 8px 12px; width: fit-content; max-width: 100%; word-break: break-word;" onclick="window.toggleReactionTray('${msg.id}', event)">
+                <div class="chat-msg-bubble" style="cursor:pointer; padding: 8px 12px; width: fit-content; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word;" onclick="window.toggleReactionTray('${msg.id}', event)">
                   ${contentHtml}
                 </div>
                 ${msg.reaction ? `<div class="chat-bubble-reaction" onclick="window.toggleReactionTray('${msg.id}', event)" style="position: absolute; bottom: -8px; ${isMe ? 'left: 8px;' : 'right: 8px;'}; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); z-index: 2;">${msg.reaction}</div>` : ''}

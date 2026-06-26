@@ -180,7 +180,7 @@ function updateSidebarProfileWidget() {
       mobilePopoutAuthBtn.className = 'btn btn-secondary';
     }
     if (mobilePopoutPremiumBtn) {
-      mobilePopoutPremiumBtn.style.display = State.currentUser.isPremium ? 'none' : 'flex';
+      mobilePopoutPremiumBtn.style.display = 'none';
     }
   } else {
     if (mobileTopAvatar) mobileTopAvatar.src = getAvatarSrc('avatar_guest');
@@ -208,6 +208,15 @@ function updateSidebarProfileWidget() {
   }
   if (mobileAdminTab) {
     mobileAdminTab.style.display = isAdmin ? 'flex' : 'none';
+  }
+  
+  const messagesTab = document.querySelector('.app-sidebar .nav-item[data-tab="messages"]');
+  const mobileMessagesTab = document.querySelector('.mobile-drawer-item[data-tab="messages"]');
+  if (messagesTab) {
+    messagesTab.style.display = State.isSignedIn ? 'flex' : 'none';
+  }
+  if (mobileMessagesTab) {
+    mobileMessagesTab.style.display = State.isSignedIn ? 'flex' : 'none';
   }
   
   if (!isAdmin && State.activeTab === 'admin') {
@@ -256,9 +265,11 @@ function getUserRoleMarkup(username) {
     baseMarkup = `<span class="role-name-nomad" style="color: var(--text-main); font-weight: 500;">${cleanName}</span><span class="role-badge-nomad" style="background: rgba(120, 120, 120, 0.1); color: var(--muted-text); border: 1px solid rgba(120, 120, 120, 0.2); border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 500; margin-left: 4px; vertical-align: middle;">NOMAD</span>`;
   }
 
+  /* Premium verified badge is hidden for initial launch
   if (user && user.isPremium) {
     baseMarkup += `<span class="role-badge-premium" style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid #10B981; border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 700; margin-left: 4px; vertical-align: middle; display: inline-flex; align-items: center; gap: 2px;">✔ VERIFIED</span>`;
   }
+  */
 
   return baseMarkup;
 }
@@ -305,6 +316,9 @@ function parseMarkdownToHtml(text) {
   
   // Italic: *text*
   escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  
+  // Hashtags: #moab -> clickable search trigger
+  escaped = escaped.replace(/#(\w+)/g, '<span class="hashtag" style="color:var(--accent-green); cursor:pointer; font-weight:600;" onclick="window.triggerHashtagSearch(\'#$1\')">#$1</span>');
   
   // Inline Code: `code`
   escaped = escaped.replace(/`(.*?)`/g, '<code>$1</code>');
@@ -394,3 +408,12 @@ function markNotificationRead(id) {
     renderNotifications();
   }
 }
+
+window.triggerHashtagSearch = function(tag) {
+  const searchInput = document.getElementById('global-search');
+  if (searchInput) {
+    searchInput.value = tag;
+    State.searchQuery = tag.toLowerCase();
+    renderCurrentTab();
+  }
+};

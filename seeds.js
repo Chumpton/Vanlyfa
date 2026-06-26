@@ -1383,12 +1383,11 @@ const ClusterEngine = {
     );
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
     if (isMobile) {
-      if (zoom >= 13) return filtered;
-      if (zoom >= 11) return this.clusterByGrid(filtered, 0.08);
-      if (zoom >= 9) return this.clusterByGrid(filtered, 0.25);
-      if (zoom >= 7) return this.clusterByGrid(filtered, 0.7);
-      if (zoom >= 5) return this.clusterByGrid(filtered, 2.0);
-      return this.clusterByGrid(filtered, 5.0);
+      if (zoom >= 11) return filtered;
+      if (zoom >= 9) return this.clusterByGrid(filtered, 0.08);
+      if (zoom >= 7) return this.clusterByGrid(filtered, 0.25);
+      if (zoom >= 5) return this.clusterByGrid(filtered, 0.7);
+      return this.clusterByGrid(filtered, 2.0);
     } else {
       if (zoom >= 13) return filtered;
       if (zoom >= 11) return this.clusterByGrid(filtered, 0.05);

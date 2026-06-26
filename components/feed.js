@@ -8,9 +8,9 @@ function renderSocialFeed(containerId, isSidebar = false) {
   
   const query = State.searchQuery;
   
-  const selectedArea = document.getElementById('feed-filter-area') ? document.getElementById('feed-filter-area').value : 'all';
-  const selectedSort = document.getElementById('feed-filter-sort') ? document.getElementById('feed-filter-sort').value : 'trending';
-  const selectedSaved = document.getElementById('feed-filter-saved') ? document.getElementById('feed-filter-saved').value : 'all';
+  const selectedArea = State.feedFilterArea || 'all';
+  const selectedSort = State.feedFilterSort || 'trending';
+  const selectedSaved = State.feedFilterSaved || 'all';
 
   // Cache check
   if (!State._cachedFeeds) {
@@ -163,7 +163,7 @@ function renderSocialFeed(containerId, isSidebar = false) {
     return false;
   }
 
-  // 2. Filter by search query, area, and saves
+  // 2. Filter by search query, area, saves, and blocked users
   let filtered = combinedItems.filter(p => {
     const queryMatch = p.content.toLowerCase().includes(query.toLowerCase()) || 
                        p.author.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -180,16 +180,26 @@ function renderSocialFeed(containerId, isSidebar = false) {
       return false;
     }
 
+    // Blocked Users filter
+    if (State.currentUser && State.currentUser.blockedUsers && State.currentUser.blockedUsers.includes(p.author.name)) {
+      return false;
+    }
+
     // Area filter
     if (!postMatchesArea(p, selectedArea)) {
       return false;
     }
 
-    // Saved filter
+    // Saved/Following filter
     if (selectedSaved === 'saved') {
       if (!State.currentUser || !State.currentUser.savedPostIds) return false;
       const isSaved = State.currentUser.savedPostIds.includes(p.rawId);
       if (!isSaved) return false;
+    } else if (selectedSaved === 'following') {
+      if (!State.isSignedIn) return false;
+      const userObj = State.users.find(u => u.name === State.currentUser.name);
+      const friends = userObj ? (userObj.friends || []) : [];
+      if (!friends.includes(p.author.name)) return false;
     }
     
     return true;
@@ -197,6 +207,38 @@ function renderSocialFeed(containerId, isSidebar = false) {
   
   // 3. Sort Feed
   if (selectedSort === 'trending') {
+    // Sense user interests
+    const userInterests = new Set(['#vanlife', '#camper', '#roadtrip']);
+    if (State.isSignedIn) {
+      if (State.currentUser.bio) {
+        const bioWords = State.currentUser.bio.toLowerCase().match(/\b\w+\b/g) || [];
+        bioWords.forEach(w => {
+          if (w.length > 3) userInterests.add('#' + w);
+        });
+      }
+      if (State.posts) {
+        State.posts.forEach(postItem => {
+          if (postItem.author && postItem.author.name === State.currentUser.name) {
+            const tags = postItem.content.match(/#\w+/g) || [];
+            tags.forEach(tag => userInterests.add(tag.toLowerCase()));
+          }
+        });
+      }
+    }
+
+    // Sense community trending tags
+    const hashtagCounts = {};
+    if (State.posts) {
+      State.posts.forEach(postItem => {
+        const tags = postItem.content.match(/#\w+/g) || [];
+        tags.forEach(tag => {
+          const lowerTag = tag.toLowerCase();
+          hashtagCounts[lowerTag] = (hashtagCounts[lowerTag] || 0) + 1;
+        });
+      });
+    }
+    const trendingTags = Object.keys(hashtagCounts).filter(tag => hashtagCounts[tag] >= 2);
+
     filtered.forEach(p => {
       let recencyBoost = 0;
       const parts = p.id.split('-');
@@ -205,7 +247,17 @@ function renderSocialFeed(containerId, isSidebar = false) {
         const ageInHours = (Date.now() - ts) / (1000 * 60 * 60);
         recencyBoost = Math.max(0, 50 - ageInHours);
       }
-      p._engagementScore = (p.likes * 3) + (p.saves * 5) + ((p.comments ? p.comments.length : 0) * 4) + (p.views * 0.5) + recencyBoost;
+      
+      // Hashtag Boost
+      let hashtagBoost = 0;
+      const postTags = p.content.match(/#\w+/g) || [];
+      postTags.forEach(tag => {
+        const lowerTag = tag.toLowerCase();
+        if (userInterests.has(lowerTag)) hashtagBoost += 15;
+        if (trendingTags.includes(lowerTag)) hashtagBoost += 5;
+      });
+
+      p._engagementScore = (p.likes * 3) + (p.saves * 5) + ((p.comments ? p.comments.length : 0) * 4) + (p.views * 0.5) + recencyBoost + hashtagBoost;
     });
     filtered.sort((a, b) => b._engagementScore - a._engagementScore);
   } else {
@@ -232,17 +284,27 @@ function renderSocialFeed(containerId, isSidebar = false) {
   let feedHtml = '';
   
   displayItems.forEach(post => {
-    // Views tracking (once per session)
-    if (post.type === 'post' && !isSidebar) {
+    // Views tracking (once per session) for all feed types (posts, marketplace, meetups, spots)
+    if (!isSidebar) {
       if (!State.viewedPostsInSession) {
         State.viewedPostsInSession = new Set();
       }
-      if (!State.viewedPostsInSession.has(post.rawId)) {
-        State.viewedPostsInSession.add(post.rawId);
-        const rawPost = State.posts.find(p => p.id === post.rawId);
-        if (rawPost) {
-          rawPost.views = (rawPost.views || 0) + 1;
-          post.views = rawPost.views; // Sync current rendering copy
+      if (!State.viewedPostsInSession.has(post.id)) {
+        State.viewedPostsInSession.add(post.id);
+        let rawItem = null;
+        if (post.type === 'post') {
+          rawItem = State.posts.find(p => p.id === post.rawId);
+        } else if (post.type === 'marketplace') {
+          rawItem = State.marketplace.find(m => m.id === post.rawId);
+        } else if (post.type === 'meetup') {
+          rawItem = State.meetups.find(mt => mt.id === post.rawId);
+        } else if (post.type === 'spot') {
+          rawItem = State.spots.find(s => s.id === post.rawId);
+        }
+        
+        if (rawItem) {
+          rawItem.views = (rawItem.views || 0) + 1;
+          post.views = rawItem.views; // Sync current rendering copy
           saveStateToStorage();
         }
       }
@@ -271,32 +333,58 @@ function renderSocialFeed(containerId, isSidebar = false) {
       modTagMarkup = `<span style="background:rgba(239,68,68,0.12); color:#ef4444; border: 1px solid rgba(239,68,68,0.25); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; margin-left:6px; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="shield-close" style="width:10px; height:10px;"></i> Flagged / Rejected</span>`;
     }
 
-    // comments markup
+    // comments markup (showing 1-2 visible inline, expand/collapse enabled)
     let commentsMarkup = '';
     if (post.comments && post.comments.length > 0) {
-      commentsMarkup = `
-        <div class="thread-replies-list" style="margin-top:10px; border-left: 2px solid var(--border-color); padding-left:12px; display:flex; flex-direction:column; gap:8px;">
-          ${post.comments.map((c, index) => {
-            const commenter = State.users ? State.users.find(u => u.name === c.user) : null;
-            const avatar = commenter ? commenter.avatar : 'avatar_bob';
-            return `
-              <div class="thread-reply-item" style="display:flex; gap:8px; align-items:flex-start; font-size:12px;">
-                <img src="${getAvatarSrc(avatar)}" alt="${c.user}" class="reply-avatar" style="width:24px; height:24px; border-radius:50%; object-fit:cover; cursor:pointer;" onclick="viewUserProfile('${c.user}')">
-                <div class="reply-content-box" style="background:var(--bg-sand); padding:6px 10px; border-radius:var(--radius-sm); flex-grow:1; text-align:left;">
-                  <div class="reply-user-meta" style="display:flex; justify-content:space-between; margin-bottom:2px;">
-                    <span class="reply-username" style="font-weight:700; color:var(--text-charcoal); cursor:pointer;" onclick="viewUserProfile('${c.user}')">${getUserRoleMarkup(c.user)}</span>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                      <span class="reply-time" style="font-size:10px; color:var(--muted-text);">Reply</span>
-                      <button onclick="window.flagItem('comment', '${post.id}', ${index})" title="Flag/Report" style="background:none; border:none; padding:0; color:#ef4444; cursor:pointer; display:inline-flex; align-items:center;"><i data-lucide="flag" style="width:11px; height:11px;"></i></button>
-                    </div>
-                  </div>
-                  <p class="reply-text" style="color:var(--text-main); margin:0; line-height:1.3;">${parseMarkdownToHtml(c.text)}</p>
+      const isExpanded = State._expandedPostComments && State._expandedPostComments.has(post.id);
+      let renderedCount = 0;
+      const totalVisible = post.comments.filter(c => !(State.currentUser && State.currentUser.blockedUsers && State.currentUser.blockedUsers.includes(c.user))).length;
+      
+      const commentItemsHtml = post.comments.map((c, index) => {
+        const isBlocked = State.currentUser && State.currentUser.blockedUsers && State.currentUser.blockedUsers.includes(c.user);
+        if (isBlocked) return '';
+        
+        renderedCount++;
+        if (!isExpanded && renderedCount > 2) return '';
+        
+        const commenter = State.users ? State.users.find(u => u.name === c.user) : null;
+        const avatar = commenter ? commenter.avatar : 'avatar_bob';
+        return `
+          <div class="thread-reply-item" style="display:flex; gap:8px; align-items:flex-start; font-size:12px;">
+            <img src="${getAvatarSrc(avatar)}" alt="${c.user}" class="reply-avatar" style="width:24px; height:24px; border-radius:50%; object-fit:cover; cursor:pointer;" onclick="viewUserProfile('${c.user}')">
+            <div class="reply-content-box" style="background:var(--bg-sand); padding:6px 10px; border-radius:var(--radius-sm); flex-grow:1; text-align:left;">
+              <div class="reply-user-meta" style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                <span class="reply-username" style="font-weight:700; color:var(--text-charcoal); cursor:pointer;" onclick="viewUserProfile('${c.user}')">${getUserRoleMarkup(c.user)}</span>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <button onclick="window.replyToComment('${post.id}', '${c.user}')" class="reply-time-btn" style="background:none; border:none; padding:0; font-size:10px; color:var(--muted-text); cursor:pointer; font-weight:700; display:inline-flex; align-items:center;">Reply</button>
+                  ${c.pendingSync ? '<span class="sync-spinner" title="Syncing with database..."></span>' : ''}
+                  <button onclick="window.flagItem('comment', '${post.id}', ${index})" title="Flag/Report" style="background:none; border:none; padding:0; color:#ef4444; cursor:pointer; display:inline-flex; align-items:center;"><i data-lucide="flag" style="width:11px; height:11px;"></i></button>
                 </div>
               </div>
-            `;
-          }).join('')}
-        </div>
-      `;
+              <p class="reply-text" style="color:var(--text-main); margin:0; line-height:1.3;">${parseMarkdownToHtml(c.text)}</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (totalVisible > 0) {
+        let threadLink = '';
+        if (totalVisible > 2) {
+          threadLink = `
+            <button class="btn-view-thread" onclick="window.toggleExpandComments('${post.id}')" style="background:none; border:none; color:var(--accent-green); font-size:11px; font-weight:700; cursor:pointer; padding:6px 0; display:flex; align-items:center; gap:4px; margin-top: 4px;">
+              <i data-lucide="${isExpanded ? 'chevron-up' : 'messages-square'}" style="width:14px; height:14px;"></i>
+              <span>${isExpanded ? 'Collapse comments' : `View Full Thread (${totalVisible} replies)`}</span>
+            </button>
+          `;
+        }
+
+        commentsMarkup = `
+          <div class="thread-replies-list" style="margin-top:10px; border-left: 2px solid var(--border-color); padding-left:12px; display:flex; flex-direction:column; gap:8px;">
+            ${commentItemsHtml}
+            ${threadLink}
+          </div>
+        `;
+      }
     }
     
     const isGuest = !State.isSignedIn;
@@ -334,6 +422,7 @@ function renderSocialFeed(containerId, isSidebar = false) {
                 <span class="thread-author-name" onclick="viewUserProfile('${post.author.name}')" style="font-weight:700; color:var(--text-charcoal); cursor:pointer;">${getUserRoleMarkup(post.author.name)}</span>
                 <span class="thread-dot" style="color:var(--muted-text);">•</span>
                 <span class="thread-time" style="color:var(--muted-text); font-size:11px;">${post.time}</span>
+                ${post.pendingSync ? '<span class="sync-spinner" title="Syncing with database..."></span>' : ''}
                 ${typeBadgeMarkup}
                 ${modTagMarkup}
                 ${clickGoMarkup}
@@ -366,9 +455,19 @@ function renderSocialFeed(containerId, isSidebar = false) {
                 <i data-lucide="share" style="width:15px; height:15px;"></i>
                 <span>${post.shares || 0}</span>
               </button>
-              <button class="thread-action-icon-btn" onclick="window.flagItem('post', '${post.id}')" title="Flag/Report" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer; margin-left: auto;">
-                <i data-lucide="flag" style="width:15px; height:15px; color:#ef4444;"></i>
-              </button>
+              <div style="position: relative; margin-left: auto; display: flex; align-items: center;">
+                <button class="thread-action-icon-btn feed-more-btn" onclick="window.toggleFeedPostMenu(event, '${post.id}')" title="More Options" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer;">
+                  <i data-lucide="more-vertical" style="width:15px; height:15px;"></i>
+                </button>
+                <div id="post-menu-${post.id}" class="hidden" style="position: absolute; right: 0; bottom: 26px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1015; min-width: 120px;">
+                  <button onclick="window.flagItem('post', '${post.id}'); window.toggleFeedPostMenu(event, '${post.id}')" style="display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; font-size: 11px; color: var(--text-main); cursor: pointer; border-bottom: 1px solid var(--border-color); font-weight:600;">
+                    <i data-lucide="flag" style="width:12px; height:12px; color:#ef4444;"></i> Report Post
+                  </button>
+                  <button onclick="window.blockUser('${post.author.name}'); window.toggleFeedPostMenu(event, '${post.id}')" style="display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; font-size: 11px; color: var(--text-main); cursor: pointer; font-weight:600;">
+                    <i data-lucide="slash" style="width:12px; height:12px; color:#ef4444;"></i> Block User
+                  </button>
+                </div>
+              </div>
             </div>
             
             ${commentsMarkup}
@@ -468,3 +567,51 @@ function toggleFeedShelf(shelf) {
     }
   }
 }
+
+window.toggleExpandComments = function(postId) {
+  if (!State._expandedPostComments) {
+    State._expandedPostComments = new Set();
+  }
+  if (State._expandedPostComments.has(postId)) {
+    State._expandedPostComments.delete(postId);
+  } else {
+    State._expandedPostComments.add(postId);
+  }
+  State._cachedFeeds = {};
+  renderDashboardFeed();
+  renderFeedTabPosts();
+};
+
+window.toggleFeedPostMenu = function(event, postId) {
+  event.stopPropagation();
+  const menu = document.getElementById(`post-menu-${postId}`);
+  if (menu) {
+    const isHidden = menu.classList.contains('hidden');
+    document.querySelectorAll('[id^="post-menu-"]').forEach(m => {
+      m.classList.add('hidden');
+    });
+    if (isHidden) {
+      menu.classList.remove('hidden');
+    }
+  }
+};
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('[id^="post-menu-"]').forEach(m => {
+    m.classList.add('hidden');
+  });
+});
+
+window.replyToComment = function(postId, username) {
+  if (!State.isSignedIn) {
+    showToast("Please sign in to reply.", "warning");
+    return;
+  }
+  const input = document.getElementById(`comment-input-${postId}`);
+  if (input) {
+    input.focus();
+    const userObj = State.users.find(u => u.name === username);
+    const handle = userObj ? userObj.handle : `@${username.toLowerCase().replace(/\s+/g, '_')}`;
+    input.value = `${handle} ${input.value}`;
+  }
+};
