@@ -834,8 +834,7 @@ function setupModalHandlers() {
   if (tribePane) {
     tribePane.addEventListener('focusin', (e) => {
       if (window.innerWidth <= 768 && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
-        const detailView = document.getElementById('tribe-detail-view');
-        if (detailView) detailView.classList.add('chat-focused');
+        tribePane.classList.add('chat-focused');
         const topBar = document.querySelector('.top-bar');
         if (topBar) topBar.classList.add('hide-top-bar');
         const sidebar = document.querySelector('.app-sidebar');
@@ -850,8 +849,7 @@ function setupModalHandlers() {
     });
     tribePane.addEventListener('focusout', (e) => {
       if (window.innerWidth <= 768 && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
-        const detailView = document.getElementById('tribe-detail-view');
-        if (detailView) detailView.classList.remove('chat-focused');
+        tribePane.classList.remove('chat-focused');
         const topBar = document.querySelector('.top-bar');
         if (topBar) topBar.classList.remove('hide-top-bar');
         const sidebar = document.querySelector('.app-sidebar');

@@ -391,9 +391,12 @@ function submitComment(e, postId) {
         pendingSync: true
       };
       target.comments.push(newComment);
+      if (!State._expandedPostComments) State._expandedPostComments = new Set();
+      State._expandedPostComments.add(postId);
       
-      // Simulated notification to target author
-      if (target.author && target.author.name !== State.currentUser.name) {
+      // Simulated notification to target author/host/seller safely
+      const targetAuthorName = target.author ? target.author.name : (target.host ? target.host.name : (target.seller ? (typeof target.seller === 'object' ? target.seller.name : target.seller) : null));
+      if (targetAuthorName && targetAuthorName !== State.currentUser.name) {
         if (!State.notifications) State.notifications = [];
         State.notifications.unshift({
           id: `notif-${Date.now()}`,

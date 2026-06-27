@@ -4175,27 +4175,59 @@ code {
   max-height: 60vh !important;
 }
 @media (max-width: 768px) {
+  #pane-tribes {
+    display: flex !important;
+    flex-direction: column !important;
+    height: calc(100vh - 128px) !important;
+    height: calc(100dvh - 128px) !important;
+    overflow-y: hidden !important;
+    padding: 8px !important;
+  }
+  
+  #pane-tribes.chat-focused {
+    height: 100vh !important;
+    height: 100dvh !important;
+    padding: 0 !important;
+  }
+  
+  #tribe-detail-view {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    flex-grow: 1 !important;
+  }
+  
   .tribe-chat-box {
-    height: calc(100vh - 240px) !important;
-    height: calc(100dvh - 240px) !important;
-    min-height: 200px !important;
+    flex-grow: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    height: 100% !important;
     max-height: none !important;
   }
   
-  #tribe-detail-view.chat-focused .tribe-hub-header-card {
+  #tribe-pane-chat {
+    flex-grow: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    height: 100% !important;
+  }
+  
+  #pane-tribes.chat-focused .tribe-hub-header-card {
     display: none !important;
   }
-  #tribe-detail-view.chat-focused .tribe-hub-tabs {
+  #pane-tribes.chat-focused .tribe-hub-tabs {
     display: none !important;
   }
-  #tribe-detail-view.chat-focused #tribe-pane-chat {
+  #pane-tribes.chat-focused #tribe-pane-chat {
     height: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
   }
-  #tribe-detail-view.chat-focused .tribe-chat-box {
-    height: calc(100vh - 32px) !important;
-    height: calc(100dvh - 32px) !important;
+  #pane-tribes.chat-focused .tribe-chat-box {
+    height: 100% !important;
     border: none !important;
     border-radius: 0 !important;
   }

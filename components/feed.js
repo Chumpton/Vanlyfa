@@ -461,7 +461,7 @@ function renderSocialFeed(containerId, isSidebar = false) {
                 <i data-lucide="heart" style="width:18px; height:18px; color:${post.likedByUser ? '#ef4444' : 'inherit'}; fill:${post.likedByUser ? '#ef4444' : 'none'};"></i>
                 <span>${post.likes || 0}</span>
               </button>
-              <button class="thread-action-icon-btn" onclick="window.openPostDetailModal('${post.id}')" title="Comment" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
+              <button class="thread-action-icon-btn" onclick="window.toggleRepliesAndFocus('${post.id}')" title="Comment" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
                 <i data-lucide="message-circle" style="width:18px; height:18px;"></i>
                 <span>${post.comments ? post.comments.length : 0}</span>
               </button>
@@ -479,7 +479,7 @@ function renderSocialFeed(containerId, isSidebar = false) {
         ${commentsMarkup}
             
             <!-- Reply form -->
-            <form class="thread-reply-form" onsubmit="submitComment(event, '${post.id}')" style="display:flex; gap:8px; margin-top:10px; align-items:center;">
+            <form class="thread-reply-form" onsubmit="window.submitComment(event, '${post.id}')" style="display:flex; gap:8px; margin-top:10px; align-items:center;">
               <img src="${getAvatarSrc(avatarToUse)}" alt="Me" class="thread-reply-avatar" style="width:24px; height:24px; border-radius:50%; object-fit:cover;">
               <div class="thread-reply-input-wrapper" style="display:flex; border:1px solid var(--border-color); border-radius:16px; padding:4px 8px; flex-grow:1; background:var(--bg-sand); align-items:center;">
                 <input type="text" placeholder="${placeholderText}" id="comment-input-${post.id}" class="thread-reply-input" ${disabledAttr} style="border:none; background:none; flex-grow:1; font-size:12px; color:var(--text-main); outline:none;">
@@ -800,5 +800,20 @@ window.toggleRepost = function(postId) {
     renderDashboardFeed();
     renderFeedTabPosts();
   }
+};
+
+window.toggleRepliesAndFocus = function(postId) {
+  if (!State._expandedPostComments) State._expandedPostComments = new Set();
+  if (State._expandedPostComments.has(postId)) {
+    State._expandedPostComments.delete(postId);
+  } else {
+    State._expandedPostComments.add(postId);
+  }
+  renderDashboardFeed();
+  renderFeedTabPosts();
+  setTimeout(() => {
+    const input = document.getElementById(`comment-input-${postId}`);
+    if (input) input.focus();
+  }, 100);
 };
 
