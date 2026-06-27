@@ -2116,8 +2116,8 @@ body {
   }
   
   .app-sidebar .nav-item i, .app-sidebar .nav-item svg {
-    width: 16px !important;
-    height: 16px !important;
+    width: 22px !important;
+    height: 22px !important;
   }
   
   .app-sidebar .nav-item:hover {
@@ -4329,7 +4329,7 @@ body.dark-mode .leaflet-tile {
 
   /* Bottom rack: Hide desktop-only items and show More button */
   .app-sidebar .nav-item[data-tab="tribes"],
-  .app-sidebar .nav-item[data-tab="forum"],
+  .app-sidebar .nav-item[data-tab="meetups"],
   .app-sidebar .nav-item[data-tab="jobs"],
   .app-sidebar .nav-item[data-tab="messages"],
   .app-sidebar .nav-item[data-tab="profile"] {
