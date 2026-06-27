@@ -1039,6 +1039,8 @@ body {
 .section-title-wrap p {
   color: var(--muted-text);
   font-size: 14px;
+  margin-top: 8px;
+  line-height: 1.6;
 }
 
 .filter-row {
@@ -1556,7 +1558,7 @@ body {
   text-align: left;
   font-size: 13px;
   font-weight: 600;
-  border-radius: var(--radius-md);
+  border-radius: 9999px; /* Capsule pill style */
   color: var(--muted-text);
   cursor: pointer;
   transition: var(--transition-fast);
@@ -1575,8 +1577,9 @@ body {
 }
 
 .forum-cat-btn.active {
-  background-color: var(--accent-green-light);
-  color: var(--accent-green);
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  color: var(--accent-green) !important;
+  font-weight: 700;
 }
 
 .forum-thread-list {
@@ -1962,8 +1965,10 @@ body {
   
   .forum-sidebar {
     flex-direction: row;
-    overflow-x: auto;
-    padding-bottom: 8px;
+    flex-wrap: wrap; /* 2-liner bubble wrap */
+    gap: 8px;
+    overflow-x: visible;
+    padding-bottom: 0;
   }
   
   .forum-cat-btn {
@@ -2083,6 +2088,7 @@ body {
     justify-content: space-around;
     border-right: none;
     border-top: 1px solid var(--border-color);
+    box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.05); /* Premium separation shadow */
     z-index: 1000;
     background-color: var(--card-bg);
     transform: none !important;
@@ -2132,6 +2138,8 @@ body {
   .app-sidebar .nav-item.active i, .app-sidebar .nav-item.active svg {
     color: var(--accent-green) !important;
     stroke: var(--accent-green) !important;
+    fill: rgba(16, 185, 129, 0.2) !important; /* Premium active filled state */
+    stroke-width: 2.5px !important;
   }
   
   .app-sidebar .nav-item span {
@@ -2554,6 +2562,10 @@ body {
     overflow-y: auto !important;
     padding: 16px !important;
     background-color: var(--card-bg) !important;
+  }
+  
+  .chat-msg-row {
+    max-width: 90% !important;
   }
 
   .chat-header {
@@ -4278,17 +4290,39 @@ body.dark-mode .leaflet-tile {
 }
 
 .forum-thread-card {
-  border-radius: var(--radius-md) !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  border-radius: var(--radius-lg) !important;
   border: 1px solid var(--border-color) !important;
   background-color: var(--card-bg) !important;
   padding: 16px 20px !important;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast) !important;
+  gap: 16px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .forum-thread-card:hover {
   transform: translateY(-2px) !important;
   box-shadow: var(--shadow-md) !important;
   border-color: var(--accent-green) !important;
+}
+
+@media (max-width: 600px) {
+  .forum-thread-card {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 12px 14px !important;
+    gap: 12px !important;
+  }
+  .forum-thread-card > div:last-child {
+    width: 100% !important;
+    justify-content: space-between !important;
+    border-top: 1px solid var(--border-light) !important;
+    padding-top: 10px !important;
+    margin-top: 4px !important;
+  }
 }
 
 /* Navigation bell popover styling */
@@ -4328,7 +4362,6 @@ body.dark-mode .leaflet-tile {
   }
 
   /* Bottom rack: Hide desktop-only items and show More button */
-  .app-sidebar .nav-item[data-tab="tribes"],
   .app-sidebar .nav-item[data-tab="meetups"],
   .app-sidebar .nav-item[data-tab="jobs"],
   .app-sidebar .nav-item[data-tab="messages"],
@@ -4343,8 +4376,36 @@ body.dark-mode .leaflet-tile {
     flex-direction: column;
     cursor: pointer;
   }
+
+  /* Forum create button mobile FAB */
+  #forum-create-btn {
+    position: fixed !important;
+    bottom: 80px !important;
+    right: 20px !important;
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 50% !important;
+    box-shadow: var(--shadow-lg) !important;
+    z-index: 1000 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+  #forum-create-btn span {
+    display: none !important;
+  }
+  #forum-create-btn i, #forum-create-btn svg {
+    width: 24px !important;
+    height: 24px !important;
+    margin: 0 !important;
+  }
 }
 
-
-
-
+/* Forum create button desktop alignment */
+#forum-create-btn {
+  height: 38px;
+  padding: 8px 16px;
+  font-size: 13px;
+  align-self: center;
+}

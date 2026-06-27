@@ -221,7 +221,7 @@ function renderActiveChats() {
         messagesHtml += `
           <div class="chat-msg-row ${isMe ? 'outgoing' : 'incoming'}">
             ${!isMe ? `<img src="${getAvatarSrc(contact.avatar)}" alt="${contact.name}" class="chat-msg-avatar" onclick="viewUserProfile('${contact.name}')" style="cursor:pointer;">` : ''}
-            <div class="chat-msg-bubble-wrap" style="display: flex; flex-direction: column; max-width: 75%; align-items: ${isMe ? 'flex-end' : 'flex-start'};">
+            <div class="chat-msg-bubble-wrap" style="display: flex; flex-direction: column; max-width: 100%; align-items: ${isMe ? 'flex-end' : 'flex-start'};">
               <div class="chat-msg-bubble-container" style="position: relative; width: fit-content; max-width: 100%;">
                 <div class="chat-msg-bubble" style="cursor:pointer; padding: 8px 12px; width: fit-content; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word;" onclick="window.toggleReactionTray('${msg.id}', event)">
                   ${contentHtml}

@@ -1346,7 +1346,7 @@ function saveNewPost() {
     likes: 0,
     likedByUser: false,
     comments: [],
-    status: State.currentUser.role === 'admin' ? 'approved' : 'pending',
+    status: 'approved',
     lat: loc && loc.status === 'present' ? loc.lat : null,
     lng: loc && loc.status === 'present' ? loc.lng : null
   };
@@ -1373,7 +1373,7 @@ function saveNewPost() {
   window.simulateDatabaseWrite(newPost, 'post', sql, rls, () => {
     saveStateToStorage();
     renderDashboardFeed();
-    const successMsg = newPost.status === 'approved' ? "Update shared with community feed!" : "Post submitted! Awaiting admin approval.";
+    const successMsg = "Update shared with community feed!";
     showToast(successMsg, "success");
   });
 }
@@ -1752,7 +1752,7 @@ function saveNewFeedTabPost() {
     }
   }
   
-  const status = State.currentUser.role === 'admin' ? 'approved' : 'pending';
+  const status = 'approved';
   const loc = getCachedLocation();
   
   const newPost = {
@@ -1793,7 +1793,7 @@ function saveNewFeedTabPost() {
     State._cachedFeeds = {};
     renderDashboardFeed();
     renderFeedTabPosts();
-    const successMsg = status === 'approved' ? "Update shared with community feed!" : "Post submitted! Awaiting admin approval.";
+    const successMsg = "Update shared with community feed!";
     showToast(successMsg, "success");
   });
 }
