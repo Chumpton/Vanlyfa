@@ -2327,6 +2327,13 @@ body {
     height: calc(100vh - 64px);
     height: calc(100dvh - 64px);
     margin-bottom: 64px; /* Offset bottom navigation bar height */
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .app-sidebar.hide-bottom-bar ~ .app-content {
+    height: 100vh !important;
+    height: 100dvh !important;
+    margin-bottom: 0 !important;
   }
   
   .top-bar {
@@ -2404,6 +2411,12 @@ body {
     overflow-y: auto;
     height: calc(100vh - 64px);
     height: calc(100dvh - 64px);
+    transition: opacity 0.15s linear, top 0.3s cubic-bezier(0.4, 0, 0.2, 1), height 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  
+  .top-bar.hide-top-bar ~ .tab-content-pane {
+    top: 0 !important;
+    height: 100% !important;
   }
   
   .meetup-card {
@@ -4408,4 +4421,22 @@ body.dark-mode .leaflet-tile {
   padding: 8px 16px;
   font-size: 13px;
   align-self: center;
+}
+
+/* Specific overrides for More Options bubble to prevent inheriting navigation item styling */
+.more-options-bubble .more-bubble-item span {
+  font-size: 22px !important; /* Premium readable size, no wrapping */
+  font-weight: 700 !important;
+  color: var(--text-main) !important;
+  text-align: center !important;
+  display: block !important;
+  line-height: 1.2 !important;
+  padding-right: 26px !important;
+  box-sizing: border-box !important;
+}
+
+.more-options-bubble .more-bubble-item i,
+.more-options-bubble .more-bubble-item svg {
+  width: 26px !important;
+  height: 26px !important;
 }
