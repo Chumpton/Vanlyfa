@@ -318,19 +318,19 @@ function renderSocialFeed(containerId, isSidebar = false) {
     // Type badges
     let typeBadgeMarkup = '';
     if (post.type === 'marketplace') {
-      typeBadgeMarkup = `<span style="background:rgba(168,85,247,0.12); color:#a855f7; border: 1px solid rgba(168,85,247,0.2); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="shopping-bag" style="width:10px; height:10px;"></i> Marketplace</span>`;
+      typeBadgeMarkup = `<span style="background:rgba(168,85,247,0.12); color:#a855f7; border: 1px solid rgba(168,85,247,0.2); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="shopping-bag" style="width:10px; height:10px;"></i> market</span>`;
     } else if (post.type === 'meetup') {
-      typeBadgeMarkup = `<span style="background:rgba(239,68,68,0.12); color:#ef4444; border: 1px solid rgba(239,68,68,0.2); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="flame" style="width:10px; height:10px;"></i> Caravan Meetup</span>`;
+      typeBadgeMarkup = `<span style="background:rgba(239,68,68,0.12); color:#ef4444; border: 1px solid rgba(239,68,68,0.2); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="flame" style="width:10px; height:10px;"></i> meetup</span>`;
     } else if (post.type === 'spot') {
-      typeBadgeMarkup = `<span style="background:rgba(59,122,87,0.12); color:var(--accent-green); border: 1px solid var(--accent-green-light); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="map-pin" style="width:10px; height:10px;"></i> Vouched Spot</span>`;
+      typeBadgeMarkup = `<span style="background:rgba(59,122,87,0.12); color:var(--accent-green); border: 1px solid var(--accent-green-light); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="map-pin" style="width:10px; height:10px;"></i> vouched</span>`;
     }
     
     // Moderation tag
     let modTagMarkup = '';
     if (post.status === 'pending') {
-      modTagMarkup = `<span style="background:rgba(245,158,11,0.12); color:#f59e0b; border: 1px solid rgba(245,158,11,0.25); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; margin-left:6px; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="shield-alert" style="width:10px; height:10px;"></i> Pending Admin Approval</span>`;
+      modTagMarkup = `<span style="background:rgba(245,158,11,0.12); color:#f59e0b; border: 1px solid rgba(245,158,11,0.25); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; margin-left:6px; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="shield-alert" style="width:10px; height:10px;"></i> pending</span>`;
     } else if (post.status === 'rejected') {
-      modTagMarkup = `<span style="background:rgba(239,68,68,0.12); color:#ef4444; border: 1px solid rgba(239,68,68,0.25); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; margin-left:6px; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="shield-close" style="width:10px; height:10px;"></i> Flagged / Rejected</span>`;
+      modTagMarkup = `<span style="background:rgba(239,68,68,0.12); color:#ef4444; border: 1px solid rgba(239,68,68,0.25); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; margin-left:6px; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="shield-close" style="width:10px; height:10px;"></i> rejected</span>`;
     }
 
     // comments markup (showing 1-2 visible inline, expand/collapse enabled)
@@ -403,11 +403,11 @@ function renderSocialFeed(containerId, isSidebar = false) {
     // Action button handlers
     let clickGoMarkup = '';
     if (post.type === 'marketplace') {
-      clickGoMarkup = `<button class="btn btn-xs" onclick="switchTab('marketplace')" style="font-size: 10px; background: rgba(168,85,247,0.1); color: #a855f7; border: 1px solid rgba(168,85,247,0.15); display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; cursor: pointer;"><i data-lucide="eye" style="width:12px; height:12px;"></i> View Listing</button>`;
+      clickGoMarkup = `<button class="btn btn-xs" onclick="switchTab('marketplace')" title="View Listing" style="font-size: 10px; background: rgba(168,85,247,0.1); color: #a855f7; border: 1px solid rgba(168,85,247,0.15); display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; padding: 0; cursor: pointer; margin-left: 2px;"><i data-lucide="eye" style="width:13px; height:13px;"></i></button>`;
     } else if (post.type === 'meetup') {
-      clickGoMarkup = `<button class="btn btn-xs" onclick="switchTab('meetups')" style="font-size: 10px; background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.15); display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; cursor: pointer;"><i data-lucide="calendar-days" style="width:12px; height:12px;"></i> View Event</button>`;
+      clickGoMarkup = `<button class="btn btn-xs" onclick="switchTab('meetups')" title="View Event" style="font-size: 10px; background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.15); display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; padding: 0; cursor: pointer; margin-left: 2px;"><i data-lucide="calendar-days" style="width:13px; height:13px;"></i></button>`;
     } else if (post.type === 'spot') {
-      clickGoMarkup = `<button class="btn btn-xs" onclick="viewSpotFromProfile('${post.rawId}')" style="font-size: 10px; background: rgba(59,122,87,0.1); color: var(--accent-green); border: 1px solid var(--accent-green-light); display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; cursor: pointer;"><i data-lucide="map" style="width:12px; height:12px;"></i> View Map Pin</button>`;
+      clickGoMarkup = `<button class="btn btn-xs" onclick="viewSpotFromProfile('${post.rawId}')" title="View Map Pin" style="font-size: 10px; background: rgba(59,122,87,0.1); color: var(--accent-green); border: 1px solid var(--accent-green-light); display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; padding: 0; cursor: pointer; margin-left: 2px;"><i data-lucide="map" style="width:13px; height:13px;"></i></button>`;
     }
 
     const isSaved = State.currentUser && State.currentUser.savedPostIds && State.currentUser.savedPostIds.includes(post.rawId);
@@ -415,58 +415,32 @@ function renderSocialFeed(containerId, isSidebar = false) {
     feedHtml += `
       <div class="feed-post-card" id="post-card-${post.id}" ${cardStyle}>
         <div class="thread-post-layout" style="display:flex; gap:12px;">
-          <!-- Left Column: Avatar -->
+          <!-- Left Column: Avatar with Follow Badge -->
           <div class="thread-left-col" style="display:flex; flex-direction:column; align-items:center;">
             <div class="thread-avatar-container" style="position:relative;">
               <img src="${getAvatarSrc(post.author.avatar)}" alt="${post.author.name}" onclick="viewUserProfile('${post.author.name}')" class="thread-avatar" style="width:36px; height:36px; border-radius:50%; object-fit:cover; cursor:pointer;">
+              <div style="position:absolute; bottom:0px; right:0px; background:white; color:black; width:12px; height:12px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:bold; border:1px solid var(--card-bg); box-shadow:0 1px 3px rgba(0,0,0,0.2); cursor:pointer;" onclick="event.stopPropagation(); window.blockUser('${post.author.name}')">+</div>
             </div>
           </div>
           
           <!-- Right Column: Details & actions -->
           <div class="thread-right-col" style="flex-grow:1; text-align:left;">
             <div class="thread-header" style="display:flex; justify-content:space-between; align-items:center;">
-              <div class="thread-user-meta" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:13px;">
-                <span class="thread-author-name" onclick="viewUserProfile('${post.author.name}')" style="font-weight:700; color:var(--text-charcoal); cursor:pointer;">${getUserRoleMarkup(post.author.name)}</span>
-                <span class="thread-dot" style="color:var(--muted-text);">•</span>
-                <span class="thread-time" style="color:var(--muted-text); font-size:11px;">${post.time}</span>
+              <div class="thread-user-meta" style="display:flex; align-items:center; gap:6px; font-size:14px;">
+                <span class="thread-author-name" onclick="viewUserProfile('${post.author.name}')" style="font-weight:700; color:var(--text-charcoal); cursor:pointer;">${post.author.name}</span>
+                <i data-lucide="check-circle-2" style="width:14px; height:14px; fill:#3B82F6; color:white; flex-shrink:0;"></i>
+                <span class="thread-time" style="color:var(--muted-text); font-size:13px; margin-left:4px;">${post.time}</span>
                 ${post.pendingSync ? '<span class="sync-spinner" title="Syncing with database..."></span>' : ''}
-                ${typeBadgeMarkup}
                 ${modTagMarkup}
                 ${clickGoMarkup}
               </div>
-            </div>
-            
-            <div class="thread-body" style="margin-top:6px; cursor:pointer;" onclick="window.openPostDetailModal('${post.id}')">
-              <p class="thread-content" style="margin:0; font-size:13px; line-height:1.5; color:var(--text-main);">${parseMarkdownToHtml(post.content)}</p>
-              ${imgMarkup}
-            </div>
-            
-            <div class="thread-actions-bar" style="display:flex; gap:16px; margin-top:12px; font-size:12px; color:var(--muted-text);">
-              <button class="thread-action-icon-btn ${post.likedByUser ? 'liked' : ''}" onclick="toggleLike('${post.id}')" title="Like" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer;">
-                <i data-lucide="heart" style="width:15px; height:15px; color:${post.likedByUser ? '#ef4444' : 'inherit'}; fill:${post.likedByUser ? '#ef4444' : 'none'};"></i>
-                <span>${post.likes || 0}</span>
-              </button>
-              <button class="thread-action-icon-btn" onclick="window.openPostDetailModal('${post.id}')" title="Comment" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer;">
-                <i data-lucide="message-circle" style="width:15px; height:15px;"></i>
-                <span>${post.comments ? post.comments.length : 0}</span>
-              </button>
-              <button class="thread-action-icon-btn ${isSaved ? 'saved' : ''}" onclick="toggleSavePost('${post.rawId}')" title="Save Bookmark" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer;">
-                <i data-lucide="bookmark" style="width:15px; height:15px; color:${isSaved ? 'var(--accent-green)' : 'inherit'}; fill:${isSaved ? 'var(--accent-green)' : 'none'};"></i>
-                <span>${post.saves || 0}</span>
-              </button>
-              <span class="thread-action-icon-btn" title="Views" style="display:flex; align-items:center; gap:4px;">
-                <i data-lucide="eye" style="width:15px; height:15px;"></i>
-                <span>${post.views || 0}</span>
-              </span>
-              <button class="thread-action-icon-btn" onclick="sharePost('${post.id}')" title="Share Link" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer;">
-                <i data-lucide="share" style="width:15px; height:15px;"></i>
-                <span>${post.shares || 0}</span>
-              </button>
-              <div style="position: relative; margin-left: auto; display: flex; align-items: center;">
-                <button class="thread-action-icon-btn feed-more-btn" onclick="window.toggleFeedPostMenu(event, '${post.id}')" title="More Options" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer;">
-                  <i data-lucide="more-vertical" style="width:15px; height:15px;"></i>
+              
+              <!-- More Options Button at top-right -->
+              <div style="position: relative; display: flex; align-items: center;">
+                <button class="thread-action-icon-btn feed-more-btn" onclick="window.toggleFeedPostMenu(event, '${post.id}')" title="More Options" style="background:none; border:none; color:var(--muted-text); display:flex; align-items:center; cursor:pointer; padding: 4px;">
+                  <i data-lucide="more-horizontal" style="width:18px; height:18px;"></i>
                 </button>
-                <div id="post-menu-${post.id}" class="hidden" style="position: absolute; right: 0; bottom: 26px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1015; min-width: 120px;">
+                <div id="post-menu-${post.id}" class="hidden" style="position: absolute; right: 0; top: 24px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1015; min-width: 120px;">
                   <button onclick="window.flagItem('post', '${post.id}'); window.toggleFeedPostMenu(event, '${post.id}')" style="display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; font-size: 11px; color: var(--text-main); cursor: pointer; border-bottom: 1px solid var(--border-color); font-weight:600;">
                     <i data-lucide="flag" style="width:12px; height:12px; color:#ef4444;"></i> Report Post
                   </button>
@@ -477,7 +451,32 @@ function renderSocialFeed(containerId, isSidebar = false) {
               </div>
             </div>
             
-            ${commentsMarkup}
+            <div class="thread-body" style="margin-top:6px; cursor:pointer;" onclick="window.openPostDetailModal('${post.id}')">
+              <p class="thread-content" style="margin:0; font-size:14px; line-height:1.5; color:var(--text-main);">${parseMarkdownToHtml(post.content)}</p>
+              ${imgMarkup}
+            </div>
+            
+            <div class="thread-actions-bar" style="display:flex; gap:28px; margin-top:12px; font-size:13px; color:var(--muted-text); align-items:center;">
+              <button class="thread-action-icon-btn ${post.likedByUser ? 'liked' : ''}" onclick="toggleLike('${post.id}')" title="Like" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
+                <i data-lucide="heart" style="width:18px; height:18px; color:${post.likedByUser ? '#ef4444' : 'inherit'}; fill:${post.likedByUser ? '#ef4444' : 'none'};"></i>
+                <span>${post.likes || 0}</span>
+              </button>
+              <button class="thread-action-icon-btn" onclick="window.openPostDetailModal('${post.id}')" title="Comment" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
+                <i data-lucide="message-circle" style="width:18px; height:18px;"></i>
+                <span>${post.comments ? post.comments.length : 0}</span>
+              </button>
+              <button class="thread-action-icon-btn" onclick="window.toggleRepost('${post.id}')" title="Repost" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
+                <i data-lucide="repeat" style="width:18px; height:18px;"></i>
+                <span>${post.reposts || 0}</span>
+              </button>
+              <button class="thread-action-icon-btn" onclick="sharePost('${post.id}')" title="Share Link" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
+                <i data-lucide="send" style="width:18px; height:18px;"></i>
+                <span>${post.shares || 0}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        ${commentsMarkup}
             
             <!-- Reply form -->
             <form class="thread-reply-form" onsubmit="submitComment(event, '${post.id}')" style="display:flex; gap:8px; margin-top:10px; align-items:center;">
@@ -655,11 +654,11 @@ window.openPostDetailModal = function(postId) {
 
   let typeBadgeMarkup = '';
   if (postId.startsWith('market-post-')) {
-    typeBadgeMarkup = `<span style="background:rgba(168,85,247,0.12); color:#a855f7; border: 1px solid rgba(168,85,247,0.2); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="shopping-bag" style="width:10px; height:10px;"></i> Marketplace</span>`;
+    typeBadgeMarkup = `<span style="background:rgba(168,85,247,0.12); color:#a855f7; border: 1px solid rgba(168,85,247,0.2); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="shopping-bag" style="width:10px; height:10px;"></i> market</span>`;
   } else if (postId.startsWith('meetup-post-')) {
-    typeBadgeMarkup = `<span style="background:rgba(239,68,68,0.12); color:#ef4444; border: 1px solid rgba(239,68,68,0.2); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="flame" style="width:10px; height:10px;"></i> Caravan Meetup</span>`;
+    typeBadgeMarkup = `<span style="background:rgba(239,68,68,0.12); color:#ef4444; border: 1px solid rgba(239,68,68,0.2); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="flame" style="width:10px; height:10px;"></i> meetup</span>`;
   } else if (postId.startsWith('spot-post-')) {
-    typeBadgeMarkup = `<span style="background:rgba(59,122,87,0.12); color:var(--accent-green); border: 1px solid var(--accent-green-light); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="map-pin" style="width:10px; height:10px;"></i> Vouched Spot</span>`;
+    typeBadgeMarkup = `<span style="background:rgba(59,122,87,0.12); color:var(--accent-green); border: 1px solid var(--accent-green-light); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="map-pin" style="width:10px; height:10px;"></i> vouched</span>`;
   }
 
   let commentsListHtml = '';
@@ -709,30 +708,29 @@ window.openPostDetailModal = function(postId) {
             <span style="font-weight:700; color:var(--text-charcoal); cursor:pointer;" onclick="closeModal('modal-post-detail'); viewUserProfile('${postAuthorName}')">${getUserRoleMarkup(postAuthorName)}</span>
             <span style="color:var(--muted-text);">•</span>
             <span style="color:var(--muted-text); font-size:11px;">${postTime}</span>
-            ${typeBadgeMarkup}
           </div>
         </div>
         <div style="margin-top:8px; font-size:14px; line-height:1.5; color:var(--text-main);">${postContent}</div>
         ${imgMarkup}
         
         <!-- Post Stats & Action Bar -->
-        <div style="display:flex; gap:20px; margin-top:16px; font-size:12px; color:var(--muted-text); border-top:1.5px solid var(--border-color); padding-top:12px;">
-          <button onclick="window.toggleLike('${postId}'); window.openPostDetailModal('${postId}')" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer;">
-            <i data-lucide="heart" style="width:15px; height:15px; color:${likedByUser ? '#ef4444' : 'inherit'}; fill:${likedByUser ? '#ef4444' : 'none'};"></i>
+        <div style="display:flex; gap:28px; margin-top:16px; font-size:13px; color:var(--muted-text); border-top:1.5px solid var(--border-color); padding-top:12px; align-items:center;">
+          <button onclick="window.toggleLike('${postId}'); window.openPostDetailModal('${postId}')" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
+            <i data-lucide="heart" style="width:18px; height:18px; color:${likedByUser ? '#ef4444' : 'inherit'}; fill:${likedByUser ? '#ef4444' : 'none'};"></i>
             <span>${target.likes || 0}</span>
           </button>
-          <span style="display:flex; align-items:center; gap:4px;">
-            <i data-lucide="message-circle" style="width:15px; height:15px;"></i>
+          <span style="display:flex; align-items:center; gap:6px;">
+            <i data-lucide="message-circle" style="width:18px; height:18px;"></i>
             <span>${comments.length}</span>
           </span>
-          <button onclick="window.toggleSavePost('${target.id}'); window.openPostDetailModal('${postId}')" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer;">
-            <i data-lucide="bookmark" style="width:15px; height:15px; color:${isSaved ? 'var(--accent-green)' : 'inherit'}; fill:${isSaved ? 'var(--accent-green)' : 'none'};"></i>
-            <span>${target.saves || 0}</span>
+          <button onclick="window.toggleRepost('${postId}'); window.openPostDetailModal('${postId}')" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
+            <i data-lucide="repeat" style="width:18px; height:18px;"></i>
+            <span>${target.reposts || 0}</span>
           </button>
-          <span style="display:flex; align-items:center; gap:4px;">
-            <i data-lucide="eye" style="width:15px; height:15px;"></i>
-            <span>${target.views || 0}</span>
-          </span>
+          <button onclick="sharePost('${postId}')" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
+            <i data-lucide="send" style="width:18px; height:18px;"></i>
+            <span>${target.shares || 0}</span>
+          </button>
         </div>
       </div>
     </div>
@@ -783,6 +781,24 @@ window.submitModalComment = function(event, postId) {
     setTimeout(() => {
       window.openPostDetailModal(postId);
     }, 200);
+  }
+};
+
+window.toggleRepost = function(postId) {
+  const { target } = findPostOrItem(postId);
+  if (target) {
+    if (!target.reposts) target.reposts = 0;
+    if (target.repostedByUser) {
+      target.reposts--;
+      target.repostedByUser = false;
+    } else {
+      target.reposts++;
+      target.repostedByUser = true;
+    }
+    saveStateToStorage();
+    State._cachedFeeds = {};
+    renderDashboardFeed();
+    renderFeedTabPosts();
   }
 };
 

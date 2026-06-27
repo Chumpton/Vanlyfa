@@ -829,6 +829,37 @@ function setupModalHandlers() {
   document.getElementById('save-meetup-btn').addEventListener('click', saveNewMeetup);
   document.getElementById('save-thread-btn').addEventListener('click', saveNewForumThread);
 
+  // Dynamic Tribe Chat and Forum Input Focus Listeners for Mobile Auto-Squish
+  const tribePane = document.getElementById('pane-tribes');
+  if (tribePane) {
+    tribePane.addEventListener('focusin', (e) => {
+      if (window.innerWidth <= 768 && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+        const detailView = document.getElementById('tribe-detail-view');
+        if (detailView) detailView.classList.add('chat-focused');
+        const topBar = document.querySelector('.top-bar');
+        if (topBar) topBar.classList.add('hide-top-bar');
+        const sidebar = document.querySelector('.app-sidebar');
+        if (sidebar) sidebar.classList.add('hide-bottom-bar');
+        
+        // Auto-scroll chat area to bottom
+        const activeMsgArea = document.getElementById('tribe-chat-messages-area');
+        if (activeMsgArea) {
+          setTimeout(() => { activeMsgArea.scrollTop = activeMsgArea.scrollHeight; }, 100);
+        }
+      }
+    });
+    tribePane.addEventListener('focusout', (e) => {
+      if (window.innerWidth <= 768 && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+        const detailView = document.getElementById('tribe-detail-view');
+        if (detailView) detailView.classList.remove('chat-focused');
+        const topBar = document.querySelector('.top-bar');
+        if (topBar) topBar.classList.remove('hide-top-bar');
+        const sidebar = document.querySelector('.app-sidebar');
+        if (sidebar) sidebar.classList.remove('hide-bottom-bar');
+      }
+    });
+  }
+
   // Safety Agreement Checklist Verification
   const safetyChecks = document.querySelectorAll('.safety-check');
   const agreeBtn = document.getElementById('btn-agree-safety');
@@ -1247,7 +1278,7 @@ function saveNewSpot() {
     return;
   }
   
-  const status = State.currentUser.role === 'admin' ? 'approved' : 'pending';
+  const status = 'approved';
   
   const newSpot = {
     id: `spot-${Date.now()}`,
@@ -1272,7 +1303,7 @@ function saveNewSpot() {
     };
   }
   
-  const successMsg = status === 'approved' ? "Campsite vouched successfully!" : "Campsite submitted! Awaiting admin approval.";
+  const successMsg = "Campsite vouched successfully!";
   
   if (State.isOffline) {
     newSpot.pendingSync = true;
@@ -1415,7 +1446,7 @@ function saveNewListing() {
   const condition = category === 'services-offer' ? 'Service Offered' : 
                     (category === 'services-want' ? 'Service Wanted' : 'Good');
   
-  const status = State.currentUser.role === 'admin' ? 'approved' : 'pending';
+  const status = 'approved';
   
   const newListing = {
     id: `market-${Date.now()}`,
@@ -1468,7 +1499,7 @@ function saveNewListing() {
   window.simulateDatabaseWrite(newListing, 'marketplace listing', sql, rls, () => {
     saveStateToStorage();
     renderMarketplaceListings();
-    const successMsg = status === 'approved' ? "Marketplace listing published!" : "Listing submitted! Awaiting admin approval.";
+    const successMsg = "Marketplace listing published!";
     showToast(successMsg, "success");
   });
 }
@@ -1583,7 +1614,7 @@ function saveNewMeetup() {
     return;
   }
   
-  const status = State.currentUser.role === 'admin' ? 'approved' : 'pending';
+  const status = 'approved';
   
   // Extract meetup thumbnail from canvas
   let thumbnail = 'none';
@@ -1646,7 +1677,7 @@ function saveNewMeetup() {
     saveStateToStorage();
     renderLeafletMarkers();
     renderMeetupsList();
-    const successMsg = status === 'approved' ? "Meetup hosted and pinned on global map!" : "Meetup submitted! Awaiting admin approval.";
+    const successMsg = "Meetup hosted and pinned on global map!";
     showToast(successMsg, "success");
   });
 }

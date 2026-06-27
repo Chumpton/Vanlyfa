@@ -4038,13 +4038,13 @@ code {
   
   /* Threads-style Actions bar spacing */
   .thread-actions-bar {
-    justify-content: space-between !important;
+    justify-content: flex-start !important;
     padding: 12px 16px 8px 0 !important;
-    gap: 0 !important;
+    gap: 28px !important;
   }
   .thread-action-icon-btn {
-    padding: 8px !important;
-    font-size: 14px !important;
+    padding: 0 !important;
+    font-size: 13px !important;
   }
   .thread-action-icon-btn i, .thread-action-icon-btn svg {
     width: 18px !important;
@@ -4177,8 +4177,27 @@ code {
 @media (max-width: 768px) {
   .tribe-chat-box {
     height: calc(100vh - 240px) !important;
+    height: calc(100dvh - 240px) !important;
     min-height: 200px !important;
     max-height: none !important;
+  }
+  
+  #tribe-detail-view.chat-focused .tribe-hub-header-card {
+    display: none !important;
+  }
+  #tribe-detail-view.chat-focused .tribe-hub-tabs {
+    display: none !important;
+  }
+  #tribe-detail-view.chat-focused #tribe-pane-chat {
+    height: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+  #tribe-detail-view.chat-focused .tribe-chat-box {
+    height: calc(100vh - 32px) !important;
+    height: calc(100dvh - 32px) !important;
+    border: none !important;
+    border-radius: 0 !important;
   }
   
   .meetup-mobile-icon {
