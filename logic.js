@@ -391,6 +391,18 @@ function submitComment(e, postId) {
         pendingSync: true
       };
       target.comments.push(newComment);
+      
+      // Simulated notification to target author
+      if (target.author && target.author.name !== State.currentUser.name) {
+        if (!State.notifications) State.notifications = [];
+        State.notifications.unshift({
+          id: `notif-${Date.now()}`,
+          content: `💬 ${State.currentUser.name} commented on your post: "${commentText.substring(0, 30)}${commentText.length > 30 ? '...' : ''}"`,
+          time: "Just now",
+          read: false
+        });
+      }
+      
       input.value = '';
       State._cachedFeeds = {};
       saveStateToStorage();
@@ -477,6 +489,17 @@ function submitForumReply() {
       date: "Just now",
       body: body
     };
+
+    // Add simulated notification to thread author
+    if (thread.author && thread.author.name !== State.currentUser.name) {
+      if (!State.notifications) State.notifications = [];
+      State.notifications.unshift({
+        id: `notif-${Date.now()}`,
+        content: `📝 ${State.currentUser.name} replied to your thread "${thread.title.substring(0, 20)}..."`,
+        time: "Just now",
+        read: false
+      });
+    }
 
     if (State.isOffline) {
       newReply.pendingSync = true;
@@ -1137,12 +1160,12 @@ function simulateAutoReply(username, text, delay) {
     }
   });
   
-  State.notifications.unshift({
-    id: `notif-${Date.now()}`,
-    content: `💬 Message from ${username}: "${text.substring(0, 45)}${text.length > 45 ? '...' : ''}"`,
-    time: "Just now",
-    read: false
-  });
+  if (!State.activeChats.includes(username)) {
+    if (!State.unreadChats) State.unreadChats = [];
+    if (!State.unreadChats.includes(username)) {
+      State.unreadChats.push(username);
+    }
+  }
   
   saveStateToStorage();
   renderActiveChats();
@@ -1504,6 +1527,7 @@ function checkRateLimit(type) {
 
 window.flagItem = flagItem;
 window.checkRateLimit = checkRateLimit;
+window.submitComment = submitComment;
 
 function blockUser(username) {
   if (!requireAuth()) return;

@@ -371,9 +371,16 @@ function renderSocialFeed(containerId, isSidebar = false) {
         let threadLink = '';
         if (totalVisible > 2) {
           threadLink = `
-            <button class="btn-view-thread" onclick="window.toggleExpandComments('${post.id}')" style="background:none; border:none; color:var(--accent-green); font-size:11px; font-weight:700; cursor:pointer; padding:6px 0; display:flex; align-items:center; gap:4px; margin-top: 4px;">
-              <i data-lucide="${isExpanded ? 'chevron-up' : 'messages-square'}" style="width:14px; height:14px;"></i>
-              <span>${isExpanded ? 'Collapse comments' : `View Full Thread (${totalVisible} replies)`}</span>
+            <button class="btn-view-thread" onclick="window.openPostDetailModal('${post.id}')" style="background:none; border:none; color:var(--accent-green); font-size:11px; font-weight:700; cursor:pointer; padding:6px 0; display:flex; align-items:center; gap:4px; margin-top: 4px;">
+              <i data-lucide="messages-square" style="width:14px; height:14px;"></i>
+              <span>View Discussion (${totalVisible} replies)</span>
+            </button>
+          `;
+        } else {
+          threadLink = `
+            <button class="btn-view-thread" onclick="window.openPostDetailModal('${post.id}')" style="background:none; border:none; color:var(--accent-green); font-size:11px; font-weight:700; cursor:pointer; padding:6px 0; display:flex; align-items:center; gap:4px; margin-top: 4px;">
+              <i data-lucide="messages-square" style="width:14px; height:14px;"></i>
+              <span>View full conversation</span>
             </button>
           `;
         }
@@ -429,7 +436,7 @@ function renderSocialFeed(containerId, isSidebar = false) {
               </div>
             </div>
             
-            <div class="thread-body" style="margin-top:6px;">
+            <div class="thread-body" style="margin-top:6px; cursor:pointer;" onclick="window.openPostDetailModal('${post.id}')">
               <p class="thread-content" style="margin:0; font-size:13px; line-height:1.5; color:var(--text-main);">${parseMarkdownToHtml(post.content)}</p>
               ${imgMarkup}
             </div>
@@ -439,7 +446,7 @@ function renderSocialFeed(containerId, isSidebar = false) {
                 <i data-lucide="heart" style="width:15px; height:15px; color:${post.likedByUser ? '#ef4444' : 'inherit'}; fill:${post.likedByUser ? '#ef4444' : 'none'};"></i>
                 <span>${post.likes || 0}</span>
               </button>
-              <button class="thread-action-icon-btn" onclick="focusCommentInput('${post.id}')" title="Comment" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer;">
+              <button class="thread-action-icon-btn" onclick="window.openPostDetailModal('${post.id}')" title="Comment" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer;">
                 <i data-lucide="message-circle" style="width:15px; height:15px;"></i>
                 <span>${post.comments ? post.comments.length : 0}</span>
               </button>
@@ -615,3 +622,167 @@ window.replyToComment = function(postId, username) {
     input.value = `${handle} ${input.value}`;
   }
 };
+
+window.openPostDetailModal = function(postId) {
+  const { target } = findPostOrItem(postId);
+  if (!target) return;
+
+  const modal = document.getElementById('modal-post-detail');
+  const body = document.getElementById('post-detail-modal-body');
+  if (!modal || !body) return;
+
+  // Track views once per session
+  if (!State.viewedPostsInSession) {
+    State.viewedPostsInSession = new Set();
+  }
+  if (!State.viewedPostsInSession.has(postId)) {
+    State.viewedPostsInSession.add(postId);
+    target.views = (target.views || 0) + 1;
+    saveStateToStorage();
+    renderDashboardFeed();
+    renderFeedTabPosts();
+  }
+
+  const authorAvatar = getAvatarSrc(target.author ? target.author.avatar : 'avatar_bob');
+  const postAuthorName = target.author ? target.author.name : 'Nomad';
+  const postTime = target.time || 'Just now';
+  const postContent = parseMarkdownToHtml(target.content);
+  
+  let imgMarkup = '';
+  if (target.image && target.image !== 'none') {
+    imgMarkup = `<img src="${getImageSrc(target.image)}" alt="Post Media" style="border-radius:var(--radius-md); margin-top:12px; width:100%; max-height:350px; object-fit:contain; background:#111;">`;
+  }
+
+  let typeBadgeMarkup = '';
+  if (postId.startsWith('market-post-')) {
+    typeBadgeMarkup = `<span style="background:rgba(168,85,247,0.12); color:#a855f7; border: 1px solid rgba(168,85,247,0.2); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="shopping-bag" style="width:10px; height:10px;"></i> Marketplace</span>`;
+  } else if (postId.startsWith('meetup-post-')) {
+    typeBadgeMarkup = `<span style="background:rgba(239,68,68,0.12); color:#ef4444; border: 1px solid rgba(239,68,68,0.2); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="flame" style="width:10px; height:10px;"></i> Caravan Meetup</span>`;
+  } else if (postId.startsWith('spot-post-')) {
+    typeBadgeMarkup = `<span style="background:rgba(59,122,87,0.12); color:var(--accent-green); border: 1px solid var(--accent-green-light); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="map-pin" style="width:10px; height:10px;"></i> Vouched Spot</span>`;
+  }
+
+  let commentsListHtml = '';
+  const comments = target.comments || [];
+  const blockedUsers = State.currentUser?.blockedUsers || [];
+  const visibleComments = comments.filter(c => !blockedUsers.includes(c.user));
+
+  if (visibleComments.length === 0) {
+    commentsListHtml = `<div style="text-align:center; padding:24px 0; color:var(--muted-text); font-size:12px; font-style:italic;">No replies yet. Start the conversation!</div>`;
+  } else {
+    visibleComments.forEach((c, index) => {
+      const commenter = State.users ? State.users.find(u => u.name === c.user) : null;
+      const avatar = commenter ? commenter.avatar : 'avatar_bob';
+      commentsListHtml += `
+        <div class="thread-reply-item" style="display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--border-color);">
+          <img src="${getAvatarSrc(avatar)}" alt="${c.user}" class="reply-avatar" style="width:28px; height:28px; border-radius:50%; object-fit:cover; cursor:pointer;" onclick="closeModal('modal-post-detail'); viewUserProfile('${c.user}')">
+          <div style="flex-grow:1; text-align:left;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:12px;">
+              <span style="font-weight:700; color:var(--text-charcoal); cursor:pointer;" onclick="closeModal('modal-post-detail'); viewUserProfile('${c.user}')">${getUserRoleMarkup(c.user)}</span>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <button onclick="window.replyToModalComment('${postId}', '${c.user}')" style="background:none; border:none; padding:0; font-size:10px; color:var(--muted-text); cursor:pointer; font-weight:700;">Reply</button>
+                <button onclick="window.flagItem('comment', '${postId}', ${index})" title="Flag/Report" style="background:none; border:none; padding:0; color:#ef4444; cursor:pointer; display:inline-flex; align-items:center;"><i data-lucide="flag" style="width:11px; height:11px;"></i></button>
+              </div>
+            </div>
+            <p style="color:var(--text-main); margin:0; font-size:12px; line-height:1.4;">${parseMarkdownToHtml(c.text)}</p>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  const isGuest = !State.isSignedIn;
+  const placeholderText = isGuest ? "Please sign in to reply..." : `Reply to ${postAuthorName}...`;
+  const disabledAttr = isGuest ? "disabled" : "";
+  const avatarToUse = isGuest ? 'avatar_guest' : State.currentUser.avatar;
+
+  const isSaved = State.currentUser && State.currentUser.savedPostIds && State.currentUser.savedPostIds.includes(target.id);
+  const likedByUser = target.likedByUser || false;
+
+  body.innerHTML = `
+    <!-- Original Post -->
+    <div style="display:flex; gap:12px; border-bottom:1px solid var(--border-color); padding-bottom:16px; margin-bottom:16px;">
+      <img src="${authorAvatar}" alt="${postAuthorName}" onclick="closeModal('modal-post-detail'); viewUserProfile('${postAuthorName}')" style="width:40px; height:40px; border-radius:50%; object-fit:cover; cursor:pointer;">
+      <div style="flex-grow:1; text-align:left;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:13px;">
+            <span style="font-weight:700; color:var(--text-charcoal); cursor:pointer;" onclick="closeModal('modal-post-detail'); viewUserProfile('${postAuthorName}')">${getUserRoleMarkup(postAuthorName)}</span>
+            <span style="color:var(--muted-text);">•</span>
+            <span style="color:var(--muted-text); font-size:11px;">${postTime}</span>
+            ${typeBadgeMarkup}
+          </div>
+        </div>
+        <div style="margin-top:8px; font-size:14px; line-height:1.5; color:var(--text-main);">${postContent}</div>
+        ${imgMarkup}
+        
+        <!-- Post Stats & Action Bar -->
+        <div style="display:flex; gap:20px; margin-top:16px; font-size:12px; color:var(--muted-text); border-top:1.5px solid var(--border-color); padding-top:12px;">
+          <button onclick="window.toggleLike('${postId}'); window.openPostDetailModal('${postId}')" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer;">
+            <i data-lucide="heart" style="width:15px; height:15px; color:${likedByUser ? '#ef4444' : 'inherit'}; fill:${likedByUser ? '#ef4444' : 'none'};"></i>
+            <span>${target.likes || 0}</span>
+          </button>
+          <span style="display:flex; align-items:center; gap:4px;">
+            <i data-lucide="message-circle" style="width:15px; height:15px;"></i>
+            <span>${comments.length}</span>
+          </span>
+          <button onclick="window.toggleSavePost('${target.id}'); window.openPostDetailModal('${postId}')" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer;">
+            <i data-lucide="bookmark" style="width:15px; height:15px; color:${isSaved ? 'var(--accent-green)' : 'inherit'}; fill:${isSaved ? 'var(--accent-green)' : 'none'};"></i>
+            <span>${target.saves || 0}</span>
+          </button>
+          <span style="display:flex; align-items:center; gap:4px;">
+            <i data-lucide="eye" style="width:15px; height:15px;"></i>
+            <span>${target.views || 0}</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comments / Thread replies list -->
+    <h4 style="font-size:13px; font-weight:700; color:var(--text-charcoal); margin-bottom:8px; text-align:left;">Discussion (${comments.length})</h4>
+    <div style="max-height: 250px; overflow-y: auto; padding-right: 4px; display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
+      ${commentsListHtml}
+    </div>
+
+    <!-- Reply input form for modal -->
+    <form onsubmit="window.submitModalComment(event, '${postId}')" style="display:flex; gap:8px; align-items:center; border-top:1px solid var(--border-color); padding-top:12px;">
+      <img src="${getAvatarSrc(avatarToUse)}" alt="Me" style="width:28px; height:28px; border-radius:50%; object-fit:cover;">
+      <div style="display:flex; border:1px solid var(--border-color); border-radius:16px; padding:4px 8px; flex-grow:1; background:var(--bg-sand); align-items:center;">
+        <input type="text" placeholder="${placeholderText}" id="modal-comment-input-${postId}" ${disabledAttr} style="border:none; background:none; flex-grow:1; font-size:12px; color:var(--text-main); outline:none;">
+        <button type="submit" ${disabledAttr} style="background:none; border:none; color:var(--accent-green); cursor:pointer;"><i data-lucide="corner-down-left" style="width:14px; height:14px;"></i></button>
+      </div>
+    </form>
+  `;
+
+  openModal('modal-post-detail');
+  if (window.lucide) lucide.createIcons();
+};
+
+window.replyToModalComment = function(postId, username) {
+  const input = document.getElementById(`modal-comment-input-${postId}`);
+  if (input) {
+    input.focus();
+    const userObj = State.users.find(u => u.name === username);
+    const handle = userObj ? userObj.handle : `@${username.toLowerCase().replace(/\s+/g, '_')}`;
+    input.value = `${handle} ${input.value}`;
+  }
+};
+
+window.submitModalComment = function(event, postId) {
+  event.preventDefault();
+  const input = document.getElementById(`modal-comment-input-${postId}`);
+  if (input && input.value.trim() !== '') {
+    const tempInput = document.createElement('input');
+    tempInput.id = `comment-input-${postId}`;
+    tempInput.value = input.value;
+    document.body.appendChild(tempInput);
+    
+    window.submitComment({ preventDefault: () => {} }, postId);
+    
+    document.body.removeChild(tempInput);
+    
+    setTimeout(() => {
+      window.openPostDetailModal(postId);
+    }, 200);
+  }
+};
+

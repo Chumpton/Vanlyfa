@@ -388,6 +388,22 @@ function initApp() {
       openMobileDrawer();
     });
   }
+
+  // Mobile More Options Bubble Toggle
+  const moreClickArea = document.getElementById('more-click-area');
+  const moreOptionsBubble = document.getElementById('more-options-bubble');
+  if (moreClickArea && moreOptionsBubble) {
+    moreClickArea.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isHidden = moreOptionsBubble.style.display === 'none' || moreOptionsBubble.style.display === '';
+      moreOptionsBubble.style.display = isHidden ? 'flex' : 'none';
+    });
+    document.addEventListener('click', (e) => {
+      if (!moreOptionsBubble.contains(e.target) && e.target !== moreClickArea) {
+        moreOptionsBubble.style.display = 'none';
+      }
+    });
+  }
   
   // Mobile Top Avatar Popout Toggle
   const mobileTopAvatar = document.getElementById('mobile-top-avatar');

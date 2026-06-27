@@ -50,12 +50,13 @@ function renderContactsSidebar() {
   const badges = [
     document.getElementById('contacts-unread-badge'),
     document.getElementById('nav-messages-badge'),
-    document.getElementById('mobile-feed-unread-badge')
+    document.getElementById('mobile-nav-messages-badge'),
+    document.getElementById('mobile-top-messages-badge')
   ];
   
   badges.forEach(badge => {
     if (badge) {
-      if (unreadCount > 0 && !openActive) {
+      if (unreadCount > 0 && (!openActive || badge.id === 'nav-messages-badge' || badge.id === 'mobile-nav-messages-badge' || badge.id === 'mobile-top-messages-badge')) {
         badge.innerText = unreadCount;
         badge.style.display = 'flex';
       } else {

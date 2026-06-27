@@ -341,32 +341,58 @@ function parseMarkdownToHtml(text) {
    NOTIFICATIONS MANAGEMENT
    ========================================================================== */
 function renderNotifications() {
-  const panel = document.getElementById('notifications-panel');
   const list = document.getElementById('notifications-list');
-  const badge = document.getElementById('nav-feed-badge');
-  if (!panel || !list) return;
+  const badge = document.getElementById('bell-unread-badge');
+  const feedBadge = document.getElementById('nav-feed-badge');
+  if (!list) return;
 
   const unreadCount = State.notifications.filter(n => !n.read).length;
   
   if (badge) {
     if (unreadCount > 0) {
-      badge.innerText = unreadCount;
-      badge.style.display = 'flex';
+      badge.style.display = 'block';
     } else {
       badge.style.display = 'none';
     }
   }
 
-  list.innerHTML = '';
-  if (State.notifications.length === 0) {
-    panel.style.display = 'none';
-    return;
+  if (feedBadge) {
+    if (unreadCount > 0) {
+      feedBadge.innerText = unreadCount;
+      feedBadge.style.display = 'flex';
+    } else {
+      feedBadge.style.display = 'none';
+    }
   }
 
-  if (State.activeTab === 'feed') {
-    panel.style.display = 'flex';
-  } else {
-    panel.style.display = 'none';
+  if (!window._notifBellWired) {
+    window._notifBellWired = true;
+    const bellBtn = document.getElementById('notif-bell-btn');
+    if (bellBtn) {
+      bellBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dropdown = document.getElementById('notifications-dropdown');
+        if (dropdown) {
+          const isHidden = dropdown.style.display === 'none' || dropdown.style.display === '';
+          dropdown.style.display = isHidden ? 'flex' : 'none';
+          if (isHidden) {
+            State.notifications.forEach(n => n.read = true);
+            saveStateToStorage();
+            renderNotifications();
+          }
+        }
+      });
+    }
+    document.addEventListener('click', () => {
+      const dropdown = document.getElementById('notifications-dropdown');
+      if (dropdown) dropdown.style.display = 'none';
+    });
+  }
+
+  list.innerHTML = '';
+  if (State.notifications.length === 0) {
+    list.innerHTML = '<div style="text-align:center; padding:16px; color:var(--muted-text); font-size:12px;">No notifications.</div>';
+    return;
   }
 
   State.notifications.forEach(n => {

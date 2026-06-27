@@ -59,6 +59,34 @@
           <i data-lucide="user"></i>
           <span>My Profile</span>
         </div>
+        <div class="nav-item mobile-only-more" style="display: none; position: relative;">
+          <div class="more-options-bubble" id="more-options-bubble" style="display: none; position: absolute; bottom: 70px; right: 10px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); width: 180px; padding: 8px; z-index: 2100; flex-direction: column; gap: 4px;">
+            <div class="more-bubble-item" onclick="switchTab('tribes')" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; font-size: 13px; color: var(--text-main); cursor: pointer; border-radius: var(--radius-sm); justify-content: flex-start; text-align: left;">
+              <i data-lucide="users" style="width: 16px; height: 16px;"></i>
+              <span>Tribes</span>
+            </div>
+            <div class="more-bubble-item" onclick="switchTab('forum')" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; font-size: 13px; color: var(--text-main); cursor: pointer; border-radius: var(--radius-sm); justify-content: flex-start; text-align: left;">
+              <i data-lucide="scroll-text" style="width: 16px; height: 16px;"></i>
+              <span>Forum</span>
+            </div>
+            <div class="more-bubble-item" onclick="switchTab('jobs')" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; font-size: 13px; color: var(--text-main); cursor: pointer; border-radius: var(--radius-sm); justify-content: flex-start; text-align: left;">
+              <i data-lucide="briefcase" style="width: 16px; height: 16px;"></i>
+              <span>Work</span>
+            </div>
+            <div class="more-bubble-item" onclick="switchTab('profile')" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; font-size: 13px; color: var(--text-main); cursor: pointer; border-radius: var(--radius-sm); justify-content: flex-start; text-align: left;">
+              <i data-lucide="user" style="width: 16px; height: 16px;"></i>
+              <span>My Profile</span>
+            </div>
+            <div class="more-bubble-item" onclick="openAboutModal()" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; font-size: 13px; color: var(--text-main); cursor: pointer; border-radius: var(--radius-sm); justify-content: flex-start; text-align: left;">
+              <i data-lucide="info" style="width: 16px; height: 16px;"></i>
+              <span>About Vanlyfa</span>
+            </div>
+          </div>
+          <div id="more-click-area" style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%;">
+            <i data-lucide="more-horizontal"></i>
+            <span>More</span>
+          </div>
+        </div>
         <div class="nav-item" data-tab="admin" id="sidebar-admin-tab" style="display: none;">
           <i data-lucide="shield-alert"></i>
           <span>Admin Panel</span>
@@ -74,8 +102,8 @@
         <div style="display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 0;">
           <img src="" alt="User Avatar" class="profile-avatar" id="sidebar-user-avatar">
           <div class="profile-info" style="min-width: 0; flex-grow: 1;">
-            <span class="profile-name" id="sidebar-user-name">Loading...</span>
-            <span class="profile-handle" id="sidebar-user-handle">@loading</span>
+            <span class="profile-name" id="sidebar-user-name">Guest Nomad</span>
+            <span class="profile-handle" id="sidebar-user-handle">@guest</span>
           </div>
         </div>
         <button id="sidebar-auth-btn" style="background: transparent; border: none; color: var(--muted-text); cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; transition: color 0.2s;" title="Sign Out">
@@ -113,16 +141,37 @@
           <button class="btn" id="theme-toggle-btn" title="Toggle Dark/Light Mode" style="padding: 8px;">
             <i data-lucide="moon" id="theme-icon"></i>
           </button>
+          
+          <!-- Notification Bell -->
+          <div style="position: relative; display: inline-block;">
+            <button class="btn" id="notif-bell-btn" title="Notifications" style="padding: 8px; position: relative; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: var(--text-main); cursor: pointer;">
+              <i data-lucide="bell" style="width: 18px; height: 18px;"></i>
+              <span class="nav-unread-badge" id="bell-unread-badge" style="display: none; position: absolute; top: 0px; right: 0px; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; border: 1.5px solid var(--card-bg);"></span>
+            </button>
+            
+            <!-- Notifications Popover/Dropdown -->
+            <div class="notifications-dropdown" id="notifications-dropdown" style="display: none; position: absolute; top: 40px; right: 0; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); width: 320px; padding: 16px; z-index: 1000; flex-direction: column;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: var(--text-charcoal); display: flex; align-items: center; gap: 6px;"><i data-lucide="bell" style="width: 16px; height: 16px; color: var(--accent-green);"></i> Notifications</h3>
+                <button class="btn btn-sm" onclick="clearNotifications()" style="padding: 4px 8px; font-size: 11px; height: auto;">Clear All</button>
+              </div>
+              <div id="notifications-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto;">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Mobile Messages Icon (Top Rack) -->
+          <button class="btn mobile-only-messages-btn" onclick="switchTab('messages')" title="Messages" style="display: none; padding: 8px; position: relative;">
+            <i data-lucide="message-square" style="width: 18px; height: 18px;"></i>
+            <span class="nav-unread-badge" id="mobile-top-messages-badge" style="display: none; position: absolute; top: -2px; right: -2px; width: 14px; height: 14px; font-size: 8px; font-weight: 700; border-radius: 50%; background: #ef4444; color: white; display: flex; align-items: center; justify-content: center;">0</span>
+          </button>
           <!-- Action buttons are rendered dynamically based on active tab -->
           <button class="btn btn-primary" id="main-action-btn">
             <i data-lucide="plus"></i>
             <span>Add Spot</span>
           </button>
           
-          <!-- Mobile Top Bar Controls -->
-          <button class="btn" id="mobile-info-btn" title="About VanLyfa" style="display: none; padding: 8px;" onclick="openAboutModal()">
-            <i data-lucide="info"></i>
-          </button>
           <div class="mobile-profile-container" id="mobile-profile-container" style="display: none; position: relative;">
             <img src="" alt="User Avatar" class="profile-avatar" id="mobile-top-avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 1px solid var(--border-color);">
             
@@ -149,6 +198,11 @@
               <button class="btn popout-item" id="mobile-popout-conn-btn" style="width: 100%; justify-content: flex-start; gap: 8px; padding: 8px 12px; font-size: 13px; background: transparent; border: none; color: var(--text-main); cursor: pointer;">
                 <span class="status-indicator-dot" id="mobile-popout-conn-dot" style="width: 8px; height: 8px; border-radius: 50%; background-color: var(--accent-green);"></span>
                 <span id="mobile-popout-conn-text" style="font-size: 13px; font-weight: 600;">Online Mode</span>
+              </button>
+
+              <button class="btn popout-item" id="mobile-popout-about-btn" onclick="openAboutModal()" style="width: 100%; justify-content: flex-start; gap: 8px; padding: 8px 12px; font-size: 13px; background: transparent; border: none; color: var(--text-main); cursor: pointer;">
+                <i data-lucide="info" style="width: 16px; height: 16px;"></i>
+                <span>About Vanlyfa</span>
               </button>
               
               <button class="btn popout-item" id="mobile-popout-premium-btn" onclick="openModal('modal-premium-pass')" style="width: 100%; justify-content: flex-start; gap: 8px; padding: 8px 12px; font-size: 13px; background: transparent; border: none; color: #10B981; cursor: pointer; font-weight: bold; display: none;">
@@ -529,23 +583,13 @@
               </div>
             </div>
           </div>
-          <!-- Notifications Panel -->
-          <div class="notifications-panel" id="notifications-panel" style="display: none; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; margin-top: 16px; width: 100%; box-sizing: border-box; flex-direction: column;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
-              <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: var(--text-charcoal); display: flex; align-items: center; gap: 6px;"><i data-lucide="bell" style="width: 16px; height: 16px; color: var(--accent-green);"></i> Notifications</h3>
-              <button class="btn btn-sm" onclick="clearNotifications()" style="padding: 4px 8px; font-size: 11px; height: auto;">Clear All</button>
-            </div>
-            <div id="notifications-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto;">
-              <!-- Dynamically populated -->
-            </div>
-          </div>
+          <!-- Notifications Panel Removed from Feed tab layout -->
 
           <!-- Feed Filters (Inline Organic Chips) -->
           <div class="feed-filters-chips" style="margin-top: 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; width: 100%;">
-            <!-- Area Filter Chips -->
-            <div class="filter-chip-group" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-              <span style="font-size: 11px; font-weight: 700; color: var(--muted-text); min-width: 45px;">Area:</span>
-              <button class="filter-chip active" data-filter-type="area" data-value="all">All</button>
+            <!-- Area Filter Chips: Area scroll area -->
+            <div class="filter-chip-group" style="display: flex; gap: 6px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 6px; width: 100%;">
+              <button class="filter-chip active" data-filter-type="area" data-value="all">All Areas</button>
               <button class="filter-chip" data-filter-type="area" data-value="near">Near Me</button>
               <button class="filter-chip" data-filter-type="area" data-value="moab">Moab</button>
               <button class="filter-chip" data-filter-type="area" data-value="bend">Bend</button>
@@ -553,19 +597,14 @@
               <button class="filter-chip" data-filter-type="area" data-value="baja">Baja</button>
             </div>
             
-            <!-- Sort & Saved Filters -->
-            <div style="display: flex; gap: 20px; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 8px;">
-              <div class="filter-chip-group" style="display: flex; gap: 6px; align-items: center;">
-                <span style="font-size: 11px; font-weight: 700; color: var(--muted-text); min-width: 45px;">Sort:</span>
-                <button class="filter-chip active" data-filter-type="sort" data-value="trending">Trending</button>
-                <button class="filter-chip" data-filter-type="sort" data-value="recent">Recent</button>
-              </div>
-              <div class="filter-chip-group" style="display: flex; gap: 6px; align-items: center;">
-                <span style="font-size: 11px; font-weight: 700; color: var(--muted-text); min-width: 45px;">Filter:</span>
-                <button class="filter-chip active" data-filter-type="saved" data-value="all">All Updates</button>
-                <button class="filter-chip" data-filter-type="saved" data-value="following">Following</button>
-                <button class="filter-chip" data-filter-type="saved" data-value="saved">Bookmarked</button>
-              </div>
+            <!-- Sort & Saved Filters: Combined scroll area -->
+            <div class="filter-chip-group" style="display: flex; gap: 6px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 6px; width: 100%;">
+              <button class="filter-chip active" data-filter-type="sort" data-value="trending">Trending</button>
+              <button class="filter-chip" data-filter-type="sort" data-value="recent">Recent</button>
+              <span style="border-right: 1px solid var(--border-color); margin: 0 4px;"></span>
+              <button class="filter-chip active" data-filter-type="saved" data-value="all">All Updates</button>
+              <button class="filter-chip" data-filter-type="saved" data-value="following">Following</button>
+              <button class="filter-chip" data-filter-type="saved" data-value="saved">Bookmarked</button>
             </div>
           </div>
 
@@ -875,15 +914,15 @@
           
           <div class="profile-card-left">
             <img src="" alt="User Avatar" class="profile-large-avatar" id="profile-user-avatar">
-            <h2 id="profile-user-name">Nomad Bob</h2>
-            <p id="profile-user-handle" style="color:var(--muted-text); font-size:14px; margin-top:-10px;">@nomad_bob</p>
+            <h2 id="profile-user-name">Guest Nomad</h2>
+            <p id="profile-user-handle" style="color:var(--muted-text); font-size:14px; margin-top:-10px;">@guest</p>
             
             <div id="profile-reputation-wrap" style="margin: 6px 0 12px 0; font-size: 13px; font-weight: 700; color: var(--accent-green); display: flex; align-items: center; gap: 6px; justify-content: center;">
               <i data-lucide="award" style="width: 16px; height: 16px;"></i>
-              <span id="profile-reputation-score">Reputation: 15</span>
+              <span id="profile-reputation-score">Reputation: 0</span>
             </div>
 
-            <p id="profile-user-bio" style="font-size:13px; line-height:1.4;">Living full time in my build since 2024. Chasing weather patterns and solar power.</p>
+            <p id="profile-user-bio" style="font-size:13px; line-height:1.4;">Sign in to view your profile details, edit your rig specs, and see your contributions.</p>
             
             <!-- Social Handles Links -->
             <div id="profile-social-links" style="display: flex; gap: 12px; margin-top: 10px; margin-bottom: 12px; width: 100%; justify-content: center; font-size: 13px;">
@@ -1364,6 +1403,20 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal: Post Detail View -->
+  <div class="modal-overlay" id="modal-post-detail">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>Post Discussion</h3>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" id="post-detail-modal-body" style="max-height: 70vh; overflow-y: auto; padding-right: 4px;">
+        <!-- Dynamically populated single post view & comments -->
+      </div>
+    </div>
+  </div>
+
 
   <!-- Modal: Marketplace Safety Warning -->
   <div class="modal-overlay" id="modal-market-safety">
@@ -1897,9 +1950,10 @@
           <i data-lucide="briefcase"></i>
           <span>Work</span>
         </div>
-        <div class="mobile-drawer-item" data-tab="messages" onclick="switchTab('messages'); closeMobileDrawer();">
+        <div class="mobile-drawer-item" data-tab="messages" onclick="switchTab('messages'); closeMobileDrawer();" style="position: relative;">
           <i data-lucide="message-circle"></i>
           <span>Messages</span>
+          <span class="nav-unread-badge" id="mobile-nav-messages-badge" style="display: none;">0</span>
         </div>
         <div class="mobile-drawer-item" data-tab="profile" onclick="switchTab('profile'); closeMobileDrawer();">
           <i data-lucide="user"></i>

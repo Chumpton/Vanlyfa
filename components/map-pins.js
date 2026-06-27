@@ -25,11 +25,7 @@ function updateVouchUI(spot) {
 }
 
 function getMapTileUrl() {
-  if (document.body.classList.contains('dark-mode') || State.darkMode) {
-    return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-  } else {
-    return 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-  }
+  return 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 }
 
 window.getMapTileUrl = getMapTileUrl;
@@ -787,7 +783,7 @@ function safeguardedRenderLeafletMarkers() {
   const pinOffsets = new Map();
   coordGroups.forEach((pinIds, key) => {
     if (pinIds.length > 1) {
-      const radius = 0.0006 * Math.pow(2, 13 - zoom);
+      const radius = 0.0006 * Math.pow(2, 12 - zoom);
       pinIds.forEach((pinId, index) => {
         const angle = (index * 2 * Math.PI) / pinIds.length;
         pinOffsets.set(pinId, {
