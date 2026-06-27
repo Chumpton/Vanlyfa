@@ -379,7 +379,7 @@ function submitComment(e, postId) {
     showToast("Rate limit exceeded. You can only comment 10 times per hour.", "error");
     return;
   }
-  const input = document.getElementById(`comment-input-${postId}`);
+  const input = document.getElementById(`comment-input-${postId}`) || document.getElementById(`modal-comment-input-${postId}`);
   if (input && input.value.trim() !== '') {
     const { target } = findPostOrItem(postId);
     if (target) {
@@ -411,6 +411,9 @@ function submitComment(e, postId) {
       saveStateToStorage();
       renderDashboardFeed();
       renderFeedTabPosts();
+      if (document.getElementById('modal-post-detail') && document.getElementById('modal-post-detail').classList.contains('open')) {
+        window.openPostDetailModal(postId);
+      }
 
       const sql = `INSERT INTO comments (post_id, user_id, text) VALUES ('${postId}', '${State.currentUser.name}', '${commentText.replace(/'/g, "''")}');`;
       const rls = `CREATE POLICY "Enable insert for authenticated commenters" ON comments FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);`;
@@ -420,6 +423,9 @@ function submitComment(e, postId) {
         State._cachedFeeds = {};
         renderDashboardFeed();
         renderFeedTabPosts();
+        if (document.getElementById('modal-post-detail') && document.getElementById('modal-post-detail').classList.contains('open')) {
+          window.openPostDetailModal(postId);
+        }
         showToast("Comment posted!", "success");
       });
     }

@@ -398,7 +398,7 @@ function renderSocialFeed(containerId, isSidebar = false) {
     const placeholderText = isGuest ? "Please sign in to reply..." : `Reply to ${post.author.name}...`;
     const disabledAttr = isGuest ? "disabled" : "";
     const avatarToUse = isGuest ? 'avatar_guest' : State.currentUser.avatar;
-    const cardStyle = isSidebar ? '' : 'style="background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; margin-bottom: 12px;"';
+    const cardStyle = isSidebar ? '' : 'style="background-color: transparent; border: none; border-bottom: 1px solid var(--border-color); border-radius: 0; padding: 16px 0; margin-bottom: 0;"';
 
     // Action button handlers
     let clickGoMarkup = '';
@@ -461,7 +461,7 @@ function renderSocialFeed(containerId, isSidebar = false) {
                 <i data-lucide="heart" style="width:18px; height:18px; color:${post.likedByUser ? '#ef4444' : 'inherit'}; fill:${post.likedByUser ? '#ef4444' : 'none'};"></i>
                 <span>${post.likes || 0}</span>
               </button>
-              <button class="thread-action-icon-btn" onclick="window.toggleRepliesAndFocus('${post.id}')" title="Comment" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
+              <button class="thread-action-icon-btn" onclick="window.openPostDetailModal('${post.id}')" title="Comment" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
                 <i data-lucide="message-circle" style="width:18px; height:18px;"></i>
                 <span>${post.comments ? post.comments.length : 0}</span>
               </button>
@@ -469,23 +469,11 @@ function renderSocialFeed(containerId, isSidebar = false) {
                 <i data-lucide="repeat" style="width:18px; height:18px;"></i>
                 <span>${post.reposts || 0}</span>
               </button>
-              <button class="thread-action-icon-btn" onclick="sharePost('${post.id}')" title="Share Link" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
+              <button class="thread-action-icon-btn" onclick="window.openShareMenu('${post.id}')" title="Share Link" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
                 <i data-lucide="send" style="width:18px; height:18px;"></i>
                 <span>${post.shares || 0}</span>
               </button>
             </div>
-          </div>
-        </div>
-        ${commentsMarkup}
-            
-            <!-- Reply form -->
-            <form class="thread-reply-form" onsubmit="window.submitComment(event, '${post.id}')" style="display:flex; gap:8px; margin-top:10px; align-items:center;">
-              <img src="${getAvatarSrc(avatarToUse)}" alt="Me" class="thread-reply-avatar" style="width:24px; height:24px; border-radius:50%; object-fit:cover;">
-              <div class="thread-reply-input-wrapper" style="display:flex; border:1px solid var(--border-color); border-radius:16px; padding:4px 8px; flex-grow:1; background:var(--bg-sand); align-items:center;">
-                <input type="text" placeholder="${placeholderText}" id="comment-input-${post.id}" class="thread-reply-input" ${disabledAttr} style="border:none; background:none; flex-grow:1; font-size:12px; color:var(--text-main); outline:none;">
-                <button type="submit" class="thread-reply-submit-btn" ${disabledAttr} style="background:none; border:none; color:var(--accent-green); cursor:pointer;"><i data-lucide="corner-down-left" style="width:14px; height:14px;"></i></button>
-              </div>
-            </form>
           </div>
         </div>
       </div>
@@ -505,7 +493,68 @@ function renderSocialFeed(containerId, isSidebar = false) {
   if (window.lucide) lucide.createIcons();
 }
 
-function sharePost(postId) {
+window.openShareMenu = function(postId) {
+  if (!requireAuth()) return;
+  const { target } = findPostOrItem(postId);
+  if (!target) return;
+  
+  const shareUrl = `${window.location.origin}${window.location.pathname}?post=${postId}`;
+  
+  // Create or retrieve modal container
+  let shareModal = document.getElementById('modal-share-sheet');
+  if (!shareModal) {
+    shareModal = document.createElement('div');
+    shareModal.id = 'modal-share-sheet';
+    shareModal.className = 'modal-overlay';
+    shareModal.style.zIndex = '9999';
+    document.body.appendChild(shareModal);
+  }
+  
+  // Filter other users as contact targets
+  const contacts = State.users.filter(u => u.name !== State.currentUser.name);
+  let contactsListHtml = '';
+  contacts.forEach(contact => {
+    contactsListHtml += `
+      <div class="share-contact-item" onclick="window.sendShareToContact('${postId}', '${contact.name.replace(/'/g, "\\'")}')" style="display:flex; align-items:center; gap:10px; padding:10px; border-radius:var(--radius-sm); cursor:pointer; transition: background 0.2s;">
+        <img src="${getAvatarSrc(contact.avatar)}" alt="${contact.name}" style="width:28px; height:28px; border-radius:50%; object-fit:cover;">
+        <div style="flex-grow:1; text-align:left; font-size:13px; font-weight:700; color:var(--text-charcoal);">${contact.name}</div>
+        <i data-lucide="send" style="width:14px; height:14px; color:var(--accent-green);"></i>
+      </div>
+    `;
+  });
+  
+  const hasWebShare = !!navigator.share;
+  
+  shareModal.innerHTML = `
+    <div class="modal-card" style="max-width:360px; padding:20px; border-radius:var(--radius-lg); background:var(--card-bg); position:relative;">
+      <button class="modal-close-btn" onclick="closeModal('modal-share-sheet')" style="position:absolute; top:12px; right:12px; background:none; border:none; color:var(--muted-text); cursor:pointer;"><i data-lucide="x" style="width:18px; height:18px;"></i></button>
+      <h3 style="font-size:16px; font-weight:800; color:var(--text-charcoal); margin-top:0; margin-bottom:16px; text-align:left; display:flex; align-items:center; gap:8px;"><i data-lucide="share-2" style="width:18px; height:18px; color:var(--accent-green);"></i> Share Post</h3>
+      
+      <!-- Primary Actions -->
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px;">
+        <button onclick="window.shareCopyLink('${postId}')" class="btn" style="width:100%; display:flex; align-items:center; justify-content:flex-start; gap:10px; font-size:13px; font-weight:700; padding:10px 14px; border:1px solid var(--border-color); background:var(--bg-sand); color:var(--text-charcoal); border-radius:var(--radius-md); cursor:pointer; transition:all 0.2s;">
+          <i data-lucide="link" style="width:16px; height:16px;"></i> Copy Link
+        </button>
+        ${hasWebShare ? `
+        <button onclick="window.shareWebAPI('${postId}')" class="btn" style="width:100%; display:flex; align-items:center; justify-content:flex-start; gap:10px; font-size:13px; font-weight:700; padding:10px 14px; border:1px solid var(--border-color); background:var(--bg-sand); color:var(--text-charcoal); border-radius:var(--radius-md); cursor:pointer; transition:all 0.2s;">
+          <i data-lucide="share" style="width:16px; height:16px;"></i> Share via...
+        </button>
+        ` : ''}
+      </div>
+      
+      <!-- DM Contact List -->
+      <h4 style="font-size:12px; font-weight:700; color:var(--muted-text); text-transform:uppercase; margin-bottom:10px; text-align:left;">Send in Direct Message</h4>
+      <div class="share-contacts-scroll" style="max-height:180px; overflow-y:auto; display:flex; flex-direction:column; gap:4px; padding-right:4px;">
+        ${contactsListHtml}
+      </div>
+    </div>
+  `;
+  
+  openModal('modal-share-sheet');
+  if (window.lucide) lucide.createIcons();
+};
+
+window.shareCopyLink = function(postId) {
   const { target } = findPostOrItem(postId);
   if (target) {
     if (!target.shares) target.shares = 0;
@@ -514,21 +563,68 @@ function sharePost(postId) {
     State._cachedFeeds = {};
     renderDashboardFeed();
     renderFeedTabPosts();
+    
+    const shareUrl = `${window.location.origin}${window.location.pathname}?post=${postId}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      showToast("Link copied to clipboard!", "success");
+      closeModal('modal-share-sheet');
+    }).catch(err => {
+      fallbackCopyText(shareUrl);
+      showToast("Link copied to clipboard!", "success");
+      closeModal('modal-share-sheet');
+    });
+  }
+};
 
+window.shareWebAPI = function(postId) {
+  const { target } = findPostOrItem(postId);
+  if (target && navigator.share) {
+    if (!target.shares) target.shares = 0;
+    target.shares++;
+    saveStateToStorage();
+    State._cachedFeeds = {};
+    renderDashboardFeed();
+    renderFeedTabPosts();
+    
+    const shareUrl = `${window.location.origin}${window.location.pathname}?post=${postId}`;
+    navigator.share({
+      title: 'Check out this post on Vanlyfa',
+      url: shareUrl
+    }).then(() => {
+      closeModal('modal-share-sheet');
+    }).catch(err => {
+      console.log('Share canceled or failed', err);
+    });
+  }
+};
+
+window.sendShareToContact = function(postId, contactName) {
+  const { target } = findPostOrItem(postId);
+  if (target) {
+    if (!target.shares) target.shares = 0;
+    target.shares++;
+    saveStateToStorage();
+    State._cachedFeeds = {};
+    renderDashboardFeed();
+    renderFeedTabPosts();
+    
     const shareUrl = `${window.location.origin}${window.location.pathname}?post=${postId}`;
     
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(shareUrl).then(() => {
-        showToast("Post link copied to clipboard!", "success");
-      }).catch(err => {
-        console.error("Failed to copy: ", err);
-        fallbackCopyText(shareUrl);
-      });
-    } else {
-      fallbackCopyText(shareUrl);
-    }
+    // Send DM
+    if (!State.chats) State.chats = {};
+    if (!State.chats[contactName]) State.chats[contactName] = [];
+    
+    State.chats[contactName].push({
+      sender: State.currentUser.name,
+      text: `Check out this post: ${shareUrl}`,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+    
+    saveStateToStorage();
+    showToast(`Shared post with ${contactName}!`, "success");
+    closeModal('modal-share-sheet');
   }
-}
+};
 
 function fallbackCopyText(text) {
   const input = document.createElement('input');
@@ -537,9 +633,8 @@ function fallbackCopyText(text) {
   input.select();
   try {
     document.execCommand('copy');
-    showToast("Post link copied to clipboard!", "success");
   } catch (err) {
-    showToast("Could not copy link. Copy manually: " + text, "warning");
+    console.error("Could not copy link", err);
   }
   document.body.removeChild(input);
 }
@@ -673,17 +768,42 @@ window.openPostDetailModal = function(postId) {
       const commenter = State.users ? State.users.find(u => u.name === c.user) : null;
       const avatar = commenter ? commenter.avatar : 'avatar_bob';
       commentsListHtml += `
-        <div class="thread-reply-item" style="display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--border-color);">
-          <img src="${getAvatarSrc(avatar)}" alt="${c.user}" class="reply-avatar" style="width:28px; height:28px; border-radius:50%; object-fit:cover; cursor:pointer;" onclick="closeModal('modal-post-detail'); viewUserProfile('${c.user}')">
-          <div style="flex-grow:1; text-align:left;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:12px;">
-              <span style="font-weight:700; color:var(--text-charcoal); cursor:pointer;" onclick="closeModal('modal-post-detail'); viewUserProfile('${c.user}')">${getUserRoleMarkup(c.user)}</span>
-              <div style="display:flex; gap:8px; align-items:center;">
-                <button onclick="window.replyToModalComment('${postId}', '${c.user}')" style="background:none; border:none; padding:0; font-size:10px; color:var(--muted-text); cursor:pointer; font-weight:700;">Reply</button>
-                <button onclick="window.flagItem('comment', '${postId}', ${index})" title="Flag/Report" style="background:none; border:none; padding:0; color:#ef4444; cursor:pointer; display:inline-flex; align-items:center;"><i data-lucide="flag" style="width:11px; height:11px;"></i></button>
-              </div>
+        <div class="thread-reply-item" style="display:flex; gap:12px; align-items:flex-start; padding:16px 0; border-bottom:1px solid var(--border-color);">
+          <div style="position:relative; flex-shrink:0;">
+            <img src="${getAvatarSrc(avatar)}" alt="${c.user}" class="reply-avatar" style="width:36px; height:36px; border-radius:50%; object-fit:cover; cursor:pointer;" onclick="closeModal('modal-post-detail'); viewUserProfile('${c.user}')">
+            <!-- plus overlay badge -->
+            <div style="position:absolute; bottom:-1px; right:-1px; background:#fff; border-radius:50%; width:14px; height:14px; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 2px rgba(0,0,0,0.15);">
+              <i data-lucide="plus-circle" style="width:12px; height:12px; color:var(--accent-green); fill:#fff;"></i>
             </div>
-            <p style="color:var(--text-main); margin:0; font-size:12px; line-height:1.4;">${parseMarkdownToHtml(c.text)}</p>
+          </div>
+          <div style="flex-grow:1; text-align:left;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <div style="display:flex; align-items:center; gap:6px; font-size:13px;">
+                <span style="font-weight:700; color:var(--text-charcoal); cursor:pointer;" onclick="closeModal('modal-post-detail'); viewUserProfile('${c.user}')">${getUserRoleMarkup(c.user)}</span>
+                <span style="color:var(--muted-text); font-size:12px;">${c.time || '1d'}</span>
+              </div>
+              <i data-lucide="more-horizontal" style="width:16px; height:16px; color:var(--muted-text); cursor:pointer;"></i>
+            </div>
+            <p style="color:var(--text-main); margin:0; font-size:13px; line-height:1.4; font-weight:500;">${parseMarkdownToHtml(c.text)}</p>
+            
+            <!-- Comment Actions -->
+            <div style="display:flex; gap:20px; margin-top:8px; font-size:11px; color:var(--muted-text); align-items:center;">
+              <button style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer; padding:0;">
+                <i data-lucide="heart" style="width:14px; height:14px;"></i>
+                <span>${c.likes || 0}</span>
+              </button>
+              <button style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer; padding:0;">
+                <i data-lucide="message-circle" style="width:14px; height:14px;"></i>
+                <span>0</span>
+              </button>
+              <button style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer; padding:0;">
+                <i data-lucide="repeat" style="width:14px; height:14px;"></i>
+                <span>0</span>
+              </button>
+              <button style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:4px; cursor:pointer; padding:0;">
+                <i data-lucide="send" style="width:14px; height:14px;"></i>
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -700,21 +820,29 @@ window.openPostDetailModal = function(postId) {
 
   body.innerHTML = `
     <!-- Original Post -->
-    <div style="display:flex; gap:12px; border-bottom:1px solid var(--border-color); padding-bottom:16px; margin-bottom:16px;">
-      <img src="${authorAvatar}" alt="${postAuthorName}" onclick="closeModal('modal-post-detail'); viewUserProfile('${postAuthorName}')" style="width:40px; height:40px; border-radius:50%; object-fit:cover; cursor:pointer;">
+    <div style="display:flex; gap:12px; padding-bottom:16px;">
+      <div style="position:relative; flex-shrink:0;">
+        <img src="${authorAvatar}" alt="${postAuthorName}" onclick="closeModal('modal-post-detail'); viewUserProfile('${postAuthorName}')" style="width:40px; height:40px; border-radius:50%; object-fit:cover; cursor:pointer;">
+        <!-- plus overlay badge -->
+        <div style="position:absolute; bottom:-2px; right:-2px; background:#fff; border-radius:50%; width:16px; height:16px; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 3px rgba(0,0,0,0.15);">
+          <i data-lucide="plus-circle" style="width:14px; height:14px; color:var(--accent-green); fill:#fff;"></i>
+        </div>
+      </div>
       <div style="flex-grow:1; text-align:left;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:13px;">
+          <div style="display:flex; align-items:center; gap:6px; font-size:14px;">
             <span style="font-weight:700; color:var(--text-charcoal); cursor:pointer;" onclick="closeModal('modal-post-detail'); viewUserProfile('${postAuthorName}')">${getUserRoleMarkup(postAuthorName)}</span>
-            <span style="color:var(--muted-text);">•</span>
-            <span style="color:var(--muted-text); font-size:11px;">${postTime}</span>
+            <i data-lucide="check-circle-2" style="width:14px; height:14px; fill:#3B82F6; color:white; flex-shrink:0;"></i>
+            <span style="color:var(--muted-text); font-size:13px; margin-left:4px;">${postTime}</span>
           </div>
+          <!-- dots icon -->
+          <i data-lucide="more-horizontal" style="width:16px; height:16px; color:var(--muted-text); cursor:pointer;"></i>
         </div>
-        <div style="margin-top:8px; font-size:14px; line-height:1.5; color:var(--text-main);">${postContent}</div>
+        <div style="margin-top:8px; font-size:14px; line-height:1.5; color:var(--text-main); font-weight: 500;">${postContent}</div>
         ${imgMarkup}
         
         <!-- Post Stats & Action Bar -->
-        <div style="display:flex; gap:28px; margin-top:16px; font-size:13px; color:var(--muted-text); border-top:1.5px solid var(--border-color); padding-top:12px; align-items:center;">
+        <div style="display:flex; gap:28px; margin-top:16px; font-size:13px; color:var(--muted-text); align-items:center;">
           <button onclick="window.toggleLike('${postId}'); window.openPostDetailModal('${postId}')" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
             <i data-lucide="heart" style="width:18px; height:18px; color:${likedByUser ? '#ef4444' : 'inherit'}; fill:${likedByUser ? '#ef4444' : 'none'};"></i>
             <span>${target.likes || 0}</span>
@@ -727,7 +855,7 @@ window.openPostDetailModal = function(postId) {
             <i data-lucide="repeat" style="width:18px; height:18px;"></i>
             <span>${target.reposts || 0}</span>
           </button>
-          <button onclick="sharePost('${postId}')" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
+          <button onclick="window.openShareMenu('${postId}')" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
             <i data-lucide="send" style="width:18px; height:18px;"></i>
             <span>${target.shares || 0}</span>
           </button>
@@ -735,20 +863,40 @@ window.openPostDetailModal = function(postId) {
       </div>
     </div>
 
-    <!-- Comments / Thread replies list -->
-    <h4 style="font-size:13px; font-weight:700; color:var(--text-charcoal); margin-bottom:8px; text-align:left;">Discussion (${comments.length})</h4>
-    <div style="max-height: 250px; overflow-y: auto; padding-right: 4px; display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
-      ${commentsListHtml}
+    <!-- Separator Line -->
+    <div style="border-top: 1px solid var(--border-color); margin: 0 -20px 12px -20px;"></div>
+
+    <!-- Filter / Sort Bar -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; font-size:13px; color:var(--muted-text); padding: 0 4px;">
+      <div style="display:flex; align-items:center; gap:4px; font-weight:700; cursor:pointer; color:var(--text-charcoal);">
+        <i data-lucide="arrow-down-up" style="width:14px; height:14px;"></i>
+        <span>Top</span>
+        <i data-lucide="chevron-down" style="width:14px; height:14px;"></i>
+      </div>
+      <div style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+        <span>View activity</span>
+        <i data-lucide="chevron-right" style="width:14px; height:14px;"></i>
+      </div>
     </div>
 
-    <!-- Reply input form for modal -->
-    <form onsubmit="window.submitModalComment(event, '${postId}')" style="display:flex; gap:8px; align-items:center; border-top:1px solid var(--border-color); padding-top:12px;">
-      <img src="${getAvatarSrc(avatarToUse)}" alt="Me" style="width:28px; height:28px; border-radius:50%; object-fit:cover;">
-      <div style="display:flex; border:1px solid var(--border-color); border-radius:16px; padding:4px 8px; flex-grow:1; background:var(--bg-sand); align-items:center;">
-        <input type="text" placeholder="${placeholderText}" id="modal-comment-input-${postId}" ${disabledAttr} style="border:none; background:none; flex-grow:1; font-size:12px; color:var(--text-main); outline:none;">
-        <button type="submit" ${disabledAttr} style="background:none; border:none; color:var(--accent-green); cursor:pointer;"><i data-lucide="corner-down-left" style="width:14px; height:14px;"></i></button>
+    <!-- Reply Input Bar -->
+    <form onsubmit="window.submitModalComment(event, '${postId}')" style="margin-bottom:20px;">
+      <div style="display:flex; align-items:center; gap:10px; border:1px solid var(--border-color); border-radius:24px; padding:6px 14px; background:var(--card-bg);">
+        <img src="${getAvatarSrc(avatarToUse)}" alt="Me" style="width:28px; height:28px; border-radius:50%; object-fit:cover;">
+        <input type="text" placeholder="${placeholderText}" id="modal-comment-input-${postId}" ${disabledAttr} style="border:none; background:none; flex-grow:1; font-size:13px; color:var(--text-main); outline:none;" />
+        <!-- Inline composer icons on the right -->
+        <div style="display:flex; align-items:center; gap:12px; color:var(--muted-text);">
+          <i data-lucide="image" style="width:16px; height:16px; cursor:pointer;"></i>
+          <span style="font-size:10px; font-weight:800; border:1.5px solid var(--border-color); border-radius:4px; padding:1px 3px; cursor:pointer; line-height:1;">GIF</span>
+          <i data-lucide="maximize-2" style="width:14px; height:14px; cursor:pointer;"></i>
+        </div>
       </div>
     </form>
+
+    <!-- Comments List -->
+    <div style="display:flex; flex-direction:column; gap:0;">
+      ${commentsListHtml}
+    </div>
   `;
 
   openModal('modal-post-detail');
