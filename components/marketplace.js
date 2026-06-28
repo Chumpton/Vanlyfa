@@ -168,15 +168,14 @@ function contactSeller(sellerName, itemTitle) {
   }
 }
 
-function deleteListing(itemId) {
+async function deleteListing(itemId) {
   if (confirm("Are you sure you want to delete this listing?")) {
-    State.marketplace = State.marketplace.filter(item => String(item.id) !== String(itemId));
-    saveStateToStorage();
-    State._cachedFeeds = {}; // Clear feed cache
-    renderMarketplaceListings();
-    renderDashboardFeed();
-    renderFeedTabPosts();
-    showToast("Listing deleted successfully.", "success");
+    try {
+      await Backend.deleteListing(itemId);
+      showToast("Listing deleted successfully.", "success");
+    } catch (e) {
+      showToast(e.message, "error");
+    }
   }
 }
 

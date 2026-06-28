@@ -70,7 +70,7 @@ function renderJobsList() {
   lucide.createIcons();
 }
 
-function saveNewJobListing(event) {
+async function saveNewJobListing(event) {
   event.preventDefault();
   if (!requireAuth()) return;
 
@@ -86,30 +86,23 @@ function saveNewJobListing(event) {
     return;
   }
 
-  const newJob = {
-    id: `job-${Date.now()}`,
-    title: title,
-    location: location,
-    duration: duration,
-    labor: labor,
-    comp: comp,
-    description: description,
-    host: {
-      name: State.currentUser.name,
-      avatar: State.currentUser.avatar || 'avatar_bob'
-    },
-    date: new Date().toISOString().split('T')[0]
-  };
-
-  State.jobs.push(newJob);
-  saveStateToStorage();
-  closeModal('modal-add-job');
-  
-  // reset form
-  document.getElementById('add-job-form').reset();
-  
-  if (State.activeTab === 'jobs') {
-    renderJobsList();
+  try {
+    await Backend.createJob({
+      title,
+      location,
+      duration,
+      labor,
+      compensation: comp,
+      description
+    });
+    closeModal('modal-add-job');
+    
+    // reset form
+    document.getElementById('add-job-form').reset();
+    
+    showToast("Work & Stay opportunity posted successfully!", "success");
+  } catch (e) {
+    if (e.message === 'auth_required') openModal('modal-auth-required');
+    else showToast(e.message, 'error');
   }
-  showToast("Work & Stay opportunity posted successfully!", "success");
 }

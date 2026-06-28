@@ -337,17 +337,17 @@ function findPostOrItem(postId) {
   return { target, array };
 }
 
-function toggleLike(postId) {
+async function toggleLike(postId) {
   if (!requireAuth()) return;
   try {
-    Backend.toggleLike(postId);
+    await Backend.toggleLike(postId);
   } catch (e) {
     if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
     showToast(e.message, 'error');
   }
 }
 
-function submitComment(e, postId) {
+async function submitComment(e, postId) {
   e.preventDefault();
   if (!requireAuth()) return;
   if (!checkRateLimit('comment')) {
@@ -358,7 +358,7 @@ function submitComment(e, postId) {
   if (input && input.value.trim() !== '') {
     const commentText = input.value.trim();
     try {
-      Backend.addComment(postId, commentText);
+      await Backend.addComment(postId, commentText);
       input.value = '';
       showToast("Comment posted!", "success");
     } catch (e) {
@@ -394,10 +394,10 @@ function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-function toggleMeetupRsvp(meetupId) {
+async function toggleMeetupRsvp(meetupId) {
   if (!requireAuth()) return;
   try {
-    const nowAttending = Backend.toggleAttendance(meetupId);
+    const nowAttending = await Backend.toggleAttendance(meetupId);
     if (nowAttending) {
       showToast("RSVP confirmed! See you at camp.", "success");
     } else {
@@ -409,8 +409,9 @@ function toggleMeetupRsvp(meetupId) {
   }
 }
 
-function submitForumReply() {
+async function submitForumReply() {
   const textInput = document.getElementById('forum-reply-text');
+  if (!textInput) return;
   const body = textInput.value.trim();
   if (body === '') return;
   
@@ -421,7 +422,7 @@ function submitForumReply() {
   }
   
   try {
-    Backend.submitReply(State.activeThreadId, body);
+    await Backend.submitReply(State.activeThreadId, body);
     textInput.value = '';
     showToast("Reply published!", "success");
   } catch (e) {
@@ -430,13 +431,13 @@ function submitForumReply() {
   }
 }
 
-function toggleFriend() {
+async function toggleFriend() {
   if (!requireAuth()) return;
   const user = getActiveUser();
   if (user.name === State.currentUser.name) return;
   
   try {
-    const nowFollowing = Backend.toggleFollow(user.name);
+    const nowFollowing = await Backend.toggleFollow(user.name);
     if (nowFollowing) {
       showToast(`Added ${user.name} as a friend!`, "success");
     } else {
@@ -449,10 +450,10 @@ function toggleFriend() {
   }
 }
 
-function toggleReputation() {
+async function toggleReputation() {
   if (!requireAuth()) return;
   try {
-    const authorUser = Backend.giveReputation(State.activeThreadId);
+    const authorUser = await Backend.giveReputation(State.activeThreadId);
     if (authorUser) {
       showToast(`Gave 1 reputation point to ${authorUser.name}!`, 'success');
     }
@@ -497,10 +498,10 @@ function markCurrentSpotAsVisited() {
   }
 }
 
-function toggleVouchSpot(spotId) {
+async function toggleVouchSpot(spotId) {
   if (!requireAuth()) return;
   try {
-    const spot = Backend.vouchSpot(spotId);
+    const spot = await Backend.vouchSpot(spotId);
     updateVouchUI(spot);
     showToast("Vouched spot successfully!", "success");
   } catch (e) {
@@ -754,14 +755,14 @@ function handlePrivateTribeJoin(tribe, onTriggerRender) {
   }, 2500);
 }
 
-function toggleTribeHubMembership(tribeId) {
+async function toggleTribeHubMembership(tribeId) {
   if (!requireAuth()) return;
   const tribe = State.tribes.find(t => t.id === tribeId);
   if (!tribe) return;
   
   try {
     if (tribe.joined) {
-      Backend.leaveTribe(tribeId);
+      await Backend.leaveTribe(tribeId);
       tribe.joined = false;
       showToast(`Left the "${tribe.title}" tribe.`);
     } else {
@@ -771,7 +772,7 @@ function toggleTribeHubMembership(tribeId) {
         });
         return;
       }
-      Backend.joinTribe(tribeId);
+      await Backend.joinTribe(tribeId);
       tribe.joined = true;
       showToast(`Joined the "${tribe.title}" tribe!`, 'success');
     }
@@ -784,7 +785,7 @@ function toggleTribeHubMembership(tribeId) {
   }
 }
 
-function sendTribeChatMessage(e) {
+async function sendTribeChatMessage(e) {
   e.preventDefault();
   if (!requireAuth()) return;
   const tribeId = State.activeTribeId;
@@ -792,7 +793,7 @@ function sendTribeChatMessage(e) {
   if (!tribeId || !input || input.value.trim() === '') return;
   
   try {
-    Backend.sendTribeChat(tribeId, input.value.trim());
+    await Backend.sendTribeChat(tribeId, input.value.trim());
     input.value = '';
     renderTribeHubChat(tribeId);
   } catch (e) {
@@ -847,14 +848,14 @@ function submitTribeThreadReply(e, tribeId, threadId) {
   }
 }
 
-function toggleTribeMembership(tribeId) {
+async function toggleTribeMembership(tribeId) {
   if (!requireAuth()) return;
   const tribe = State.tribes.find(t => t.id === tribeId);
   if (!tribe) return;
   
   try {
     if (tribe.joined) {
-      Backend.leaveTribe(tribeId);
+      await Backend.leaveTribe(tribeId);
       tribe.joined = false;
       showToast(`Left the "${tribe.title}" tribe.`);
     } else {
@@ -864,7 +865,7 @@ function toggleTribeMembership(tribeId) {
         });
         return;
       }
-      Backend.joinTribe(tribeId);
+      await Backend.joinTribe(tribeId);
       tribe.joined = true;
       showToast(`Joined the "${tribe.title}" tribe!`, 'success');
     }
@@ -891,10 +892,10 @@ function updateMessageTickUI(msgId, status) {
   }
 }
 
-function sendChatMessage(username, text) {
+async function sendChatMessage(username, text) {
   if (!requireAuth()) return;
   try {
-    Backend.sendMessage(username, text);
+    await Backend.sendMessage(username, text);
   } catch (e) {
     if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
     showToast(e.message, 'error');
@@ -906,12 +907,16 @@ function sendChatMessage(username, text) {
   }, 3500);
 }
 
-function toggleHeartReaction(username, msgId) {
+async function toggleHeartReaction(username, msgId) {
   const messages = State.chats[username] || [];
   const msg = messages.find(m => m.id === msgId);
   if (msg) {
     const newEmoji = msg.reaction ? null : '❤️';
-    Backend.reactToMessage(username, msgId, newEmoji);
+    try {
+      await Backend.reactToMessage(username, msgId, newEmoji);
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
   }
 }
 
@@ -1148,10 +1153,10 @@ function checkRateLimit(type) {
   return true;
 }
 
-function toggleSavePost(postId) {
+async function toggleSavePost(postId) {
   if (!requireAuth()) return;
   try {
-    const nowSaved = Backend.toggleSavePost(postId);
+    const nowSaved = await Backend.toggleSavePost(postId);
     if (nowSaved) {
       showToast("Post saved to bookmarks!", "success");
     } else {
@@ -1274,7 +1279,7 @@ window.flagItem = flagItem;
 window.checkRateLimit = checkRateLimit;
 window.submitComment = submitComment;
 
-function blockUser(username) {
+async function blockUser(username) {
   if (!requireAuth()) return;
   if (username === State.currentUser.name) {
     showToast("You cannot block yourself.", "error");
@@ -1282,7 +1287,7 @@ function blockUser(username) {
   }
   if (confirm(`Are you sure you want to block ${username}? You will no longer see their posts or comments.`)) {
     try {
-      Backend.blockUser(username);
+      await Backend.blockUser(username);
       showToast(`Blocked ${username}`, "success");
     } catch (e) {
       if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }

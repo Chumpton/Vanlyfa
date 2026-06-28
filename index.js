@@ -29,8 +29,57 @@ function initApp() {
     localStorage.setItem('vanlyfa_supabase_prep_v1', 'true');
   }
 
-  // Load saved state
-  loadStateFromStorage();
+  // Initialize Supabase Client if credentials are provided
+  const supabaseUrl = window.SUPABASE_URL || '';
+  const supabaseKey = window.SUPABASE_ANON_KEY || '';
+  
+  if (supabaseUrl && supabaseKey && typeof supabase !== 'undefined') {
+    window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    Backend._supabase = window.supabaseClient;
+    
+    if (Backend._mode === 'supabase') {
+      // Subscribe to Auth state changes
+      window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        if (session) {
+          try {
+            const { data: profile, error } = await window.supabaseClient
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+              
+            if (error) throw error;
+            
+            State.currentUser = {
+              id: profile.id,
+              name: profile.name,
+              handle: profile.handle,
+              avatar: profile.avatar || 'avatar_bob',
+              bio: profile.bio || 'Living full time on the road.',
+              role: profile.role || 'user',
+              spotsCount: profile.spots_count || 0,
+              listingsCount: profile.listings_count || 0,
+              reputation: profile.reputation || 0,
+              savedPostIds: profile.saved_post_ids || [],
+              savedMeetupIds: profile.saved_meetup_ids || []
+            };
+            State.isSignedIn = true;
+          } catch (err) {
+            console.error("Error loading user profile on auth change:", err);
+            showToast("Failed to retrieve profile data.", "error");
+          }
+        } else {
+          await Backend.signOut();
+        }
+        updateSidebarProfileWidget();
+        renderCurrentTab();
+      });
+    } else {
+      loadStateFromStorage();
+    }
+  } else {
+    loadStateFromStorage();
+  }
   
   // Read saved theme
   const savedDarkVal = localStorage.getItem('vanlyfa_dark_mode');
@@ -1013,7 +1062,7 @@ function handleGoogleSignIn() {
 }
 window.handleGoogleSignIn = handleGoogleSignIn;
 
-function handleAuthSignIn(event) {
+async function handleAuthSignIn(event) {
   event.preventDefault();
   const inputVal = document.getElementById('signin-email').value.trim();
   const passwordVal = document.getElementById('signin-password').value;
@@ -1021,7 +1070,7 @@ function handleAuthSignIn(event) {
   if (!inputVal) return;
   
   try {
-    const user = Backend.signIn(inputVal, passwordVal);
+    const user = await Backend.signIn(inputVal, passwordVal);
     
     // UI updates
     updateSidebarProfileWidget();
@@ -1041,7 +1090,7 @@ function handleAuthSignIn(event) {
   }
 }
 
-function handleAuthSignUp(event) {
+async function handleAuthSignUp(event) {
   event.preventDefault();
   const username = document.getElementById('signup-username').value.trim();
   const email = document.getElementById('signup-email').value.trim();
@@ -1082,19 +1131,20 @@ function handleAuthSignUp(event) {
     avatar_crop: { x: 0, y: 0, zoom: 1 }
   };
   
-  State.users.push(newUser);
-  State.currentUser = { ...newUser };
-  State.isSignedIn = true;
-  Backend.commit(['profile', 'feed', 'dashboard']);
-  updateSidebarProfileWidget();
-  closeModal('modal-auth-required');
-  showToast(`Welcome aboard, ${username}!`, "success");
-  
-  // Hide admin tab on fresh signup
-  const adminTab = document.getElementById('sidebar-admin-tab');
-  if (adminTab) adminTab.style.display = 'none';
+  try {
+    await Backend.signUp(newUser);
+    updateSidebarProfileWidget();
+    closeModal('modal-auth-required');
+    showToast(`Welcome aboard, ${username}!`, "success");
+    
+    // Hide admin tab on fresh signup
+    const adminTab = document.getElementById('sidebar-admin-tab');
+    if (adminTab) adminTab.style.display = 'none';
 
-  renderCurrentTab();
+    renderCurrentTab();
+  } catch(e) {
+    showToast(e.message, 'error');
+  }
 }
 
 function saveUserProfileEdit() {
@@ -1305,7 +1355,7 @@ function saveUserProfileEdit() {
   }
 }
 
-function saveNewSpot() {
+async function saveNewSpot() {
   if (!requireAuth()) return;
   if (!checkRateLimit('spot')) {
     showToast("Rate limit exceeded. You can only add 5 spots per hour.", "error");
@@ -1323,7 +1373,6 @@ function saveNewSpot() {
   }
   
   const spotData = {
-    id: `spot-${Date.now()}`,
     title,
     category,
     lat,
@@ -1342,7 +1391,7 @@ function saveNewSpot() {
   }
   
   try {
-    Backend.createSpot(spotData);
+    await Backend.createSpot(spotData);
     
     if (State.isOffline) {
       updateConnectionUI();
@@ -1371,7 +1420,7 @@ function saveNewSpot() {
   closeModal('modal-add-spot');
 }
 
-function saveNewPost() {
+async function saveNewPost() {
   if (!requireAuth()) return;
   const content = document.getElementById('post-text').value.trim();
   
@@ -1395,24 +1444,20 @@ function saveNewPost() {
   }
   
   const loc = getCachedLocation();
-  const newPost = {
-    id: `post-${Date.now()}`,
-    author: { name: State.currentUser.name, avatar: State.currentUser.avatar },
-    time: "Just now",
-    content,
-    image: finalImage,
-    likes: 0,
-    likedByUser: false,
-    comments: [],
-    status: 'approved',
-    lat: loc && loc.status === 'present' ? loc.lat : null,
-    lng: loc && loc.status === 'present' ? loc.lng : null
-  };
   
-  newPost.pendingSync = true;
-  State.posts.unshift(newPost);
-  saveStateToStorage();
-  renderDashboardFeed();
+  try {
+    await Backend.createPost({
+      content,
+      image: finalImage,
+      lat: loc && loc.status === 'present' ? loc.lat : null,
+      lng: loc && loc.status === 'present' ? loc.lng : null
+    });
+    showToast("Update shared with community feed!", "success");
+  } catch(e) {
+    if (e.message === 'auth_required') openModal('modal-auth-required');
+    else showToast(e.message, 'error');
+    return;
+  }
   
   // Clean inputs
   document.getElementById('post-text').value = '';
@@ -1424,19 +1469,9 @@ function saveNewPost() {
   State.postCropState = createCropObject();
   
   closeModal('modal-add-post');
-
-  const sql = `INSERT INTO posts (id, content, image_url, author_id, likes, status, latitude, longitude) VALUES ('${newPost.id}', '${newPost.content.replace(/'/g, "''")}', ${newPost.image ? "'[image_data]'" : "NULL"}, '${State.currentUser.name}', 0, '${newPost.status}', ${newPost.lat || 'NULL'}, ${newPost.lng || 'NULL'});`;
-  const rls = `CREATE POLICY "Enable insert for authenticated users" ON posts FOR INSERT TO authenticated WITH CHECK (auth.uid() = author_id);`;
-
-  window.simulateDatabaseWrite(newPost, 'post', sql, rls, () => {
-    saveStateToStorage();
-    renderDashboardFeed();
-    const successMsg = "Update shared with community feed!";
-    showToast(successMsg, "success");
-  });
 }
 
-function saveNewListing() {
+async function saveNewListing() {
   if (!requireAuth()) return;
   const userListings = State.marketplace.filter(m => m.seller && (m.seller === State.currentUser.name || (typeof m.seller === 'object' && m.seller.name === State.currentUser.name)));
   if (userListings.length >= 3) {
@@ -1475,13 +1510,7 @@ function saveNewListing() {
   
   const coords = resolveZipCoordinates(zip) || { lat: 39.0, lng: -105.0 };
   
-  const condition = category === 'services-offer' ? 'Service Offered' : 
-                    (category === 'services-want' ? 'Service Wanted' : 'Good');
-  
-  const status = 'approved';
-  
-  const newListing = {
-    id: `market-${Date.now()}`,
+  const listingData = {
     title,
     price,
     category,
@@ -1489,16 +1518,18 @@ function saveNewListing() {
     zip,
     lat: coords.lat,
     lng: coords.lng,
-    condition,
     description,
-    seller: { name: State.currentUser.name, avatar: State.currentUser.avatar },
-    image: finalImage,
-    status
+    image: finalImage
   };
   
-  newListing.pendingSync = true;
-  State.marketplace.push(newListing);
-  saveStateToStorage();
+  try {
+    await Backend.createListing(listingData);
+    showToast("Marketplace listing published!", "success");
+  } catch(e) {
+    if (e.message === 'auth_required') openModal('modal-auth-required');
+    else showToast(e.message, 'error');
+    return;
+  }
   
   const isService = category === 'services-offer' || category === 'services-want';
   const activeType = isService ? 'services' : 'items';
@@ -1507,7 +1538,6 @@ function saveNewListing() {
   } else {
     State.activeMarketplaceType = activeType;
   }
-  renderMarketplaceListings();
   
   // Clean inputs
   document.getElementById('list-title').value = '';
@@ -1524,16 +1554,6 @@ function saveNewListing() {
   State.listingCropState = createCropObject();
   
   closeModal('modal-add-listing');
-
-  const sql = `INSERT INTO listings (id, title, price, category, location, zip, latitude, longitude, condition, description, seller_id, image_url, status) VALUES ('${newListing.id}', '${newListing.title.replace(/'/g, "''")}', ${newListing.price}, '${newListing.category}', '${newListing.location.replace(/'/g, "''")}', '${newListing.zip}', ${newListing.lat}, ${newListing.lng}, '${newListing.condition}', '${newListing.description.replace(/'/g, "''")}', '${State.currentUser.name}', '[image_data]', '${newListing.status}');`;
-  const rls = `CREATE POLICY "Enable insert for authenticated sellers" ON listings FOR INSERT TO authenticated WITH CHECK (auth.uid() = seller_id);`;
-
-  window.simulateDatabaseWrite(newListing, 'marketplace listing', sql, rls, () => {
-    saveStateToStorage();
-    renderMarketplaceListings();
-    const successMsg = "Marketplace listing published!";
-    showToast(successMsg, "success");
-  });
 }
 
 function saveNewTribe() {
@@ -1627,7 +1647,7 @@ function saveNewTribe() {
   });
 }
 
-function saveNewMeetup() {
+async function saveNewMeetup() {
   if (!requireAuth()) return;
   if (!checkRateLimit('meetup')) {
     showToast("Rate limit exceeded. You can only host 3 meetups per hour.", "error");
@@ -1657,7 +1677,7 @@ function saveNewMeetup() {
   }
   
   try {
-    Backend.createMeetup({
+    await Backend.createMeetup({
       title, lat, lng, date, time, location, description,
       image: thumbnail !== 'none' ? thumbnail : null
     });
@@ -1766,7 +1786,7 @@ function saveNewForumThread() {
   closeModal('modal-add-thread');
 }
 
-function saveNewFeedTabPost() {
+async function saveNewFeedTabPost() {
   if (!requireAuth()) return;
   const content = document.getElementById('feed-tab-post-text').value.trim();
   
@@ -1792,7 +1812,7 @@ function saveNewFeedTabPost() {
   const loc = getCachedLocation();
   
   try {
-    Backend.createPost({
+    await Backend.createPost({
       content,
       image: finalImage,
       lat: loc && loc.status === 'present' ? loc.lat : null,

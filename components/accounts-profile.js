@@ -669,7 +669,7 @@ window.viewForumThreadFromProfile = function(threadId) {
   if (typeof renderForumView === 'function') renderForumView();
 };
 
-window.submitProfileComment = function(event, profileOwnerName) {
+window.submitProfileComment = async function(event, profileOwnerName) {
   event.preventDefault();
   if (!requireAuth()) return;
   
@@ -678,30 +678,18 @@ window.submitProfileComment = function(event, profileOwnerName) {
   
   const text = input.value.trim();
   
-  let targetUser = State.users.find(u => u.name === profileOwnerName);
-  if (!targetUser) return;
-  
-  if (!targetUser.profileComments) targetUser.profileComments = [];
-  
-  targetUser.profileComments.unshift({
-    user: State.currentUser.name,
-    text: text,
-    time: "Just now"
-  });
-  
-  if (profileOwnerName !== State.currentUser.name) {
-    if (!targetUser.notifications) targetUser.notifications = [];
-    targetUser.notifications.unshift({
-      id: `notif-${Date.now()}`,
-      content: `💬 ${State.currentUser.name} left a comment on your profile guestbook: "${text.substring(0, 30)}${text.length > 30 ? '...' : ''}"`,
-      time: "Just now",
-      read: false
-    });
+  try {
+    await Backend.addGuestbookComment(profileOwnerName, text);
+    input.value = '';
+    
+    let targetUser = State.users.find(u => u.name === profileOwnerName);
+    if (targetUser) {
+      renderProfileTabContent(targetUser);
+    }
+  } catch(e) {
+    if (e.message === 'auth_required') openModal('modal-auth-required');
+    else showToast(e.message, 'error');
   }
-  
-  saveStateToStorage();
-  input.value = '';
-  renderProfileTabContent(targetUser);
 };
 
 window.shareUserProfile = function(username) {

@@ -94,7 +94,7 @@ function openDirectChat(username) {
   
   State.minimizedChats = State.minimizedChats.filter(name => name !== username);
   
-  saveStateToStorage();
+  Backend._persist();
   renderActiveChats();
   renderContactsSidebar();
   
@@ -116,7 +116,7 @@ function toggleChatMinimize(username, event) {
     State.minimizedChats.push(username);
   }
   
-  saveStateToStorage();
+  Backend._persist();
   renderActiveChats();
 }
 
@@ -126,7 +126,7 @@ function closeDirectChat(username, event) {
   State.activeChats = State.activeChats.filter(name => name !== username);
   State.minimizedChats = State.minimizedChats.filter(name => name !== username);
   
-  saveStateToStorage();
+  Backend._persist();
   renderActiveChats();
   renderContactsSidebar();
 }

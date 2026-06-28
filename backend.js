@@ -2,13 +2,16 @@
    VANLYFA BACKEND ABSTRACTION LAYER — backend.js
    
    Centralizes ALL data mutations behind a clean async API.
-   Currently uses localStorage (via State + saveStateToStorage).
-   Designed to swap internals to Supabase without touching callers.
-   
-   Usage:  Backend.createPost({ content, image })
-           Backend.toggleLike(postId)
-           Backend.commit(['feed', 'dashboard'])
+   Supports both 'local' (localStorage) and 'supabase' modes.
+   Uses database UUID alignment and provides robust Optimistic UI with rollback.
    ========================================================================== */
+
+function mockUuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
 const Backend = {
 
@@ -25,35 +28,10 @@ const Backend = {
 
   /** Clear cached feed renders so next render rebuilds */
   _invalidateFeeds() {
-    State._cachedFeeds = {};
+    if (State) State._cachedFeeds = {};
   },
 
-  /** Simulate a backend write (clears pendingSync after delay) */
-  _scheduleSync(item, type, callback) {
-    if (!item) return;
-    item.pendingSync = true;
-
-    if (this._mode === 'local') {
-      // Log simulated SQL for debugging
-      console.log(`%c[Backend] Writing ${type}...`, 'color: #3ecf8e; font-weight: bold;');
-      setTimeout(() => {
-        if (item) item.pendingSync = false;
-        this._persist();
-        if (callback) callback();
-      }, 1000);
-    }
-    // Supabase mode: caller handles async write directly
-  },
-
-  /** 
-   * Commit: persist state + selectively re-render affected UI areas.
-   * Replaces the scattered saveStateToStorage() + render*() calls.
-   * 
-   * @param {string[]} targets - Areas to re-render: 
-   *   'feed', 'dashboard', 'forum', 'thread', 'map', 'meetups',
-   *   'marketplace', 'chats', 'contacts', 'tribes', 'profile',
-   *   'jobs', 'postDetail', 'notifications'
-   */
+  /** Commit: persist state + selectively re-render affected UI areas. */
   commit(targets = []) {
     this._persist();
     this._invalidateFeeds();
@@ -75,7 +53,6 @@ const Backend = {
       postDetail:  () => {
         const modal = document.getElementById('modal-post-detail');
         if (modal && modal.classList.contains('open')) {
-          // Re-open the currently viewed post detail
           if (typeof window.openPostDetailModal === 'function' && State._activePostDetailId) {
             window.openPostDetailModal(State._activePostDetailId);
           }
@@ -96,21 +73,19 @@ const Backend = {
   //  POSTS
   // ═══════════════════════════════════════════════════════════════════
 
-  /**
-   * Create a new feed post.
-   * @returns {object} The created post object.
-   */
-  createPost({ content, image = null, lat = null, lng = null }) {
+  /** Create a new feed post. */
+  async createPost({ content, image = null, lat = null, lng = null }) {
     if (!content) throw new Error('Post content cannot be empty.');
     if (!State.isSignedIn) throw new Error('auth_required');
     if (typeof checkRateLimit === 'function' && !checkRateLimit('post')) {
       throw new Error('Rate limit exceeded. You can only create 5 posts per hour.');
     }
 
-    const newPost = {
-      id: `post-${Date.now()}`,
+    const tempId = mockUuid();
+    const tempPost = {
+      id: tempId,
       author: { name: State.currentUser.name, avatar: State.currentUser.avatar },
-      time: 'Just now',
+      time: 'Posting...',
       content,
       image,
       likes: 0,
@@ -123,19 +98,62 @@ const Backend = {
       lat, lng
     };
 
-    State.posts.unshift(newPost);
+    // Optimistic Update
+    State.posts.unshift(tempPost);
     this.commit(['feed', 'dashboard']);
-    this._scheduleSync(newPost, 'post', () => {
-      this.commit(['feed', 'dashboard']);
-    });
 
-    return newPost;
+    try {
+      if (this._mode === 'supabase') {
+        const { data, error } = await this._supabase
+          .from('posts')
+          .insert({
+            text: content,
+            image: image,
+            author_id: State.currentUser.id,
+            status: 'approved'
+          })
+          .select('*, author:profiles(*)')
+          .single();
+
+        if (error) throw error;
+
+        // Replace temp with database values
+        const idx = State.posts.findIndex(p => p.id === tempId);
+        if (idx !== -1) {
+          State.posts[idx] = {
+            id: data.id,
+            author: { name: data.author.name, avatar: data.author.avatar },
+            time: 'Just now',
+            content: data.text,
+            image: data.image,
+            likes: 0,
+            likedByUser: false,
+            comments: [],
+            reposts: 0,
+            shares: 0,
+            status: data.status,
+            lat: lat, lng: lng
+          };
+        }
+      } else {
+        // Local mode fallback
+        await new Promise(resolve => setTimeout(resolve, 800));
+        tempPost.id = mockUuid();
+        tempPost.time = 'Just now';
+        tempPost.pendingSync = false;
+      }
+      this.commit(['feed', 'dashboard']);
+      return State.posts.find(p => p.id !== tempId) || tempPost;
+    } catch (err) {
+      // Rollback
+      State.posts = State.posts.filter(p => p.id !== tempId);
+      this.commit(['feed', 'dashboard']);
+      throw err;
+    }
   },
 
-  /**
-   * Delete a post by ID. Only the author can delete.
-   */
-  deletePost(postId) {
+  /** Delete a post. */
+  async deletePost(postId) {
     const idx = State.posts.findIndex(p => String(p.id) === String(postId));
     if (idx === -1) throw new Error('Post not found.');
     
@@ -144,66 +162,84 @@ const Backend = {
       throw new Error('You can only delete your own posts.');
     }
 
-    // Optimistic removal
-    const removed = State.posts.splice(idx, 1)[0];
+    const originalPosts = [...State.posts];
+
+    // Optimistic delete
+    State.posts.splice(idx, 1);
     this.commit(['feed', 'dashboard']);
 
-    this._scheduleSync({ pendingSync: true }, 'delete_post', () => {
-      // If supabase mode and fails, re-insert
-    });
-
-    return removed;
+    try {
+      if (this._mode === 'supabase') {
+        const { error } = await this._supabase
+          .from('posts')
+          .delete()
+          .eq('id', postId);
+        if (error) throw error;
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      this.commit(['feed', 'dashboard']);
+    } catch (err) {
+      // Rollback
+      State.posts = originalPosts;
+      this.commit(['feed', 'dashboard']);
+      throw err;
+    }
   },
 
-  /**
-   * Toggle like on a post.
-   */
-  toggleLike(postId) {
+  /** Toggle like on a post with precise rollback */
+  async toggleLike(postId) {
     if (!State.isSignedIn) throw new Error('auth_required');
 
     const result = typeof findPostOrItem === 'function' ? findPostOrItem(postId) : null;
     const target = result ? result.target : null;
     if (!target) throw new Error('Post not found.');
 
-    // Optimistic toggle
-    if (target.likedByUser) {
-      target.likes = Math.max(0, (target.likes || 0) - 1);
-      target.likedByUser = false;
-    } else {
-      target.likes = (target.likes || 0) + 1;
-      target.likedByUser = true;
-    }
+    // Snapshot previous values
+    const wasLiked = target.likedByUser;
+    const prevLikes = target.likes;
 
+    // Optimistic Update
+    target.likedByUser = !wasLiked;
+    target.likes = wasLiked ? Math.max(0, (target.likes || 0) - 1) : (target.likes || 0) + 1;
     this.commit(['feed', 'dashboard', 'postDetail']);
 
-    // Sync
-    if (this._mode === 'local') {
-      if (typeof simulateApiCall === 'function') {
-        simulateApiCall(
-          () => { this._persist(); },
-          () => {
-            // Rollback
-            if (target.likedByUser) {
-              target.likes = Math.max(0, (target.likes || 0) - 1);
-              target.likedByUser = false;
-            } else {
-              target.likes = (target.likes || 0) + 1;
-              target.likedByUser = true;
-            }
-            this.commit(['feed', 'dashboard', 'postDetail']);
-            if (typeof showToast === 'function') showToast('Network sync failed. Like rolled back.', 'error');
-          }
-        );
+    try {
+      if (this._mode === 'supabase') {
+        if (wasLiked) {
+          const { error } = await this._supabase
+            .from('post_likes')
+            .delete()
+            .eq('post_id', postId)
+            .eq('profile_id', State.currentUser.id);
+          if (error) throw error;
+        } else {
+          const { error } = await this._supabase
+            .from('post_likes')
+            .insert({ post_id: postId, profile_id: State.currentUser.id });
+          if (error) throw error;
+        }
+      } else {
+        await new Promise((resolve, reject) => {
+          setTimeout(() => {
+            if (State.isOffline) reject(new Error('Offline mode active.'));
+            else resolve();
+          }, 400);
+        });
       }
+      this._persist();
+      return target;
+    } catch (err) {
+      // Rollback
+      target.likedByUser = wasLiked;
+      target.likes = prevLikes;
+      this.commit(['feed', 'dashboard', 'postDetail']);
+      throw err;
     }
-
-    return target;
   },
 
-  /**
-   * Add a comment to a post/item.
-   */
-  addComment(postId, commentText) {
+  /** Add a comment with rollback. */
+  async addComment(postId, commentText) {
     if (!State.isSignedIn) throw new Error('auth_required');
     if (!commentText || !commentText.trim()) throw new Error('Comment cannot be empty.');
 
@@ -212,47 +248,65 @@ const Backend = {
     if (!target) throw new Error('Target not found.');
     if (!target.comments) target.comments = [];
 
+    const tempId = mockUuid();
     const newComment = {
-      id: `cmt-${Date.now()}`,
+      id: tempId,
       author: { name: State.currentUser.name, avatar: State.currentUser.avatar },
       text: commentText.trim(),
       time: 'Just now',
       pendingSync: true
     };
 
-    target.comments.push(newComment);
+    // Snapshot previous comments
+    const originalComments = [...target.comments];
 
-    // Expand comments for this post
+    // Optimistic Update
+    target.comments.push(newComment);
     if (!State._expandedPostComments) State._expandedPostComments = new Set();
     State._expandedPostComments.add(postId);
-
-    // Create notification for author
-    const targetAuthorName = target.author ? target.author.name 
-      : (target.host ? target.host.name 
-      : (target.seller ? (typeof target.seller === 'object' ? target.seller.name : target.seller) : null));
-    
-    if (targetAuthorName && targetAuthorName !== State.currentUser.name) {
-      if (!State.notifications) State.notifications = [];
-      State.notifications.unshift({
-        id: `notif-${Date.now()}`,
-        content: `💬 ${State.currentUser.name} commented on your post: "${commentText.substring(0, 30)}${commentText.length > 30 ? '...' : ''}"`,
-        time: 'Just now',
-        read: false
-      });
-    }
-
     this.commit(['feed', 'dashboard', 'postDetail']);
-    this._scheduleSync(newComment, 'comment', () => {
-      this.commit(['feed', 'dashboard', 'postDetail']);
-    });
 
-    return newComment;
+    try {
+      if (this._mode === 'supabase') {
+        const { data, error } = await this._supabase
+          .from('comments')
+          .insert({
+            post_id: postId,
+            text: commentText.trim(),
+            author_id: State.currentUser.id
+          })
+          .select('*, author:profiles(*)')
+          .single();
+
+        if (error) throw error;
+
+        // Sync local object ID
+        const idx = target.comments.findIndex(c => c.id === tempId);
+        if (idx !== -1) {
+          target.comments[idx] = {
+            id: data.id,
+            author: { name: data.author.name, avatar: data.author.avatar },
+            text: data.text,
+            time: 'Just now'
+          };
+        }
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        newComment.id = mockUuid();
+        newComment.pendingSync = false;
+      }
+      this.commit(['feed', 'dashboard', 'postDetail']);
+      return newComment;
+    } catch (err) {
+      // Rollback
+      target.comments = originalComments;
+      this.commit(['feed', 'dashboard', 'postDetail']);
+      throw err;
+    }
   },
 
-  /**
-   * Toggle repost on a post.
-   */
-  toggleRepost(postId) {
+  /** Toggle repost. */
+  async toggleRepost(postId) {
     if (!State.isSignedIn) throw new Error('auth_required');
 
     const target = State.posts.find(p => String(p.id) === String(postId));
@@ -263,6 +317,7 @@ const Backend = {
     const rawId = target.rawId || target.id;
     const idx = State.currentUser.repostedPostIds.indexOf(rawId);
 
+    // Optimistic Update
     if (idx > -1) {
       State.currentUser.repostedPostIds.splice(idx, 1);
       target.reposts = Math.max(0, (target.reposts || 0) - 1);
@@ -270,15 +325,31 @@ const Backend = {
       State.currentUser.repostedPostIds.push(rawId);
       target.reposts = (target.reposts || 0) + 1;
     }
-
     this.commit(['feed', 'dashboard']);
-    return target;
+
+    try {
+      if (this._mode === 'supabase') {
+        // Implement database join interaction here in future
+      }
+      this._persist();
+      return target;
+    } catch (err) {
+      // Rollback
+      if (idx > -1) {
+        State.currentUser.repostedPostIds.push(rawId);
+        target.reposts = (target.reposts || 0) + 1;
+      } else {
+        const rollbackIdx = State.currentUser.repostedPostIds.indexOf(rawId);
+        if (rollbackIdx > -1) State.currentUser.repostedPostIds.splice(rollbackIdx, 1);
+        target.reposts = Math.max(0, (target.reposts || 0) - 1);
+      }
+      this.commit(['feed', 'dashboard']);
+      throw err;
+    }
   },
 
-  /**
-   * Increment share count on a post.
-   */
-  sharePost(postId) {
+  /** Share post. */
+  async sharePost(postId) {
     const target = State.posts.find(p => String(p.id) === String(postId));
     if (!target) return null;
     target.shares = (target.shares || 0) + 1;
@@ -286,22 +357,36 @@ const Backend = {
     return target;
   },
 
-  /**
-   * Toggle saving/bookmarking a post.
-   */
-  toggleSavePost(postId) {
+  /** Toggle bookmark post. */
+  async toggleSavePost(postId) {
     if (!State.isSignedIn) throw new Error('auth_required');
     if (!State.currentUser.savedPostIds) State.currentUser.savedPostIds = [];
 
     const idx = State.currentUser.savedPostIds.indexOf(postId);
+    const originalSaved = [...State.currentUser.savedPostIds];
+
+    // Optimistic update
     if (idx > -1) {
       State.currentUser.savedPostIds.splice(idx, 1);
     } else {
       State.currentUser.savedPostIds.push(postId);
     }
+    this.commit(['feed', 'dashboard']);
 
-    this._persist();
-    return idx === -1; // returns true if now saved
+    try {
+      if (this._mode === 'supabase') {
+        // Supabase bookmark sync logic (visited_spots-like table mapping)
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      this._persist();
+      return idx === -1;
+    } catch (err) {
+      // Rollback
+      State.currentUser.savedPostIds = originalSaved;
+      this.commit(['feed', 'dashboard']);
+      throw err;
+    }
   },
 
 
@@ -309,15 +394,14 @@ const Backend = {
   //  FORUM
   // ═══════════════════════════════════════════════════════════════════
 
-  /**
-   * Create a new forum thread.
-   */
-  createThread({ title, body, category = 'General', image = null }) {
+  /** Create new forum thread. */
+  async createThread({ title, body, category = 'General', image = null }) {
     if (!State.isSignedIn) throw new Error('auth_required');
     if (!title || !body) throw new Error('Title and body are required.');
 
+    const tempId = mockUuid();
     const newThread = {
-      id: `thread-${Date.now()}`,
+      id: tempId,
       title,
       category,
       body,
@@ -331,23 +415,58 @@ const Backend = {
       pendingSync: true
     };
 
-    if (State.isOffline) {
-      State.syncQueue.push({ type: 'CREATE_THREAD', payload: newThread });
-    }
-
     State.forum.unshift(newThread);
     this.commit(['forum']);
-    this._scheduleSync(newThread, 'forum_thread', () => {
-      this.commit(['forum']);
-    });
 
-    return newThread;
+    try {
+      if (this._mode === 'supabase') {
+        const { data, error } = await this._supabase
+          .from('forum_threads')
+          .insert({
+            title,
+            body,
+            category,
+            image,
+            author_id: State.currentUser.id,
+            status: 'approved'
+          })
+          .select('*, author:profiles(*)')
+          .single();
+
+        if (error) throw error;
+
+        const idx = State.forum.findIndex(t => t.id === tempId);
+        if (idx !== -1) {
+          State.forum[idx] = {
+            id: data.id,
+            title: data.title,
+            category: data.category,
+            body: data.body,
+            image: data.image,
+            author: { name: data.author.name, avatar: data.author.avatar },
+            time: 'Just now',
+            replies: [],
+            repliesCount: 0,
+            views: 0,
+            status: data.status
+          };
+        }
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        newThread.id = mockUuid();
+        newThread.pendingSync = false;
+      }
+      this.commit(['forum']);
+      return newThread;
+    } catch (err) {
+      State.forum = State.forum.filter(t => t.id !== tempId);
+      this.commit(['forum']);
+      throw err;
+    }
   },
 
-  /**
-   * Submit a reply to a forum thread.
-   */
-  submitReply(threadId, body) {
+  /** Submit reply to forum thread. */
+  async submitReply(threadId, body) {
     if (!State.isSignedIn) throw new Error('auth_required');
     if (!body || !body.trim()) throw new Error('Reply body cannot be empty.');
 
@@ -355,32 +474,63 @@ const Backend = {
     if (!thread) throw new Error('Thread not found.');
     if (!thread.replies) thread.replies = [];
 
+    const tempId = mockUuid();
     const newReply = {
-      id: `reply-${Date.now()}`,
+      id: tempId,
       body: body.trim(),
       author: { name: State.currentUser.name, avatar: State.currentUser.avatar },
       time: 'Just now',
       pendingSync: true
     };
 
-    if (State.isOffline) {
-      State.syncQueue.push({ type: 'CREATE_REPLY', payload: { threadId, reply: newReply } });
-    }
+    const originalReplies = [...thread.replies];
+    const originalCount = thread.repliesCount;
 
+    // Optimistic Update
     thread.replies.push(newReply);
     thread.repliesCount = (thread.repliesCount || 0) + 1;
     this.commit(['thread']);
-    this._scheduleSync(newReply, 'forum_reply', () => {
-      this.commit(['thread']);
-    });
 
-    return newReply;
+    try {
+      if (this._mode === 'supabase') {
+        const { data, error } = await this._supabase
+          .from('forum_replies')
+          .insert({
+            thread_id: threadId,
+            body: body.trim(),
+            author_id: State.currentUser.id
+          })
+          .select('*, author:profiles(*)')
+          .single();
+
+        if (error) throw error;
+
+        const idx = thread.replies.findIndex(r => r.id === tempId);
+        if (idx !== -1) {
+          thread.replies[idx] = {
+            id: data.id,
+            body: data.body,
+            author: { name: data.author.name, avatar: data.author.avatar },
+            time: 'Just now'
+          };
+        }
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        newReply.id = mockUuid();
+        newReply.pendingSync = false;
+      }
+      this.commit(['thread']);
+      return newReply;
+    } catch (err) {
+      thread.replies = originalReplies;
+      thread.repliesCount = originalCount;
+      this.commit(['thread']);
+      throw err;
+    }
   },
 
-  /**
-   * Give reputation to a forum thread author.
-   */
-  giveReputation(threadId) {
+  /** Give reputation point. */
+  async giveReputation(threadId) {
     if (!State.isSignedIn) throw new Error('auth_required');
 
     const thread = State.forum.find(t => t.id === threadId);
@@ -398,18 +548,33 @@ const Backend = {
     }
 
     const authorUser = State.users.find(u => u.name === authorName);
+    const originalRep = authorUser ? authorUser.reputation : 0;
+
+    // Optimistic Update
     if (authorUser) {
       authorUser.reputation = (authorUser.reputation || 0) + 1;
       State.currentUser.givenRepTo.push(authorName);
-
-      // Sync currentUser properties if same user
-      if (authorUser.name === State.currentUser.name) {
-        State.currentUser.givenRepTo = authorUser.givenRepTo;
-      }
     }
-
     this.commit(['thread', 'forum']);
-    return authorUser;
+
+    try {
+      if (this._mode === 'supabase') {
+        // Sync custom relations if in supabase
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      this._persist();
+      return authorUser;
+    } catch (err) {
+      // Rollback
+      if (authorUser) {
+        authorUser.reputation = originalRep;
+        const repIdx = State.currentUser.givenRepTo.indexOf(authorName);
+        if (repIdx > -1) State.currentUser.givenRepTo.splice(repIdx, 1);
+      }
+      this.commit(['thread', 'forum']);
+      throw err;
+    }
   },
 
 
@@ -417,14 +582,13 @@ const Backend = {
   //  SPOTS
   // ═══════════════════════════════════════════════════════════════════
 
-  /**
-   * Create a new map spot/pin.
-   */
-  createSpot(spotData) {
+  /** Create map pin. */
+  async createSpot(spotData) {
     if (!State.isSignedIn) throw new Error('auth_required');
     
+    const tempId = mockUuid();
     const newSpot = {
-      id: spotData.id || `spot-${Date.now()}`,
+      id: tempId,
       title: spotData.title,
       category: spotData.category,
       lat: spotData.lat,
@@ -440,24 +604,65 @@ const Backend = {
       pendingSync: true
     };
 
-    if (State.isOffline) {
-      State.syncQueue.push({ type: 'CREATE_SPOT', payload: newSpot });
-    }
-
     State.spots.push(newSpot);
     State.currentUser.spotsCount = (State.currentUser.spotsCount || 0) + 1;
     this.commit(['map', 'dashboard']);
-    this._scheduleSync(newSpot, 'spot', () => {
-      this.commit(['map']);
-    });
 
-    return newSpot;
+    try {
+      if (this._mode === 'supabase') {
+        const { data, error } = await this._supabase
+          .from('spots')
+          .insert({
+            title: spotData.title,
+            category: spotData.category,
+            lat: spotData.lat,
+            lng: spotData.lng,
+            description: spotData.description || '',
+            image: spotData.image || null,
+            fee: spotData.fee || 0,
+            author_id: State.currentUser.id,
+            status: spotData.requiresApproval ? 'pending' : 'approved'
+          })
+          .select('*, author:profiles(*)')
+          .single();
+
+        if (error) throw error;
+
+        const idx = State.spots.findIndex(s => s.id === tempId);
+        if (idx !== -1) {
+          State.spots[idx] = {
+            id: data.id,
+            title: data.title,
+            category: data.category,
+            lat: data.lat,
+            lng: data.lng,
+            description: data.description,
+            image: data.image,
+            fee: data.fee,
+            author: { name: data.author.name, avatar: data.author.avatar },
+            vouches: 1,
+            vouchedBy: [State.currentUser.name],
+            comments: [],
+            status: data.status
+          };
+        }
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        newSpot.id = mockUuid();
+        newSpot.pendingSync = false;
+      }
+      this.commit(['map']);
+      return newSpot;
+    } catch (err) {
+      State.spots = State.spots.filter(s => s.id !== tempId);
+      State.currentUser.spotsCount = Math.max(0, (State.currentUser.spotsCount || 0) - 1);
+      this.commit(['map', 'dashboard']);
+      throw err;
+    }
   },
 
-  /**
-   * Vouch for a spot.
-   */
-  vouchSpot(spotId) {
+  /** Vouch spot. */
+  async vouchSpot(spotId) {
     if (!State.isSignedIn) throw new Error('auth_required');
 
     const spot = State.spots.find(s => s.id === spotId);
@@ -468,18 +673,35 @@ const Backend = {
       throw new Error('already_vouched');
     }
 
-    // Optimistic
+    const prevVouches = spot.vouches;
+    const originalVouchedBy = [...spot.vouchedBy];
+
+    // Optimistic Update
     spot.vouches = (spot.vouches || 0) + 1;
     spot.vouchedBy.push(State.currentUser.name);
     this.commit(['map']);
 
-    return spot;
+    try {
+      if (this._mode === 'supabase') {
+        const { error } = await this._supabase
+          .from('visited_spots')
+          .insert({ spot_id: spotId, profile_id: State.currentUser.id });
+        if (error) throw error;
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 400));
+      }
+      this._persist();
+      return spot;
+    } catch (err) {
+      spot.vouches = prevVouches;
+      spot.vouchedBy = originalVouchedBy;
+      this.commit(['map']);
+      throw err;
+    }
   },
 
-  /**
-   * Add a review/comment to a spot.
-   */
-  addSpotReview(spotId, { rating, text }) {
+  /** Add review to spot. */
+  async addSpotReview(spotId, { rating, text }) {
     if (!State.isSignedIn) throw new Error('auth_required');
 
     const spot = State.spots.find(s => s.id === spotId);
@@ -487,7 +709,7 @@ const Backend = {
     if (!spot.comments) spot.comments = [];
 
     const review = {
-      id: `review-${Date.now()}`,
+      id: mockUuid(),
       author: State.currentUser.name,
       avatar: State.currentUser.avatar,
       rating: rating || 5,
@@ -505,13 +727,10 @@ const Backend = {
   //  MARKETPLACE
   // ═══════════════════════════════════════════════════════════════════
 
-  /**
-   * Create a new marketplace listing.
-   */
-  createListing(listingData) {
+  /** Create marketplace listing. */
+  async createListing(listingData) {
     if (!State.isSignedIn) throw new Error('auth_required');
 
-    // Enforce limit of 3 active listings
     const userListings = State.marketplace.filter(
       l => l.seller && (typeof l.seller === 'object' ? l.seller.name : l.seller) === State.currentUser.name
     );
@@ -519,8 +738,9 @@ const Backend = {
       throw new Error('You can only have 3 active listings at a time.');
     }
 
+    const tempId = mockUuid();
     const listing = {
-      id: `listing-${Date.now()}`,
+      id: tempId,
       title: listingData.title,
       price: listingData.price,
       category: listingData.category,
@@ -537,24 +757,87 @@ const Backend = {
     State.marketplace.unshift(listing);
     State.currentUser.listingsCount = (State.currentUser.listingsCount || 0) + 1;
     this.commit(['marketplace', 'dashboard']);
-    this._scheduleSync(listing, 'listing', () => {
-      this.commit(['marketplace']);
-    });
 
-    return listing;
+    try {
+      if (this._mode === 'supabase') {
+        const { data, error } = await this._supabase
+          .from('marketplace')
+          .insert({
+            title: listingData.title,
+            price: listingData.price,
+            category: listingData.category,
+            listing_type: listingData.listingType || 'item',
+            location: listingData.location,
+            zip: listingData.zip,
+            description: listingData.description || '',
+            image: listingData.image || null,
+            seller_id: State.currentUser.id,
+            status: 'approved'
+          })
+          .select('*, seller:profiles(*)')
+          .single();
+
+        if (error) throw error;
+
+        const idx = State.marketplace.findIndex(l => l.id === tempId);
+        if (idx !== -1) {
+          State.marketplace[idx] = {
+            id: data.id,
+            title: data.title,
+            price: data.price,
+            category: data.category,
+            listingType: data.listing_type,
+            location: data.location,
+            zip: data.zip,
+            description: data.description,
+            image: data.image,
+            seller: { name: data.seller.name, avatar: data.seller.avatar },
+            status: data.status
+          };
+        }
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        listing.id = mockUuid();
+        listing.pendingSync = false;
+      }
+      this.commit(['marketplace']);
+      return listing;
+    } catch (err) {
+      State.marketplace = State.marketplace.filter(l => l.id !== tempId);
+      State.currentUser.listingsCount = Math.max(0, (State.currentUser.listingsCount || 0) - 1);
+      this.commit(['marketplace', 'dashboard']);
+      throw err;
+    }
   },
 
-  /**
-   * Delete a marketplace listing.
-   */
-  deleteListing(listingId) {
+  /** Delete marketplace listing. */
+  async deleteListing(listingId) {
     const idx = State.marketplace.findIndex(l => l.id === listingId);
     if (idx === -1) throw new Error('Listing not found.');
     
-    const removed = State.marketplace.splice(idx, 1)[0];
+    const originalListing = [...State.marketplace];
+
+    // Optimistic Delete
+    State.marketplace.splice(idx, 1);
     State.currentUser.listingsCount = Math.max(0, (State.currentUser.listingsCount || 0) - 1);
     this.commit(['marketplace']);
-    return removed;
+
+    try {
+      if (this._mode === 'supabase') {
+        const { error } = await this._supabase
+          .from('marketplace')
+          .delete()
+          .eq('id', listingId);
+        if (error) throw error;
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    } catch (err) {
+      State.marketplace = originalListing;
+      State.currentUser.listingsCount = State.currentUser.listingsCount + 1;
+      this.commit(['marketplace']);
+      throw err;
+    }
   },
 
 
@@ -562,13 +845,10 @@ const Backend = {
   //  MEETUPS
   // ═══════════════════════════════════════════════════════════════════
 
-  /**
-   * Create a new meetup.
-   */
-  createMeetup(meetupData) {
+  /** Create meetup. */
+  async createMeetup(meetupData) {
     if (!State.isSignedIn) throw new Error('auth_required');
 
-    // Enforce limit of 1 hosted meetup
     const hostedCount = State.meetups.filter(
       m => m.host && m.host.name === State.currentUser.name
     ).length;
@@ -576,8 +856,9 @@ const Backend = {
       throw new Error('You can only host 1 active meetup at a time.');
     }
 
+    const tempId = mockUuid();
     const newMeetup = {
-      id: meetupData.id || `meetup-${Date.now()}`,
+      id: tempId,
       title: meetupData.title,
       date: meetupData.date,
       time: meetupData.time,
@@ -596,17 +877,63 @@ const Backend = {
 
     State.meetups.unshift(newMeetup);
     this.commit(['meetups', 'map', 'dashboard']);
-    this._scheduleSync(newMeetup, 'meetup', () => {
-      this.commit(['meetups']);
-    });
 
-    return newMeetup;
+    try {
+      if (this._mode === 'supabase') {
+        const { data, error } = await this._supabase
+          .from('meetups')
+          .insert({
+            title: meetupData.title,
+            date: meetupData.date,
+            time: meetupData.time,
+            location: meetupData.location,
+            lat: meetupData.lat,
+            lng: meetupData.lng,
+            description: meetupData.description || '',
+            image: meetupData.image || null,
+            host_id: State.currentUser.id,
+            status: 'approved'
+          })
+          .select('*, host:profiles(*)')
+          .single();
+
+        if (error) throw error;
+
+        const idx = State.meetups.findIndex(m => m.id === tempId);
+        if (idx !== -1) {
+          State.meetups[idx] = {
+            id: data.id,
+            title: data.title,
+            date: data.date,
+            time: data.time,
+            location: data.location,
+            lat: data.lat,
+            lng: data.lng,
+            description: data.description,
+            image: data.image,
+            host: { name: data.host.name, avatar: data.host.avatar },
+            attendees: [data.host.avatar],
+            attendeeNames: [data.host.name],
+            comments: [],
+            status: data.status
+          };
+        }
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        newMeetup.id = mockUuid();
+        newMeetup.pendingSync = false;
+      }
+      this.commit(['meetups']);
+      return newMeetup;
+    } catch (err) {
+      State.meetups = State.meetups.filter(m => m.id !== tempId);
+      this.commit(['meetups', 'map', 'dashboard']);
+      throw err;
+    }
   },
 
-  /**
-   * Toggle RSVP attendance for a meetup.
-   */
-  toggleAttendance(meetupId) {
+  /** Toggle attendance (RSVP) with rollback. */
+  async toggleAttendance(meetupId) {
     if (!State.isSignedIn) throw new Error('auth_required');
 
     const meetup = State.meetups.find(m => m.id === meetupId);
@@ -615,6 +942,10 @@ const Backend = {
     if (!meetup.attendees) meetup.attendees = [];
 
     const nameIdx = meetup.attendeeNames.indexOf(State.currentUser.name);
+    const originalNames = [...meetup.attendeeNames];
+    const originalAvatars = [...meetup.attendees];
+
+    // Optimistic Update
     if (nameIdx > -1) {
       meetup.attendeeNames.splice(nameIdx, 1);
       meetup.attendees = meetup.attendees.filter(a => a !== State.currentUser.avatar);
@@ -622,15 +953,39 @@ const Backend = {
       meetup.attendeeNames.push(State.currentUser.name);
       meetup.attendees.push(State.currentUser.avatar);
     }
-
     this.commit(['meetups']);
-    return nameIdx === -1; // true if now attending
+
+    try {
+      if (this._mode === 'supabase') {
+        if (nameIdx > -1) {
+          const { error } = await this._supabase
+            .from('meetup_attendees')
+            .delete()
+            .eq('meetup_id', meetupId)
+            .eq('profile_id', State.currentUser.id);
+          if (error) throw error;
+        } else {
+          const { error } = await this._supabase
+            .from('meetup_attendees')
+            .insert({ meetup_id: meetupId, profile_id: State.currentUser.id });
+          if (error) throw error;
+        }
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      this._persist();
+      return nameIdx === -1;
+    } catch (err) {
+      // Rollback
+      meetup.attendeeNames = originalNames;
+      meetup.attendees = originalAvatars;
+      this.commit(['meetups']);
+      throw err;
+    }
   },
 
-  /**
-   * Add a comment to a meetup.
-   */
-  addMeetupComment(meetupId, text) {
+  /** Comment on meetup. */
+  async addMeetupComment(meetupId, text) {
     if (!State.isSignedIn) throw new Error('auth_required');
     if (!text || !text.trim()) throw new Error('Comment cannot be empty.');
 
@@ -639,7 +994,7 @@ const Backend = {
     if (!meetup.comments) meetup.comments = [];
 
     const comment = {
-      id: `meetup-cmt-${Date.now()}`,
+      id: mockUuid(),
       author: State.currentUser.name,
       avatar: State.currentUser.avatar,
       text: text.trim(),
@@ -651,10 +1006,8 @@ const Backend = {
     return comment;
   },
 
-  /**
-   * Delete a meetup (host only).
-   */
-  deleteMeetup(meetupId) {
+  /** Delete meetup. */
+  async deleteMeetup(meetupId) {
     const idx = State.meetups.findIndex(m => m.id === meetupId);
     if (idx === -1) throw new Error('Meetup not found.');
     const removed = State.meetups.splice(idx, 1)[0];
@@ -667,17 +1020,16 @@ const Backend = {
   //  MESSAGING
   // ═══════════════════════════════════════════════════════════════════
 
-  /**
-   * Send a chat message to a user.
-   */
-  sendMessage(username, text, options = {}) {
+  /** Send chat message. */
+  async sendMessage(username, text, options = {}) {
     if (!State.isSignedIn) throw new Error('auth_required');
 
     if (!State.chats) State.chats = {};
     if (!State.chats[username]) State.chats[username] = [];
 
+    const tempId = mockUuid();
     const newMsg = {
-      id: `msg-${Date.now()}`,
+      id: tempId,
       sender: State.currentUser.name,
       text,
       isImage: options.isImage || false,
@@ -689,30 +1041,91 @@ const Backend = {
     State.chats[username].push(newMsg);
     this.commit(['chats', 'contacts']);
 
-    // Simulate delivery/read status
-    setTimeout(() => {
-      newMsg.status = 'delivered';
-      this.commit(['chats']);
-    }, 1500);
-    setTimeout(() => {
-      newMsg.status = 'read';
-      this.commit(['chats']);
-    }, 3000);
+    try {
+      if (this._mode === 'supabase') {
+        const { data: recipient, error: userError } = await this._supabase
+          .from('profiles')
+          .select('id')
+          .eq('name', username)
+          .single();
 
-    return newMsg;
+        if (userError) throw userError;
+
+        const { data, error } = await this._supabase
+          .from('messages')
+          .insert({
+            sender_id: State.currentUser.id,
+            receiver_id: recipient.id,
+            text: options.isImage ? null : text,
+            image: options.isImage ? text : null,
+            status: 'sent'
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const idx = State.chats[username].findIndex(m => m.id === tempId);
+        if (idx !== -1) {
+          State.chats[username][idx].id = data.id;
+          State.chats[username][idx].status = data.status;
+        }
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        newMsg.id = mockUuid();
+      }
+
+      // Simulate delivery/read status locally
+      setTimeout(() => {
+        const msg = State.chats[username].find(m => m.id === newMsg.id);
+        if (msg) {
+          msg.status = 'delivered';
+          this.commit(['chats']);
+        }
+      }, 1500);
+
+      setTimeout(() => {
+        const msg = State.chats[username].find(m => m.id === newMsg.id);
+        if (msg) {
+          msg.status = 'read';
+          this.commit(['chats']);
+        }
+      }, 3000);
+
+      return newMsg;
+    } catch (err) {
+      State.chats[username] = State.chats[username].filter(m => m.id !== tempId);
+      this.commit(['chats', 'contacts']);
+      throw err;
+    }
   },
 
-  /**
-   * React to a chat message.
-   */
-  reactToMessage(username, msgId, emoji) {
+  /** React to message. */
+  async reactToMessage(username, msgId, emoji) {
     const messages = State.chats[username] || [];
     const msg = messages.find(m => m.id === msgId);
     if (!msg) return null;
 
+    const originalReaction = msg.reaction;
+
+    // Optimistic Update
     msg.reaction = emoji || null;
     this.commit(['chats']);
-    return msg;
+
+    try {
+      if (this._mode === 'supabase') {
+        const { error } = await this._supabase
+          .from('messages')
+          .update({ heart_reaction: emoji === '❤️' })
+          .eq('id', msgId);
+        if (error) throw error;
+      }
+      return msg;
+    } catch (err) {
+      msg.reaction = originalReaction;
+      this.commit(['chats']);
+      throw err;
+    }
   },
 
 
@@ -720,10 +1133,8 @@ const Backend = {
   //  TRIBES
   // ═══════════════════════════════════════════════════════════════════
 
-  /**
-   * Send a message in a tribe's live chat.
-   */
-  sendTribeChat(tribeId, text) {
+  /** Send message in tribe live chat. */
+  async sendTribeChat(tribeId, text) {
     if (!State.isSignedIn) throw new Error('auth_required');
     if (!text || !text.trim()) return null;
 
@@ -731,7 +1142,7 @@ const Backend = {
     if (!State.tribeChats[tribeId]) State.tribeChats[tribeId] = [];
 
     const msg = {
-      id: `tc-${Date.now()}`,
+      id: mockUuid(),
       author: State.currentUser.name,
       avatar: State.currentUser.avatar,
       text: text.trim(),
@@ -743,40 +1154,64 @@ const Backend = {
     return msg;
   },
 
-  /**
-   * Join a tribe.
-   */
-  joinTribe(tribeId) {
+  /** Join tribe. */
+  async joinTribe(tribeId) {
     if (!State.isSignedIn) throw new Error('auth_required');
 
     const tribe = State.tribes.find(t => t.id === tribeId);
     if (!tribe) throw new Error('Tribe not found.');
     if (!tribe.members) tribe.members = [];
 
-    if (!tribe.members.includes(State.currentUser.name)) {
+    const wasMember = tribe.members.includes(State.currentUser.name);
+
+    if (!wasMember) {
       tribe.members.push(State.currentUser.name);
       tribe.memberCount = (tribe.memberCount || 0) + 1;
     }
-
     this.commit(['tribes']);
-    return tribe;
+
+    try {
+      if (this._mode === 'supabase') {
+        // Connect database join mapping
+      }
+      return tribe;
+    } catch (err) {
+      if (!wasMember) {
+        tribe.members = tribe.members.filter(m => m !== State.currentUser.name);
+        tribe.memberCount = Math.max(0, (tribe.memberCount || 0) - 1);
+      }
+      this.commit(['tribes']);
+      throw err;
+    }
   },
 
-  /**
-   * Leave a tribe.
-   */
-  leaveTribe(tribeId) {
+  /** Leave tribe. */
+  async leaveTribe(tribeId) {
     if (!State.isSignedIn) throw new Error('auth_required');
 
     const tribe = State.tribes.find(t => t.id === tribeId);
     if (!tribe) throw new Error('Tribe not found.');
     if (!tribe.members) tribe.members = [];
 
+    const wasMember = tribe.members.includes(State.currentUser.name);
+
     tribe.members = tribe.members.filter(m => m !== State.currentUser.name);
     tribe.memberCount = Math.max(0, (tribe.memberCount || 0) - 1);
-
     this.commit(['tribes']);
-    return tribe;
+
+    try {
+      if (this._mode === 'supabase') {
+        // Connect database leave mapping
+      }
+      return tribe;
+    } catch (err) {
+      if (wasMember) {
+        tribe.members.push(State.currentUser.name);
+        tribe.memberCount = tribe.memberCount + 1;
+      }
+      this.commit(['tribes']);
+      throw err;
+    }
   },
 
 
@@ -784,46 +1219,64 @@ const Backend = {
   //  PROFILES & SOCIAL
   // ═══════════════════════════════════════════════════════════════════
 
-  /**
-   * Toggle follow/unfollow a user.
-   */
-  toggleFollow(username) {
+  /** Toggle follow. */
+  async toggleFollow(username) {
     if (!State.isSignedIn) throw new Error('auth_required');
     if (username === State.currentUser.name) throw new Error('Cannot follow yourself.');
 
     if (!State.currentUser.friends) State.currentUser.friends = [];
 
     const idx = State.currentUser.friends.indexOf(username);
+    const originalFriends = [...State.currentUser.friends];
+
     if (idx > -1) {
       State.currentUser.friends.splice(idx, 1);
     } else {
       State.currentUser.friends.push(username);
     }
-
     this.commit(['feed', 'dashboard', 'profile']);
-    return idx === -1; // true if now following
+
+    try {
+      if (this._mode === 'supabase') {
+        // Sync social link mapping
+      }
+      return idx === -1;
+    } catch (err) {
+      State.currentUser.friends = originalFriends;
+      this.commit(['feed', 'dashboard', 'profile']);
+      throw err;
+    }
   },
 
-  /**
-   * Block a user.
-   */
-  blockUser(username) {
+  /** Block user. */
+  async blockUser(username) {
     if (!State.isSignedIn) throw new Error('auth_required');
     if (username === State.currentUser.name) throw new Error('You cannot block yourself.');
 
     if (!State.currentUser.blockedUsers) State.currentUser.blockedUsers = [];
-    if (!State.currentUser.blockedUsers.includes(username)) {
+    
+    const wasBlocked = State.currentUser.blockedUsers.includes(username);
+    if (!wasBlocked) {
       State.currentUser.blockedUsers.push(username);
     }
-
     this.commit(['feed', 'dashboard', 'currentTab']);
-    return true;
+
+    try {
+      if (this._mode === 'supabase') {
+        // block user sync mapping
+      }
+      return true;
+    } catch (err) {
+      if (!wasBlocked) {
+        State.currentUser.blockedUsers = State.currentUser.blockedUsers.filter(u => u !== username);
+      }
+      this.commit(['feed', 'dashboard', 'currentTab']);
+      throw err;
+    }
   },
 
-  /**
-   * Flag/report content.
-   */
-  flagItem(type, id) {
+  /** Flag item. */
+  async flagItem(type, id) {
     if (!State.isSignedIn) throw new Error('auth_required');
 
     let target = null;
@@ -834,57 +1287,106 @@ const Backend = {
     else if (type === 'thread') target = State.forum.find(t => t.id === id);
 
     if (target) {
+      const prevFlags = target.flags_count;
+      const prevStatus = target.status;
+
       target.flags_count = (target.flags_count || 0) + 1;
       if (target.flags_count >= 3) {
         target.status = 'hidden_flagged';
       }
-    }
 
-    this._persist();
+      try {
+        if (this._mode === 'supabase') {
+          const { error } = await this._supabase
+            .from('reports')
+            .insert({
+              reporter_id: State.currentUser.id,
+              content_type: type,
+              content_id: id
+            });
+          if (error) throw error;
+        }
+        this._persist();
+      } catch (err) {
+        target.flags_count = prevFlags;
+        target.status = prevStatus;
+        throw err;
+      }
+    }
     return target;
   },
 
-  /**
-   * Add a guestbook comment to a user's profile.
-   */
-  addGuestbookComment(targetUsername, text) {
+  /** Add guestbook comment. */
+  async addGuestbookComment(targetUsername, text) {
     if (!State.isSignedIn) throw new Error('auth_required');
     if (!text || !text.trim()) throw new Error('Comment cannot be empty.');
 
     const targetUser = State.users.find(u => u.name === targetUsername);
     if (!targetUser) throw new Error('User not found.');
-    if (!targetUser.guestbookComments) targetUser.guestbookComments = [];
+    if (!targetUser.profileComments) targetUser.profileComments = [];
 
     const comment = {
-      id: `gb-${Date.now()}`,
-      author: State.currentUser.name,
-      avatar: State.currentUser.avatar,
+      id: mockUuid(),
+      user: State.currentUser.name,
+      avatar: State.currentUser.avatar || 'avatar_bob',
       text: text.trim(),
       time: 'Just now'
     };
 
-    targetUser.guestbookComments.push(comment);
+    targetUser.profileComments.unshift(comment);
+
+    if (targetUsername !== State.currentUser.name) {
+      if (!targetUser.notifications) targetUser.notifications = [];
+      targetUser.notifications.unshift({
+        id: `notif-${Date.now()}`,
+        content: `💬 ${State.currentUser.name} left a comment on your profile guestbook: "${text.substring(0, 30)}${text.length > 30 ? '...' : ''}"`,
+        time: "Just now",
+        read: false
+      });
+    }
+
     this._persist();
     return comment;
   },
 
-  /**
-   * Update the current user's profile.
-   */
-  updateProfile(profileData) {
+  /** Update profile. */
+  async updateProfile(profileData) {
     if (!State.isSignedIn) throw new Error('auth_required');
 
-    // Update current user
+    const prevProfile = { ...State.currentUser };
+
     Object.assign(State.currentUser, profileData);
 
-    // Also update in users array
     const userInList = State.users.find(u => u.name === State.currentUser.name);
     if (userInList) {
       Object.assign(userInList, profileData);
     }
-
     this.commit(['profile', 'feed', 'dashboard']);
-    return State.currentUser;
+
+    try {
+      if (this._mode === 'supabase') {
+        const { error } = await this._supabase
+          .from('profiles')
+          .update({
+            name: profileData.name,
+            avatar: profileData.avatar,
+            bio: profileData.bio,
+            rig: profileData.rig,
+            solar: profileData.solar,
+            power: profileData.power,
+            water: profileData.water
+          })
+          .eq('id', State.currentUser.id);
+        if (error) throw error;
+      }
+      return State.currentUser;
+    } catch (err) {
+      // Rollback
+      Object.assign(State.currentUser, prevProfile);
+      if (userInList) Object.assign(userInList, prevProfile);
+      this.commit(['profile', 'feed', 'dashboard']);
+      throw err;
+    }
   },
 
 
@@ -892,10 +1394,32 @@ const Backend = {
   //  AUTH
   // ═══════════════════════════════════════════════════════════════════
 
-  /**
-   * Sign in a user by name/handle.
-   */
-  signIn(identifier, password) {
+  /** Sign up a new user. */
+  async signUp(userData) {
+    if (this._mode === 'supabase') {
+      const { data, error } = await this._supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            name: userData.name,
+            handle: userData.handle
+          }
+        }
+      });
+      if (error) throw error;
+      return data;
+    } else {
+      State.users.push(userData);
+      State.currentUser = { ...userData };
+      State.isSignedIn = true;
+      this.commit(['profile', 'feed', 'dashboard']);
+      return userData;
+    }
+  },
+
+  /** Sign in. */
+  async signIn(identifier, password) {
     const searchName = identifier.toLowerCase();
     const user = State.users.find(u =>
       u.name.toLowerCase() === searchName || 
@@ -917,10 +1441,8 @@ const Backend = {
     return State.currentUser;
   },
 
-  /**
-   * Sign out.
-   */
-  signOut() {
+  /** Sign out. */
+  async signOut() {
     State.isSignedIn = false;
     State.currentUser = {
       name: 'Guest Nomad', handle: '@guest', avatar: 'avatar_guest',
@@ -940,14 +1462,13 @@ const Backend = {
   //  JOBS
   // ═══════════════════════════════════════════════════════════════════
 
-  /**
-   * Create a work & stay job listing.
-   */
-  createJob(jobData) {
+  /** Create work & stay job listing. */
+  async createJob(jobData) {
     if (!State.isSignedIn) throw new Error('auth_required');
 
+    const tempId = mockUuid();
     const job = {
-      id: `job-${Date.now()}`,
+      id: tempId,
       title: jobData.title,
       location: jobData.location,
       duration: jobData.duration,
@@ -962,15 +1483,26 @@ const Backend = {
     if (!State.jobs) State.jobs = [];
     State.jobs.unshift(job);
     this.commit(['jobs']);
-    this._scheduleSync(job, 'job');
 
-    return job;
+    try {
+      if (this._mode === 'supabase') {
+        // Supabase jobs mapping insertion
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        job.id = mockUuid();
+        job.pendingSync = false;
+      }
+      this.commit(['jobs']);
+      return job;
+    } catch (err) {
+      State.jobs = State.jobs.filter(j => j.id !== tempId);
+      this.commit(['jobs']);
+      throw err;
+    }
   },
 
-  /**
-   * Delete a job listing.
-   */
-  deleteJob(jobId) {
+  /** Delete job. */
+  async deleteJob(jobId) {
     if (!State.jobs) return null;
     const idx = State.jobs.findIndex(j => j.id === jobId);
     if (idx === -1) throw new Error('Job not found.');
@@ -984,14 +1516,12 @@ const Backend = {
   //  BOOKINGS
   // ═══════════════════════════════════════════════════════════════════
 
-  /**
-   * Create a driveway stay booking.
-   */
-  createBooking(bookingData) {
+  /** Create booking. */
+  async createBooking(bookingData) {
     if (!State.isSignedIn) throw new Error('auth_required');
 
     const booking = {
-      id: `booking-${Date.now()}`,
+      id: mockUuid(),
       spotId: bookingData.spotId,
       spotTitle: bookingData.spotTitle,
       date: bookingData.date,
@@ -1014,13 +1544,11 @@ const Backend = {
   //  NOTIFICATIONS
   // ═══════════════════════════════════════════════════════════════════
 
-  /**
-   * Push a notification.
-   */
-  notify(content) {
+  /** Push notification. */
+  async notify(content) {
     if (!State.notifications) State.notifications = [];
     State.notifications.unshift({
-      id: `notif-${Date.now()}`,
+      id: mockUuid(),
       content,
       time: 'Just now',
       read: false
@@ -1028,10 +1556,8 @@ const Backend = {
     this._persist();
   },
 
-  /**
-   * Mark all notifications as read.
-   */
-  markAllNotificationsRead() {
+  /** Mark all read. */
+  async markAllNotificationsRead() {
     if (State.notifications) {
       State.notifications.forEach(n => n.read = true);
       this._persist();

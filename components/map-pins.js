@@ -1251,33 +1251,32 @@ function handleCompleteDrivewayBooking(event) {
   
   showToast("Processing simulated card payment...", "info");
   
-  setTimeout(() => {
-    const newBooking = {
-      id: `booking-${Date.now()}`,
-      spotId: spot.id,
-      spotTitle: spot.title,
-      hostName: spot.author ? spot.author.name : "Driveway Host",
-      checkInDate: dateVal,
-      nights: nightsVal,
-      totalCost: total,
-      timestamp: new Date().toISOString().split('T')[0]
-    };
-    
-    State.bookings.push(newBooking);
-    saveStateToStorage();
-    
-    closeModal('modal-book-driveway');
-    showToast("Booking confirmed! Saved to your profile.", "success");
-    
-    // Clear inputs
-    document.getElementById('card-number').value = '';
-    document.getElementById('card-expiry').value = '';
-    document.getElementById('card-cvv').value = '';
-    document.getElementById('book-date').value = '';
-    document.getElementById('book-nights').value = '1';
-    
-    if (State.activeTab === 'profile') {
-      renderUserProfile();
+  setTimeout(async () => {
+    try {
+      await Backend.createBooking({
+        spotId: spot.id,
+        spotTitle: spot.title,
+        date: dateVal,
+        nights: nightsVal,
+        total: total,
+        host: spot.author ? spot.author.name : "Driveway Host"
+      });
+      
+      closeModal('modal-book-driveway');
+      showToast("Booking confirmed! Saved to your profile.", "success");
+      
+      // Clear inputs
+      document.getElementById('card-number').value = '';
+      document.getElementById('card-expiry').value = '';
+      document.getElementById('card-cvv').value = '';
+      document.getElementById('book-date').value = '';
+      document.getElementById('book-nights').value = '1';
+      
+      if (State.activeTab === 'profile') {
+        renderUserProfile();
+      }
+    } catch(err) {
+      showToast(err.message, 'error');
     }
   }, 1200);
 }
@@ -1374,7 +1373,7 @@ function clearActiveRoute() {
   }
 }
 
-function shareRouteToFeed(routeId) {
+async function shareRouteToFeed(routeId) {
   const routesData = {
     "moab-loop": "Moab Overland Loop (150mi)",
     "baja-trek": "Baja Pacific Highway Trek (1000mi)",
@@ -1389,35 +1388,17 @@ function shareRouteToFeed(routeId) {
     return;
   }
   
-  const newPost = {
-    id: `post-route-${Date.now()}`,
-    content: `🗺️ Recommended Route: Check out "${title}" on the map! An incredible scenic trip for boondocking vanlifers.`,
-    image: 'none',
-    author: {
-      name: State.currentUser.name,
-      avatar: State.currentUser.avatar
-    },
-    likes: 0,
-    likedByUser: false,
-    reposts: 0,
-    shares: 0,
-    time: "Just now",
-    comments: [],
-    status: "approved"
-  };
+  const content = `🗺️ Recommended Route: Check out "${title}" on the map! An incredible scenic trip for boondocking vanlifers.`;
   
-  State.posts.unshift(newPost);
-  saveStateToStorage();
-  
-  if (State.leafletMap) State.leafletMap.closePopup();
-  showToast("Shared route details to the community feed!", "success");
-  
-  // Redraw feeds
-  State._cachedFeeds = {};
-  renderDashboardFeed();
-  renderFeedTabPosts();
-  
-  switchTab('feed');
+  try {
+    await Backend.createPost({ content });
+    if (State.leafletMap) State.leafletMap.closePopup();
+    showToast("Shared route details to the community feed!", "success");
+    switchTab('feed');
+  } catch(e) {
+    if (e.message === 'auth_required') openModal('modal-auth-required');
+    else showToast(e.message, 'error');
+  }
 }
 
 /* ==========================================================================
@@ -1603,38 +1584,30 @@ function getDetailedPopupHtml(pin) {
 
 // Global Actions called from Map Popups
 
-window.toggleVouchFromPopup = function(pinId) {
+window.vouchFromPopup = async function(pinId) {
   if (!requireAuth()) return;
-  const pin = State.spots.find(s => s.id === pinId);
-  if (!pin) return;
   
-  if (!pin.vouchedBy) pin.vouchedBy = [];
-  const userName = State.currentUser.name;
-  const alreadyVouched = pin.vouchedBy.includes(userName);
-  
-  if (alreadyVouched) {
-    pin.vouchedBy = pin.vouchedBy.filter(u => u !== userName);
-    pin.vouches = Math.max(0, (pin.vouches || 0) - 1);
-  } else {
-    pin.vouchedBy.push(userName);
-    pin.vouches = (pin.vouches || 0) + 1;
-  }
-  
-  saveStateToStorage();
-  showToast(alreadyVouched ? "Removed vouch!" : "Vouched spot successfully!", "success");
-  
-  // Re-create the marker to update popup and customIcon styles
-  const marker = State.leafletMarkersMap.get(pinId);
-  if (marker) {
-    State.leafletMap.removeLayer(marker);
-    State.leafletMarkersMap.delete(pinId);
-  }
-  
-  renderLeafletMarkers();
-  
-  const newMarker = State.leafletMarkersMap.get(pinId);
-  if (newMarker) {
-    newMarker.openPopup();
+  try {
+    const spot = await Backend.vouchSpot(pinId);
+    showToast("Vouched spot successfully!", "success");
+    
+    // Re-create the marker to update popup and customIcon styles
+    const marker = State.leafletMarkersMap.get(pinId);
+    if (marker) {
+      State.leafletMap.removeLayer(marker);
+      State.leafletMarkersMap.delete(pinId);
+    }
+    
+    renderLeafletMarkers();
+    
+    const newMarker = State.leafletMarkersMap.get(pinId);
+    if (newMarker) {
+      newMarker.openPopup();
+    }
+  } catch (err) {
+    if (err.message === 'auth_required') openModal('modal-auth-required');
+    else if (err.message === 'already_vouched') showToast("You have already vouched for this spot.", "info");
+    else showToast(err.message, "error");
   }
 };
 
@@ -1770,9 +1743,9 @@ function getPopupReviewsHtml(pin) {
   
   if (State.isSignedIn) {
     html += `
-      <form onsubmit="window.submitPopupReview(event, '${pin.id}')" style="display:flex; gap:4px; margin-top:6px; align-items:center;">
-        <input type="text" id="popup-review-text-${pin.id}" placeholder="Add comment..." style="flex-grow:1; font-size:10px; padding:4px 8px; border:1px solid var(--border-color); border-radius:12px; outline:none; background:var(--card-bg); color:var(--text-main);" required />
-        <select id="popup-review-rating-${pin.id}" style="font-size:10px; padding:3px; border:1px solid var(--border-color); border-radius:4px; background:var(--card-bg); color:var(--text-main);">
+      <form onsubmit="window.submitSpotReview(event, '${pin.id}')" style="display:flex; gap:4px; margin-top:6px; align-items:center;">
+        <input type="text" id="new-review-text" placeholder="Add comment..." style="flex-grow:1; font-size:10px; padding:4px 8px; border:1px solid var(--border-color); border-radius:12px; outline:none; background:var(--card-bg); color:var(--text-main);" required />
+        <select id="new-review-rating" style="font-size:10px; padding:3px; border:1px solid var(--border-color); border-radius:4px; background:var(--card-bg); color:var(--text-main);">
           <option value="5">5★</option>
           <option value="4">4★</option>
           <option value="3">3★</option>
@@ -1789,39 +1762,32 @@ function getPopupReviewsHtml(pin) {
   return html;
 }
 
-window.submitPopupReview = function(event, pinId) {
-  event.preventDefault();
+window.submitSpotReview = async function(pinId) {
   if (!requireAuth()) return;
-  
-  const textInput = document.getElementById(`popup-review-text-${pinId}`);
-  const ratingSelect = document.getElementById(`popup-review-rating-${pinId}`);
+  const textInput = document.getElementById('new-review-text');
+  const ratingSelect = document.getElementById('new-review-rating');
   if (!textInput) return;
-  
   const text = textInput.value.trim();
   const rating = parseInt(ratingSelect ? ratingSelect.value : '5');
   if (!text) return;
   
-  const pin = [...State.spots, ...State.meetups].find(p => p.id === pinId);
-  if (pin) {
-    if (!pin.reviews) pin.reviews = [];
-    pin.reviews.unshift({
-      id: `review-${Date.now()}`,
-      author: State.currentUser.name,
-      rating: rating,
-      text: text,
-      time: "Just now"
-    });
-    
-    saveStateToStorage();
+  try {
+    await Backend.addSpotReview(pinId, { rating, text });
     showToast("Review submitted successfully!", "success");
     
-    const marker = State.leafletMarkersMap.get(pinId);
-    if (marker) {
-      marker.setPopupContent(getDetailedPopupHtml(pin));
-      if (window.lucide) {
-        lucide.createIcons();
+    const pin = [...State.spots, ...State.meetups].find(p => p.id === pinId);
+    if (pin) {
+      const marker = State.leafletMarkersMap.get(pinId);
+      if (marker) {
+        marker.setPopupContent(getDetailedPopupHtml(pin));
+        if (window.lucide) {
+          lucide.createIcons();
+        }
       }
     }
+    textInput.value = '';
+  } catch (err) {
+    if (err.message === 'auth_required') openModal('modal-auth-required');
+    else showToast(err.message, "error");
   }
 };
-

@@ -196,7 +196,7 @@ function renderMeetupsList() {
   lucide.createIcons();
 }
 
-function saveMeetupComment(event, meetupId) {
+async function saveMeetupComment(event, meetupId) {
   event.preventDefault();
   if (!requireAuth()) return;
   if (!checkRateLimit('comment')) {
@@ -208,20 +208,13 @@ function saveMeetupComment(event, meetupId) {
   const text = input.value.trim();
   if (!text) return;
   
-  const meetup = State.meetups.find(m => m.id === meetupId);
-  if (meetup) {
-    if (!meetup.comments) meetup.comments = [];
-    meetup.comments.push({
-      id: `comment-${Date.now()}`,
-      author: State.currentUser.name,
-      avatar: State.currentUser.avatar || 'avatar_bob',
-      text: text,
-      time: "Just now"
-    });
+  try {
+    await Backend.addMeetupComment(meetupId, text);
     input.value = '';
-    saveStateToStorage();
-    renderMeetupsList();
     showToast("Comment posted!");
+  } catch (e) {
+    if (e.message === 'auth_required') openModal('modal-auth-required');
+    else showToast(e.message, 'error');
   }
 }
 
@@ -322,7 +315,7 @@ function openMeetupDetailModal(meetupId) {
 
   // Comment submission inside modal
   if (commentForm) {
-    commentForm.onsubmit = (e) => {
+    commentForm.onsubmit = async (e) => {
       e.preventDefault();
       if (!requireAuth()) return;
       const input = document.getElementById('meetup-view-comment-input');
@@ -330,19 +323,15 @@ function openMeetupDetailModal(meetupId) {
       const text = input.value.trim();
       if (!text) return;
 
-      if (!meetup.comments) meetup.comments = [];
-      meetup.comments.push({
-        id: `comment-${Date.now()}`,
-        author: State.currentUser.name,
-        avatar: State.currentUser.avatar || 'avatar_bob',
-        text: text,
-        time: "Just now"
-      });
-      input.value = '';
-      saveStateToStorage();
-      openMeetupDetailModal(meetup.id); // refresh modal details
-      renderMeetupsList(); // sync list view
-      showToast("Comment posted!");
+      try {
+        await Backend.addMeetupComment(meetup.id, text);
+        input.value = '';
+        openMeetupDetailModal(meetup.id); // refresh modal details
+        showToast("Comment posted!");
+      } catch (err) {
+        if (err.message === 'auth_required') openModal('modal-auth-required');
+        else showToast(err.message, 'error');
+      }
     };
   }
 

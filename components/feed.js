@@ -922,9 +922,9 @@ window.submitModalComment = function(event, postId) {
   }
 };
 
-window.toggleRepost = function(postId) {
+window.toggleRepost = async function(postId) {
   try {
-    Backend.toggleRepost(postId);
+    await Backend.toggleRepost(postId);
   } catch(e) {
     if (e.message === 'auth_required') openModal('modal-auth-required');
     else showToast(e.message, 'error');
