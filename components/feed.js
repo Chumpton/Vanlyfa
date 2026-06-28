@@ -554,14 +554,9 @@ window.openShareMenu = function(postId) {
 };
 
 window.shareCopyLink = function(postId) {
-  const { target } = findPostOrItem(postId);
-  if (target) {
-    if (!target.shares) target.shares = 0;
-    target.shares++;
-    saveStateToStorage();
-    State._cachedFeeds = {};
-    renderDashboardFeed();
-    renderFeedTabPosts();
+  try {
+    Backend.sharePost(postId);
+    Backend.commit(['feed', 'dashboard']);
     
     const shareUrl = `${window.location.origin}${window.location.pathname}?post=${postId}`;
     navigator.clipboard.writeText(shareUrl).then(() => {
@@ -572,18 +567,17 @@ window.shareCopyLink = function(postId) {
       showToast("Link copied to clipboard!", "success");
       closeModal('modal-share-sheet');
     });
+  } catch(e) {
+    if (e.message === 'auth_required') openModal('modal-auth-required');
+    else showToast(e.message, 'error');
   }
 };
 
 window.shareWebAPI = function(postId) {
-  const { target } = findPostOrItem(postId);
-  if (target && navigator.share) {
-    if (!target.shares) target.shares = 0;
-    target.shares++;
-    saveStateToStorage();
-    State._cachedFeeds = {};
-    renderDashboardFeed();
-    renderFeedTabPosts();
+  if (!navigator.share) return;
+  try {
+    Backend.sharePost(postId);
+    Backend.commit(['feed', 'dashboard']);
     
     const shareUrl = `${window.location.origin}${window.location.pathname}?post=${postId}`;
     navigator.share({
@@ -594,34 +588,27 @@ window.shareWebAPI = function(postId) {
     }).catch(err => {
       console.log('Share canceled or failed', err);
     });
+  } catch(e) {
+    if (e.message === 'auth_required') openModal('modal-auth-required');
+    else showToast(e.message, 'error');
   }
 };
 
 window.sendShareToContact = function(postId, contactName) {
-  const { target } = findPostOrItem(postId);
-  if (target) {
-    if (!target.shares) target.shares = 0;
-    target.shares++;
-    saveStateToStorage();
-    State._cachedFeeds = {};
-    renderDashboardFeed();
-    renderFeedTabPosts();
+  try {
+    Backend.sharePost(postId);
     
     const shareUrl = `${window.location.origin}${window.location.pathname}?post=${postId}`;
     
-    // Send DM
-    if (!State.chats) State.chats = {};
-    if (!State.chats[contactName]) State.chats[contactName] = [];
+    // Send DM via Backend
+    Backend.sendMessage(contactName, `Check out this post: ${shareUrl}`);
     
-    State.chats[contactName].push({
-      sender: State.currentUser.name,
-      text: `Check out this post: ${shareUrl}`,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    });
-    
-    saveStateToStorage();
+    Backend.commit(['feed', 'dashboard']);
     showToast(`Shared post with ${contactName}!`, "success");
     closeModal('modal-share-sheet');
+  } catch(e) {
+    if (e.message === 'auth_required') openModal('modal-auth-required');
+    else showToast(e.message, 'error');
   }
 };
 
@@ -936,47 +923,11 @@ window.submitModalComment = function(event, postId) {
 };
 
 window.toggleRepost = function(postId) {
-  const { target } = findPostOrItem(postId);
-  if (target) {
-    if (!target.reposts) target.reposts = 0;
-    
-    if (State.currentUser) {
-      if (!State.currentUser.repostedPostIds) State.currentUser.repostedPostIds = [];
-      const userObj = State.users.find(u => u.name === State.currentUser.name);
-      
-      const idx = State.currentUser.repostedPostIds.indexOf(postId);
-      if (idx > -1) {
-        State.currentUser.repostedPostIds.splice(idx, 1);
-        if (userObj) {
-          userObj.repostedPostIds = userObj.repostedPostIds || [];
-          const userIdx = userObj.repostedPostIds.indexOf(postId);
-          if (userIdx > -1) userObj.repostedPostIds.splice(userIdx, 1);
-        }
-        target.reposts--;
-        target.repostedByUser = false;
-      } else {
-        State.currentUser.repostedPostIds.push(postId);
-        if (userObj) {
-          userObj.repostedPostIds = userObj.repostedPostIds || [];
-          userObj.repostedPostIds.push(postId);
-        }
-        target.reposts++;
-        target.repostedByUser = true;
-      }
-    } else {
-      if (target.repostedByUser) {
-        target.reposts--;
-        target.repostedByUser = false;
-      } else {
-        target.reposts++;
-        target.repostedByUser = true;
-      }
-    }
-    
-    saveStateToStorage();
-    State._cachedFeeds = {};
-    renderDashboardFeed();
-    renderFeedTabPosts();
+  try {
+    Backend.toggleRepost(postId);
+  } catch(e) {
+    if (e.message === 'auth_required') openModal('modal-auth-required');
+    else showToast(e.message, 'error');
   }
 };
 

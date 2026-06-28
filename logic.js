@@ -339,36 +339,11 @@ function findPostOrItem(postId) {
 
 function toggleLike(postId) {
   if (!requireAuth()) return;
-  const { target } = findPostOrItem(postId);
-  if (target) {
-    const originalLiked = target.likedByUser;
-    const originalLikes = target.likes || 0;
-
-    if (target.likedByUser) {
-      target.likes = Math.max(0, originalLikes - 1);
-      target.likedByUser = false;
-    } else {
-      target.likes = originalLikes + 1;
-      target.likedByUser = true;
-    }
-
-    State._cachedFeeds = {};
-    renderDashboardFeed();
-    renderFeedTabPosts();
-
-    simulateApiCall(
-      () => {
-        saveStateToStorage();
-      },
-      () => {
-        target.likedByUser = originalLiked;
-        target.likes = originalLikes;
-        State._cachedFeeds = {};
-        renderDashboardFeed();
-        renderFeedTabPosts();
-        showToast("Network sync failed. Like rolled back.", "error");
-      }
-    );
+  try {
+    Backend.toggleLike(postId);
+  } catch (e) {
+    if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
+    showToast(e.message, 'error');
   }
 }
 
@@ -381,53 +356,14 @@ function submitComment(e, postId) {
   }
   const input = document.getElementById(`comment-input-${postId}`) || document.getElementById(`modal-comment-input-${postId}`);
   if (input && input.value.trim() !== '') {
-    const { target } = findPostOrItem(postId);
-    if (target) {
-      if (!target.comments) target.comments = [];
-      const commentText = input.value.trim();
-      const newComment = {
-        user: State.currentUser.name,
-        text: commentText,
-        pendingSync: true
-      };
-      target.comments.push(newComment);
-      if (!State._expandedPostComments) State._expandedPostComments = new Set();
-      State._expandedPostComments.add(postId);
-      
-      // Simulated notification to target author/host/seller safely
-      const targetAuthorName = target.author ? target.author.name : (target.host ? target.host.name : (target.seller ? (typeof target.seller === 'object' ? target.seller.name : target.seller) : null));
-      if (targetAuthorName && targetAuthorName !== State.currentUser.name) {
-        if (!State.notifications) State.notifications = [];
-        State.notifications.unshift({
-          id: `notif-${Date.now()}`,
-          content: `💬 ${State.currentUser.name} commented on your post: "${commentText.substring(0, 30)}${commentText.length > 30 ? '...' : ''}"`,
-          time: "Just now",
-          read: false
-        });
-      }
-      
+    const commentText = input.value.trim();
+    try {
+      Backend.addComment(postId, commentText);
       input.value = '';
-      State._cachedFeeds = {};
-      saveStateToStorage();
-      renderDashboardFeed();
-      renderFeedTabPosts();
-      if (document.getElementById('modal-post-detail') && document.getElementById('modal-post-detail').classList.contains('open')) {
-        window.openPostDetailModal(postId);
-      }
-
-      const sql = `INSERT INTO comments (post_id, user_id, text) VALUES ('${postId}', '${State.currentUser.name}', '${commentText.replace(/'/g, "''")}');`;
-      const rls = `CREATE POLICY "Enable insert for authenticated commenters" ON comments FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);`;
-
-      window.simulateDatabaseWrite(newComment, 'comment', sql, rls, () => {
-        saveStateToStorage();
-        State._cachedFeeds = {};
-        renderDashboardFeed();
-        renderFeedTabPosts();
-        if (document.getElementById('modal-post-detail') && document.getElementById('modal-post-detail').classList.contains('open')) {
-          window.openPostDetailModal(postId);
-        }
-        showToast("Comment posted!", "success");
-      });
+      showToast("Comment posted!", "success");
+    } catch (e) {
+      if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
+      showToast(e.message, 'error');
     }
   }
 }
@@ -460,23 +396,16 @@ function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
 
 function toggleMeetupRsvp(meetupId) {
   if (!requireAuth()) return;
-  const meetup = State.meetups.find(m => m.id === meetupId);
-  if (meetup) {
-    const userAvatar = State.currentUser ? State.currentUser.avatar : 'avatar_bob';
-    const idx = meetup.attendees.indexOf(userAvatar);
-    if (idx > -1) {
-      // cancel
-      meetup.attendees.splice(idx, 1);
-      meetup.attendeesCount--;
-      showToast("Cancelled your RSVP.");
-    } else {
-      // rsvp
-      meetup.attendees.push(userAvatar);
-      meetup.attendeesCount++;
+  try {
+    const nowAttending = Backend.toggleAttendance(meetupId);
+    if (nowAttending) {
       showToast("RSVP confirmed! See you at camp.", "success");
+    } else {
+      showToast("Cancelled your RSVP.");
     }
-    saveStateToStorage();
-    renderMeetupsList();
+  } catch (e) {
+    if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
+    showToast(e.message, 'error');
   }
 }
 
@@ -491,55 +420,13 @@ function submitForumReply() {
     return;
   }
   
-  const thread = State.forum.find(t => t.id === State.activeThreadId);
-  if (thread) {
-    const newReply = {
-      author: { name: State.currentUser.name, avatar: State.currentUser.avatar },
-      date: "Just now",
-      body: body
-    };
-
-    // Add simulated notification to thread author
-    if (thread.author && thread.author.name !== State.currentUser.name) {
-      if (!State.notifications) State.notifications = [];
-      State.notifications.unshift({
-        id: `notif-${Date.now()}`,
-        content: `📝 ${State.currentUser.name} replied to your thread "${thread.title.substring(0, 20)}..."`,
-        time: "Just now",
-        read: false
-      });
-    }
-
-    if (State.isOffline) {
-      newReply.pendingSync = true;
-      thread.replies.push(newReply);
-      thread.repliesCount++;
-      State.syncQueue.push({
-        type: 'CREATE_REPLY',
-        payload: { threadId: State.activeThreadId, reply: newReply }
-      });
-      saveStateToStorage();
-      updateConnectionUI();
-      showToast("Offline mode: reply queued for sync!", "warning");
-      textInput.value = '';
-      renderThreadDetail();
-    } else {
-      newReply.pendingSync = true;
-      thread.replies.push(newReply);
-      thread.repliesCount++;
-      saveStateToStorage();
-      textInput.value = '';
-      renderThreadDetail();
-
-      const sql = `INSERT INTO forum_replies (thread_id, author_id, body) VALUES ('${State.activeThreadId}', '${State.currentUser.name}', '${body.replace(/'/g, "''")}');`;
-      const rls = `CREATE POLICY "Enable insert for authenticated repliers" ON forum_replies FOR INSERT TO authenticated WITH CHECK (auth.uid() = author_id);`;
-
-      window.simulateDatabaseWrite(newReply, 'forum reply', sql, rls, () => {
-        saveStateToStorage();
-        renderThreadDetail();
-        showToast("Reply published!", "success");
-      });
-    }
+  try {
+    Backend.submitReply(State.activeThreadId, body);
+    textInput.value = '';
+    showToast("Reply published!", "success");
+  } catch (e) {
+    if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
+    showToast(e.message, 'error');
   }
 }
 
@@ -548,55 +435,33 @@ function toggleFriend() {
   const user = getActiveUser();
   if (user.name === State.currentUser.name) return;
   
-  const currentUserObj = State.users.find(u => u.name === State.currentUser.name);
-  if (!currentUserObj) return;
-  
-  if (!currentUserObj.friends) currentUserObj.friends = [];
-  if (!user.friends) user.friends = [];
-  
-  const isFriend = currentUserObj.friends.includes(user.name);
-  
-  if (isFriend) {
-    currentUserObj.friends = currentUserObj.friends.filter(name => name !== user.name);
-    user.friends = user.friends.filter(name => name !== currentUserObj.name);
-    showToast(`Removed ${user.name} from friends.`, "info");
-  } else {
-    currentUserObj.friends.push(user.name);
-    user.friends.push(currentUserObj.name);
-    showToast(`Added ${user.name} as a friend!`, "success");
+  try {
+    const nowFollowing = Backend.toggleFollow(user.name);
+    if (nowFollowing) {
+      showToast(`Added ${user.name} as a friend!`, "success");
+    } else {
+      showToast(`Removed ${user.name} from friends.`, "info");
+    }
+    renderUserProfile();
+  } catch (e) {
+    if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
+    showToast(e.message, 'error');
   }
-  
-  saveStateToStorage();
-  renderUserProfile();
 }
 
 function toggleReputation() {
   if (!requireAuth()) return;
-  const user = getActiveUser();
-  const currentUserObj = State.users.find(u => u.name === State.currentUser.name);
-  if (!currentUserObj || !user || user.name === currentUserObj.name) return;
-  
-  if (!currentUserObj.givenRepTo) currentUserObj.givenRepTo = [];
-  
-  if (currentUserObj.givenRepTo.includes(user.name)) {
-    // Remove reputation
-    currentUserObj.givenRepTo = currentUserObj.givenRepTo.filter(name => name !== user.name);
-    user.reputation = Math.max(0, (user.reputation || 0) - 1);
-    showToast(`Removed reputation point from ${user.name}`, 'info');
-  } else {
-    // Give reputation
-    currentUserObj.givenRepTo.push(user.name);
-    user.reputation = (user.reputation || 0) + 1;
-    showToast(`Gave 1 reputation point to ${user.name}!`, 'success');
+  try {
+    const authorUser = Backend.giveReputation(State.activeThreadId);
+    if (authorUser) {
+      showToast(`Gave 1 reputation point to ${authorUser.name}!`, 'success');
+    }
+    renderUserProfile();
+  } catch (e) {
+    if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
+    if (e.message === 'already_given') { showToast('You already gave reputation to this author.', 'info'); return; }
+    showToast(e.message, 'error');
   }
-  
-  // Sync currentUser properties
-  if (currentUserObj.name === State.currentUser.name) {
-    State.currentUser.givenRepTo = currentUserObj.givenRepTo;
-  }
-  
-  saveStateToStorage();
-  renderUserProfile();
 }
 
 function markCurrentSpotAsVisited() {
@@ -634,42 +499,15 @@ function markCurrentSpotAsVisited() {
 
 function toggleVouchSpot(spotId) {
   if (!requireAuth()) return;
-  const spot = State.spots.find(s => s.id === spotId);
-  if (!spot) return;
-
-  if (!spot.vouchedBy) spot.vouchedBy = [];
-  const userName = State.currentUser.name;
-  const alreadyVouched = spot.vouchedBy.includes(userName);
-  
-  // Optimistic UI Update
-  if (alreadyVouched) {
-    spot.vouchedBy = spot.vouchedBy.filter(u => u !== userName);
-    spot.vouches = Math.max(0, (spot.vouches || 0) - 1);
-  } else {
-    spot.vouchedBy.push(userName);
-    spot.vouches = (spot.vouches || 0) + 1;
+  try {
+    const spot = Backend.vouchSpot(spotId);
+    updateVouchUI(spot);
+    showToast("Vouched spot successfully!", "success");
+  } catch (e) {
+    if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
+    if (e.message === 'already_vouched') { showToast('You have already vouched for this spot.', 'info'); return; }
+    showToast(e.message, 'error');
   }
-  
-  updateVouchUI(spot);
-  showToast(alreadyVouched ? "Removing vouch..." : "Vouching spot...", "info");
-
-  simulateApiCall(
-    () => {
-      saveStateToStorage();
-      showToast(alreadyVouched ? "Removed vouch!" : "Vouched spot successfully!", "success");
-    },
-    () => {
-      if (alreadyVouched) {
-        spot.vouchedBy.push(userName);
-        spot.vouches++;
-      } else {
-        spot.vouchedBy = spot.vouchedBy.filter(u => u !== userName);
-        spot.vouches = Math.max(0, spot.vouches - 1);
-      }
-      updateVouchUI(spot);
-      showToast("Failed to sync vouch with server. Rollback applied.", "error");
-    }
-  );
 }
 
 let cropState = {
@@ -919,30 +757,30 @@ function handlePrivateTribeJoin(tribe, onTriggerRender) {
 function toggleTribeHubMembership(tribeId) {
   if (!requireAuth()) return;
   const tribe = State.tribes.find(t => t.id === tribeId);
-  if (tribe) {
+  if (!tribe) return;
+  
+  try {
     if (tribe.joined) {
+      Backend.leaveTribe(tribeId);
       tribe.joined = false;
-      tribe.membersCount--;
       showToast(`Left the "${tribe.title}" tribe.`);
-      saveStateToStorage();
-      renderTribeHubHeader(tribeId);
-      const activeTab = document.querySelector('.tribe-hub-tabs .tab-btn.active').id.includes('chat') ? 'chat' : 'forum';
-      switchTribeHubTab(activeTab);
     } else {
       if (!tribe.isPublic) {
         handlePrivateTribeJoin(tribe, () => {
           renderTribeHubHeader(tribeId);
         });
-      } else {
-        tribe.joined = true;
-        tribe.membersCount++;
-        showToast(`Joined the "${tribe.title}" tribe!`, 'success');
-        saveStateToStorage();
-        renderTribeHubHeader(tribeId);
-        const activeTab = document.querySelector('.tribe-hub-tabs .tab-btn.active').id.includes('chat') ? 'chat' : 'forum';
-        switchTribeHubTab(activeTab);
+        return;
       }
+      Backend.joinTribe(tribeId);
+      tribe.joined = true;
+      showToast(`Joined the "${tribe.title}" tribe!`, 'success');
     }
+    renderTribeHubHeader(tribeId);
+    const activeTab = document.querySelector('.tribe-hub-tabs .tab-btn.active').id.includes('chat') ? 'chat' : 'forum';
+    switchTribeHubTab(activeTab);
+  } catch (e) {
+    if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
+    showToast(e.message, 'error');
   }
 }
 
@@ -953,19 +791,17 @@ function sendTribeChatMessage(e) {
   const input = document.getElementById('tribe-chat-input');
   if (!tribeId || !input || input.value.trim() === '') return;
   
-  if (!State.tribeChats) State.tribeChats = {};
-  if (!State.tribeChats[tribeId]) State.tribeChats[tribeId] = [];
+  try {
+    Backend.sendTribeChat(tribeId, input.value.trim());
+    input.value = '';
+    renderTribeHubChat(tribeId);
+  } catch (e) {
+    if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
+    showToast(e.message, 'error');
+    return;
+  }
   
-  State.tribeChats[tribeId].push({
-    sender: State.currentUser.name,
-    text: input.value.trim(),
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  });
-  
-  input.value = '';
-  saveStateToStorage();
-  renderTribeHubChat(tribeId);
-  
+  // Simulated bot reply
   setTimeout(() => {
     if (State.activeTribeId === tribeId) {
       const responses = [
@@ -979,12 +815,13 @@ function sendTribeChatMessage(e) {
       const senders = ["Clara Outdoors", "Forest Nomad", "Baja Surfer", "Solar Explorer"];
       const randomSender = senders[Math.floor(Math.random() * senders.length)];
       
+      if (!State.tribeChats[tribeId]) State.tribeChats[tribeId] = [];
       State.tribeChats[tribeId].push({
         sender: randomSender,
         text: randomMsg,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       });
-      saveStateToStorage();
+      Backend.commit([]);
       renderTribeHubChat(tribeId);
     }
   }, 1500);
@@ -996,7 +833,7 @@ function submitTribeThreadReply(e, tribeId, threadId) {
   const input = e.target.querySelector('input');
   if (!input || input.value.trim() === '') return;
   
-  const thread = State.tribeThreads[tribeId].find(t => t.id === threadId);
+  const thread = State.tribeThreads[tribeId] ? State.tribeThreads[tribeId].find(t => t.id === threadId) : null;
   if (thread) {
     if (!thread.replies) thread.replies = [];
     thread.replies.push({
@@ -1004,7 +841,7 @@ function submitTribeThreadReply(e, tribeId, threadId) {
       body: input.value.trim()
     });
     input.value = '';
-    saveStateToStorage();
+    Backend.commit([]);
     renderTribeHubForum(tribeId);
     showToast("Reply published!", "success");
   }
@@ -1013,26 +850,28 @@ function submitTribeThreadReply(e, tribeId, threadId) {
 function toggleTribeMembership(tribeId) {
   if (!requireAuth()) return;
   const tribe = State.tribes.find(t => t.id === tribeId);
-  if (tribe) {
+  if (!tribe) return;
+  
+  try {
     if (tribe.joined) {
+      Backend.leaveTribe(tribeId);
       tribe.joined = false;
-      tribe.membersCount--;
       showToast(`Left the "${tribe.title}" tribe.`);
-      saveStateToStorage();
-      renderTribesList();
     } else {
       if (!tribe.isPublic) {
         handlePrivateTribeJoin(tribe, () => {
           renderTribesList();
         });
-      } else {
-        tribe.joined = true;
-        tribe.membersCount++;
-        showToast(`Joined the "${tribe.title}" tribe!`, 'success');
-        saveStateToStorage();
-        renderTribesList();
+        return;
       }
+      Backend.joinTribe(tribeId);
+      tribe.joined = true;
+      showToast(`Joined the "${tribe.title}" tribe!`, 'success');
     }
+    renderTribesList();
+  } catch (e) {
+    if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
+    showToast(e.message, 'error');
   }
 }
 
@@ -1054,50 +893,13 @@ function updateMessageTickUI(msgId, status) {
 
 function sendChatMessage(username, text) {
   if (!requireAuth()) return;
-  if (!State.chats[username]) State.chats[username] = [];
-  
-  const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const msgId = `msg-${Date.now()}`;
-  
-  const newMsg = {
-    id: msgId,
-    sender: State.currentUser.name,
-    text: text,
-    time: timeString,
-    reaction: false,
-    status: 'sent'
-  };
-  
-  State.chats[username].push(newMsg);
-  saveStateToStorage();
-  renderActiveChats();
-  renderContactsSidebar();
-  
-  // Transition sent -> delivered after 1.2s
-  setTimeout(() => {
-    const chat = State.chats[username];
-    if (chat) {
-      const msg = chat.find(m => m.id === msgId);
-      if (msg && msg.status === 'sent') {
-        msg.status = 'delivered';
-        saveStateToStorage();
-        updateMessageTickUI(msgId, 'delivered');
-      }
-    }
-  }, 1200);
-  
-  // Transition delivered -> read after 2.8s
-  setTimeout(() => {
-    const chat = State.chats[username];
-    if (chat) {
-      const msg = chat.find(m => m.id === msgId);
-      if (msg && msg.status === 'delivered') {
-        msg.status = 'read';
-        saveStateToStorage();
-        updateMessageTickUI(msgId, 'read');
-      }
-    }
-  }, 2800);
+  try {
+    Backend.sendMessage(username, text);
+  } catch (e) {
+    if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
+    showToast(e.message, 'error');
+    return;
+  }
 
   setTimeout(() => {
     triggerMockReply(username, text);
@@ -1108,9 +910,8 @@ function toggleHeartReaction(username, msgId) {
   const messages = State.chats[username] || [];
   const msg = messages.find(m => m.id === msgId);
   if (msg) {
-    msg.reaction = !msg.reaction;
-    saveStateToStorage();
-    renderActiveChats();
+    const newEmoji = msg.reaction ? null : '❤️';
+    Backend.reactToMessage(username, msgId, newEmoji);
   }
 }
 
@@ -1349,31 +1150,17 @@ function checkRateLimit(type) {
 
 function toggleSavePost(postId) {
   if (!requireAuth()) return;
-  const { target } = findPostOrItem(postId);
-  if (target) {
-    if (!State.currentUser.savedPostIds) {
-      State.currentUser.savedPostIds = [];
-    }
-    const idx = State.currentUser.savedPostIds.indexOf(postId);
-    const originalSaved = target.savedByUser;
-    const originalSaves = target.saves || 0;
-    
-    if (idx > -1) {
-      State.currentUser.savedPostIds.splice(idx, 1);
-      target.savedByUser = false;
-      target.saves = Math.max(0, originalSaves - 1);
-      showToast("Post removed from bookmarks.");
-    } else {
-      State.currentUser.savedPostIds.push(postId);
-      target.savedByUser = true;
-      target.saves = originalSaves + 1;
+  try {
+    const nowSaved = Backend.toggleSavePost(postId);
+    if (nowSaved) {
       showToast("Post saved to bookmarks!", "success");
+    } else {
+      showToast("Post removed from bookmarks.");
     }
-    
-    State._cachedFeeds = {};
-    saveStateToStorage();
-    renderDashboardFeed();
-    renderFeedTabPosts();
+    Backend.commit(['feed', 'dashboard']);
+  } catch (e) {
+    if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
+    showToast(e.message, 'error');
   }
 }
 
@@ -1390,8 +1177,7 @@ function toggleMeetupSave(meetupId) {
     State.currentUser.savedMeetupIds.push(meetupId);
     showToast("Meetup saved to bookmarks!", "success");
   }
-  saveStateToStorage();
-  renderMeetupsList();
+  Backend.commit(['meetups']);
 }
 
 async function safeFetchData(url, fallbackState) {
@@ -1437,64 +1223,14 @@ function processPremiumPurchase(event) {
 function flagItem(type, itemId, commentIndex = null) {
   if (!requireAuth()) return;
   if (confirm(`Are you sure you want to report this ${type} for moderation?`)) {
-    let target = null;
-    let parent = null;
-    
-    if (type === 'post') {
-      const result = findPostOrItem(itemId);
-      target = result.target;
-    } else if (type === 'spot') {
-      target = State.spots.find(s => s.id === itemId);
-    } else if (type === 'marketplace') {
-      target = State.marketplace.find(m => String(m.id) === String(itemId));
-    } else if (type === 'comment') {
-      const result = findPostOrItem(itemId);
-      if (result.target && result.target.comments) {
-        target = result.target.comments[commentIndex];
-        parent = result.target;
-      }
+    try {
+      Backend.flagItem(type, itemId);
+      showToast("Report submitted successfully.", "success");
+      Backend.commit(['feed', 'dashboard', 'currentTab', 'marketplace', 'map']);
+    } catch (e) {
+      if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
+      showToast(e.message, 'error');
     }
-    
-    if (!target) {
-      showToast("Item not found.", "error");
-      return;
-    }
-    
-    if (!target.flags) target.flags = 0;
-    if (!target.flaggedBy) target.flaggedBy = [];
-    
-    const currentUser = State.currentUser.name;
-    if (target.flaggedBy.includes(currentUser)) {
-      showToast("You have already reported this item.", "info");
-      return;
-    }
-    
-    target.flaggedBy.push(currentUser);
-    target.flags += 1;
-    
-    showToast("Report submitted successfully.", "success");
-    
-    if (target.flags >= 3) {
-      if (type === 'post') {
-        target.status = 'rejected';
-      } else if (type === 'spot') {
-        target.status = 'hidden_flagged';
-      } else if (type === 'marketplace') {
-        target.status = 'hidden_flagged';
-      } else if (type === 'comment') {
-        if (parent && parent.comments) {
-          parent.comments.splice(commentIndex, 1);
-        }
-      }
-      showToast("This item has been hidden pending admin review.", "warning");
-    }
-    
-    saveStateToStorage();
-    State._cachedFeeds = {};
-    
-    if (typeof renderCurrentTab === 'function') renderCurrentTab();
-    if (typeof renderMarketplaceListings === 'function') renderMarketplaceListings();
-    if (typeof renderLeafletMarkers === 'function') renderLeafletMarkers();
   }
 }
 
@@ -1545,18 +1281,13 @@ function blockUser(username) {
     return;
   }
   if (confirm(`Are you sure you want to block ${username}? You will no longer see their posts or comments.`)) {
-    if (!State.currentUser.blockedUsers) {
-      State.currentUser.blockedUsers = [];
+    try {
+      Backend.blockUser(username);
+      showToast(`Blocked ${username}`, "success");
+    } catch (e) {
+      if (e.message === 'auth_required') { openModal('modal-auth-required'); return; }
+      showToast(e.message, 'error');
     }
-    if (!State.currentUser.blockedUsers.includes(username)) {
-      State.currentUser.blockedUsers.push(username);
-    }
-    saveStateToStorage();
-    State._cachedFeeds = {};
-    showToast(`Blocked ${username}`, "success");
-    if (typeof renderCurrentTab === 'function') renderCurrentTab();
-    if (typeof renderDashboardFeed === 'function') renderDashboardFeed();
-    if (typeof renderFeedTabPosts === 'function') renderFeedTabPosts();
   }
 }
 window.blockUser = blockUser;

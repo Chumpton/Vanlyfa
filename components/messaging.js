@@ -276,10 +276,8 @@ function renderActiveChats() {
           <input type="file" accept="image/*" id="chat-photo-input-${username}" style="display:none;" onchange="window.handleChatPhotoUpload(event, '${username}')">
           <button class="chat-footer-action-btn" title="Photos" onclick="document.getElementById('chat-photo-input-${username}').click()"><i data-lucide="image"></i></button>
           
-          <button class="chat-footer-action-btn" title="Stickers" onclick="showToast('Stickers not loaded.', 'info')"><i data-lucide="smile"></i></button>
-          
           <div class="chat-input-wrapper">
-            <input type="text" class="chat-input-field" placeholder="Aa" onkeypress="handleChatKeyPress(event, '${username}')" onfocus="setTimeout(adjustChatContainerForVisualViewport, 300)" onblur="setTimeout(adjustChatContainerForVisualViewport, 100)">
+            <input type="text" class="chat-input-field" placeholder="Aa" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onkeypress="handleChatKeyPress(event, '${username}')" onfocus="setTimeout(adjustChatContainerForVisualViewport, 300)" onblur="setTimeout(adjustChatContainerForVisualViewport, 100)">
             <button class="chat-input-emoji-btn" title="Emoji" onclick="window.toggleEmojiPicker('${username}', event)">
               <i data-lucide="smile-plus"></i>
             </button>
@@ -409,12 +407,11 @@ window.toggleReactionTray = function(msgId, event) {
 
 window.reactToMessage = function(username, msgId, emoji, event) {
   if (event) event.stopPropagation();
-  const messages = State.chats[username] || [];
-  const msg = messages.find(m => m.id === msgId);
-  if (msg) {
-    msg.reaction = emoji || null;
-    saveStateToStorage();
-    renderActiveChats();
+  try {
+    Backend.reactToMessage(username, msgId, emoji);
+  } catch(e) {
+    if (e.message === 'auth_required') openModal('modal-auth-required');
+    else showToast(e.message, 'error');
   }
 };
 
@@ -425,21 +422,14 @@ window.handleChatPhotoUpload = function(event, username) {
   const reader = new FileReader();
   reader.onload = function(e) {
     const dataUrl = e.target.result;
-    const messages = State.chats[username] || [];
-    const newMsg = {
-      id: `msg-${Date.now()}`,
-      sender: State.currentUser.name,
-      text: dataUrl,
-      isImage: true,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      reaction: null,
-      status: 'sent'
-    };
     
-    messages.push(newMsg);
-    saveStateToStorage();
-    renderActiveChats();
-    renderContactsSidebar();
+    try {
+      Backend.sendMessage(username, dataUrl, { isImage: true });
+    } catch(err) {
+      if (err.message === 'auth_required') openModal('modal-auth-required');
+      else showToast(err.message, 'error');
+      return;
+    }
     
     setTimeout(() => {
       const replies = [

@@ -337,6 +337,7 @@ body {
   width: 100%;
   height: calc(100vh - 64px);
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   padding: 32px;
   box-sizing: border-box;
   display: none; 
@@ -2709,7 +2710,7 @@ body {
 
 .feed-tab-layout {
   max-width: 720px;
-  margin: 0;
+  margin: 0 auto;
   padding: 24px 32px;
   display: flex;
   flex-direction: column;
@@ -2768,6 +2769,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0 !important;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
 }
 
 /* Profile Image Gallery */
