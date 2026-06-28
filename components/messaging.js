@@ -255,7 +255,7 @@ function renderActiveChats() {
           <div class="chat-header-info">
             <img src="${getAvatarSrc(contact.avatar)}" alt="${contact.name}" class="chat-header-avatar" onclick="event.stopPropagation(); viewUserProfile('${contact.name}')" style="cursor:pointer;">
             <div class="chat-header-meta">
-              <span class="chat-header-name">${getUserRoleMarkup(contact.name)}</span>
+              <span class="chat-header-name" onclick="event.stopPropagation(); viewUserProfile('${contact.name}')" style="cursor:pointer;">${getUserRoleMarkup(contact.name)}</span>
               <span class="chat-header-status">${statusText}</span>
             </div>
           </div>

@@ -730,7 +730,7 @@ body {
   border: none !important;
   border-bottom: 1px solid var(--border-light) !important;
   border-radius: 0 !important;
-  padding: 20px 24px !important;
+  padding: 12px 16px !important;
   box-shadow: none !important;
   margin: 0 !important;
   transition: background-color 0.2s;
@@ -2708,9 +2708,9 @@ body {
 }
 
 .feed-tab-layout {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 32px;
+  max-width: 720px;
+  margin: 0;
+  padding: 24px 32px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -3600,7 +3600,7 @@ body.dark-mode .chat-messages-area {
   }
   
   .feed-post-card {
-    padding: 16px 16px !important;
+    padding: 10px 12px !important;
   }
 }
 
@@ -4231,6 +4231,9 @@ code {
     border: none !important;
     border-radius: 0 !important;
   }
+  #pane-tribes.chat-focused #tribe-chat-back-btn {
+    display: inline-flex !important;
+  }
   
   .meetup-mobile-icon {
     display: inline-block !important;
@@ -4490,4 +4493,19 @@ body.dark-mode .leaflet-tile {
 .more-options-bubble .more-bubble-item svg {
   width: 26px !important;
   height: 26px !important;
+}
+
+/* Feed post hover bubbles */
+.thread-action-icon-btn, .feed-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  padding: 6px 10px !important;
+  margin: -6px -4px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.thread-action-icon-btn:hover, .feed-more-btn:hover {
+  background-color: var(--bg-sand) !important;
+  color: var(--accent-green) !important;
 }

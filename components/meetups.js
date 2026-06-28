@@ -3,12 +3,14 @@
    ========================================================================== */
 
 function renderMeetupsList() {
+  if (typeof initMeetupFilters === 'function') initMeetupFilters();
   const container = document.getElementById('meetup-list-container');
   container.innerHTML = '';
   
   const query = State.searchQuery;
-  const selectedArea = document.getElementById('meetup-filter-area') ? document.getElementById('meetup-filter-area').value : 'all';
-  const selectedSaved = document.getElementById('meetup-filter-saved') ? document.getElementById('meetup-filter-saved').value : 'all';
+  const selectedArea = State.meetupFilterArea || 'all';
+  const selectedSort = State.meetupFilterSort || 'newest';
+  const selectedSaved = State.meetupFilterSaved || 'all';
 
   function meetupMatchesArea(meetup, area) {
     if (area === 'all') return true;
@@ -48,10 +50,11 @@ function renderMeetupsList() {
     return false;
   }
 
+  const queryStr = (query || '').toLowerCase();
   const filtered = State.meetups.filter(m => {
-    const queryMatch = m.title.toLowerCase().includes(query) || 
-                       m.description.toLowerCase().includes(query) ||
-                       m.location.toLowerCase().includes(query);
+    const queryMatch = m.title.toLowerCase().includes(queryStr) || 
+                       m.description.toLowerCase().includes(queryStr) ||
+                       m.location.toLowerCase().includes(queryStr);
                        
     if (!queryMatch) return false;
     
@@ -65,6 +68,24 @@ function renderMeetupsList() {
     
     return true;
   });
+  
+  if (selectedSort === 'nearby') {
+    const loc = getCachedLocation();
+    if (loc && loc.status === 'present') {
+      filtered.sort((a, b) => {
+        const latA = typeof a.lat === 'number' ? a.lat : 0;
+        const lngA = typeof a.lng === 'number' ? a.lng : 0;
+        const latB = typeof b.lat === 'number' ? b.lat : 0;
+        const lngB = typeof b.lng === 'number' ? b.lng : 0;
+        const distA = calculateHaversineDistance(latA, lngA, loc.lat, loc.lng);
+        const distB = calculateHaversineDistance(latB, lngB, loc.lat, loc.lng);
+        return distA - distB;
+      });
+    }
+  } else {
+    // Newest: Sort by date
+    filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+  }
   
   if (filtered.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding:64px; color:var(--muted-text);">No caravan meetups match your search.</div>`;

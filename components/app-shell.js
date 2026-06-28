@@ -54,7 +54,8 @@ function switchTab(tabName, isPopState = false) {
     messages: "Direct Messages",
     profile: "Rig Profile",
     jobs: "Work & Stay",
-    admin: "Admin Moderation Panel"
+    admin: "Admin Moderation Panel",
+    search: "Search Directory"
   };
   document.getElementById('page-display-title').innerText = titles[tabName] || "Vanlyfa";
   
@@ -69,7 +70,8 @@ function switchTab(tabName, isPopState = false) {
     messages: "Search direct messages...",
     profile: "Search profile specs...",
     jobs: "Search farm help, camp hosts, carpentry...",
-    admin: "Filter pending moderation..."
+    admin: "Filter pending moderation...",
+    search: "Search nomads, posts, spots..."
   };
   document.getElementById('global-search').placeholder = placeholders[tabName] || "Search...";
   

@@ -8,15 +8,14 @@ function renderSocialFeed(containerId, isSidebar = false) {
   
   const query = State.searchQuery;
   
-  const selectedArea = State.feedFilterArea || 'all';
-  const selectedSort = State.feedFilterSort || 'trending';
-  const selectedSaved = State.feedFilterSaved || 'all';
+  const selectedTab = State.feedFilterTab || 'for-you';
+  const selectedSort = State.feedFilterSort || 'newest';
 
   // Cache check
   if (!State._cachedFeeds) {
     State._cachedFeeds = {};
   }
-  const cacheKey = `${containerId}_${query}_${State.isSignedIn}_${State.currentUser ? State.currentUser.name : 'guest'}_${selectedArea}_${selectedSort}_${selectedSaved}`;
+  const cacheKey = `${containerId}_${query}_${State.isSignedIn}_${State.currentUser ? State.currentUser.name : 'guest'}_${selectedTab}`;
   if (State._cachedFeeds[cacheKey]) {
     container.innerHTML = State._cachedFeeds[cacheKey];
     if (window.lucide) lucide.createIcons();
@@ -185,21 +184,12 @@ function renderSocialFeed(containerId, isSidebar = false) {
       return false;
     }
 
-    // Area filter
-    if (!postMatchesArea(p, selectedArea)) {
-      return false;
-    }
-
-    // Saved/Following filter
-    if (selectedSaved === 'saved') {
-      if (!State.currentUser || !State.currentUser.savedPostIds) return false;
-      const isSaved = State.currentUser.savedPostIds.includes(p.rawId);
-      if (!isSaved) return false;
-    } else if (selectedSaved === 'following') {
+    // Tab filter: For You vs Following
+    if (selectedTab === 'following') {
       if (!State.isSignedIn) return false;
       const userObj = State.users.find(u => u.name === State.currentUser.name);
       const friends = userObj ? (userObj.friends || []) : [];
-      if (!friends.includes(p.author.name)) return false;
+      if (p.author.name !== State.currentUser.name && !friends.includes(p.author.name)) return false;
     }
     
     return true;
@@ -398,7 +388,9 @@ function renderSocialFeed(containerId, isSidebar = false) {
     const placeholderText = isGuest ? "Please sign in to reply..." : `Reply to ${post.author.name}...`;
     const disabledAttr = isGuest ? "disabled" : "";
     const avatarToUse = isGuest ? 'avatar_guest' : State.currentUser.avatar;
-    const cardStyle = isSidebar ? '' : 'style="background-color: transparent; border: none; border-bottom: 1px solid var(--border-color); border-radius: 0; padding: 16px 0; margin-bottom: 0;"';
+    const cardStyle = isSidebar 
+      ? 'style="cursor:pointer;"' 
+      : 'style="background-color: transparent; border: none; border-bottom: 1px solid var(--border-color); border-radius: 0; padding: 12px 0; margin-bottom: 0; cursor:pointer;"';
 
     // Action button handlers
     let clickGoMarkup = '';
@@ -412,24 +404,31 @@ function renderSocialFeed(containerId, isSidebar = false) {
 
     const isSaved = State.currentUser && State.currentUser.savedPostIds && State.currentUser.savedPostIds.includes(post.rawId);
 
+    const isFriend = State.currentUser && State.currentUser.friends && State.currentUser.friends.includes(post.author.name);
+    const isSelf = State.currentUser && State.currentUser.name === post.author.name;
+    const plusOverlay = (isFriend || isSelf || !State.isSignedIn) ? '' : `
+      <div style="position:absolute; bottom:0px; right:0px; background:var(--accent-green); color:#fff; width:15px; height:15px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; border:1px solid #fff; box-shadow:0 1px 2px rgba(0,0,0,0.15); cursor:pointer;" onclick="event.stopPropagation(); window.toggleFollowUser('${post.author.name.replace(/'/g, "\\'")}')">+</div>
+    `;
+
     feedHtml += `
-      <div class="feed-post-card" id="post-card-${post.id}" ${cardStyle}>
+      <div class="feed-post-card" id="post-card-${post.id}" ${cardStyle} onclick="window.handlePostCardClick(event, '${post.id}')">
         <div class="thread-post-layout" style="display:flex; gap:12px;">
           <!-- Left Column: Avatar with Follow Badge -->
           <div class="thread-left-col" style="display:flex; flex-direction:column; align-items:center;">
             <div class="thread-avatar-container" style="position:relative;">
-              <img src="${getAvatarSrc(post.author.avatar)}" alt="${post.author.name}" onclick="viewUserProfile('${post.author.name}')" class="thread-avatar" style="width:36px; height:36px; border-radius:50%; object-fit:cover; cursor:pointer;">
-              <div style="position:absolute; bottom:0px; right:0px; background:white; color:black; width:12px; height:12px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:bold; border:1px solid var(--card-bg); box-shadow:0 1px 3px rgba(0,0,0,0.2); cursor:pointer;" onclick="event.stopPropagation(); window.blockUser('${post.author.name}')">+</div>
+              <img src="${getAvatarSrc(post.author.avatar)}" alt="${post.author.name}" onclick="viewUserProfile('${post.author.name}')" class="thread-avatar" style="width:40px; height:40px; border-radius:50%; object-fit:cover; cursor:pointer;">
+              ${plusOverlay}
             </div>
           </div>
           
           <!-- Right Column: Details & actions -->
           <div class="thread-right-col" style="flex-grow:1; text-align:left;">
             <div class="thread-header" style="display:flex; justify-content:space-between; align-items:center;">
-              <div class="thread-user-meta" style="display:flex; align-items:center; gap:6px; font-size:14px;">
+              <div class="thread-user-meta" style="display:flex; align-items:center; gap:4px; font-size:14px;">
                 <span class="thread-author-name" onclick="viewUserProfile('${post.author.name}')" style="font-weight:700; color:var(--text-charcoal); cursor:pointer;">${post.author.name}</span>
                 <i data-lucide="check-circle-2" style="width:14px; height:14px; fill:#3B82F6; color:white; flex-shrink:0;"></i>
-                <span class="thread-time" style="color:var(--muted-text); font-size:13px; margin-left:4px;">${post.time}</span>
+                <span style="color:var(--muted-text); font-size:13px; margin-left:4px;">·</span>
+                <span class="thread-time" style="color:var(--muted-text); font-size:13px;">${post.time}</span>
                 ${post.pendingSync ? '<span class="sync-spinner" title="Syncing with database..."></span>' : ''}
                 ${modTagMarkup}
                 ${clickGoMarkup}
@@ -451,12 +450,12 @@ function renderSocialFeed(containerId, isSidebar = false) {
               </div>
             </div>
             
-            <div class="thread-body" style="margin-top:6px; cursor:pointer;" onclick="window.openPostDetailModal('${post.id}')">
+            <div class="thread-body" style="margin-top:4px; cursor:pointer;" onclick="window.openPostDetailModal('${post.id}')">
               <p class="thread-content" style="margin:0; font-size:14px; line-height:1.5; color:var(--text-main);">${parseMarkdownToHtml(post.content)}</p>
               ${imgMarkup}
             </div>
             
-            <div class="thread-actions-bar" style="display:flex; gap:28px; margin-top:12px; font-size:13px; color:var(--muted-text); align-items:center;">
+            <div class="thread-actions-bar" style="display:flex; gap:20px; margin-top:8px; font-size:13px; color:var(--muted-text); align-items:center;">
               <button class="thread-action-icon-btn ${post.likedByUser ? 'liked' : ''}" onclick="toggleLike('${post.id}')" title="Like" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
                 <i data-lucide="heart" style="width:18px; height:18px; color:${post.likedByUser ? '#ef4444' : 'inherit'}; fill:${post.likedByUser ? '#ef4444' : 'none'};"></i>
                 <span>${post.likes || 0}</span>
@@ -644,6 +643,7 @@ function renderDashboardFeed() {
 }
 
 function renderFeedTabPosts() {
+  if (typeof initFeedTabs === 'function') initFeedTabs();
   renderSocialFeed('feed-tab-posts-list', false);
 }
 
@@ -818,15 +818,18 @@ window.openPostDetailModal = function(postId) {
   const isSaved = State.currentUser && State.currentUser.savedPostIds && State.currentUser.savedPostIds.includes(target.id);
   const likedByUser = target.likedByUser || false;
 
+  const isFriend = State.currentUser && State.currentUser.friends && State.currentUser.friends.includes(postAuthorName);
+  const isSelf = State.currentUser && State.currentUser.name === postAuthorName;
+  const plusOverlay = (isFriend || isSelf || !State.isSignedIn) ? '' : `
+    <div style="position:absolute; bottom:0px; right:0px; background:var(--accent-green); color:#fff; width:15px; height:15px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; border:1px solid #fff; box-shadow:0 1px 2px rgba(0,0,0,0.15); cursor:pointer;" onclick="event.stopPropagation(); window.toggleFollowUser('${postAuthorName.replace(/'/g, "\\'")}'); window.openPostDetailModal('${target.id}');">+</div>
+  `;
+
   body.innerHTML = `
     <!-- Original Post -->
     <div style="display:flex; gap:12px; padding-bottom:16px;">
       <div style="position:relative; flex-shrink:0;">
         <img src="${authorAvatar}" alt="${postAuthorName}" onclick="closeModal('modal-post-detail'); viewUserProfile('${postAuthorName}')" style="width:40px; height:40px; border-radius:50%; object-fit:cover; cursor:pointer;">
-        <!-- plus overlay badge -->
-        <div style="position:absolute; bottom:-2px; right:-2px; background:#fff; border-radius:50%; width:16px; height:16px; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 3px rgba(0,0,0,0.15);">
-          <i data-lucide="plus-circle" style="width:14px; height:14px; color:var(--accent-green); fill:#fff;"></i>
-        </div>
+        ${plusOverlay}
       </div>
       <div style="flex-grow:1; text-align:left;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -936,13 +939,40 @@ window.toggleRepost = function(postId) {
   const { target } = findPostOrItem(postId);
   if (target) {
     if (!target.reposts) target.reposts = 0;
-    if (target.repostedByUser) {
-      target.reposts--;
-      target.repostedByUser = false;
+    
+    if (State.currentUser) {
+      if (!State.currentUser.repostedPostIds) State.currentUser.repostedPostIds = [];
+      const userObj = State.users.find(u => u.name === State.currentUser.name);
+      
+      const idx = State.currentUser.repostedPostIds.indexOf(postId);
+      if (idx > -1) {
+        State.currentUser.repostedPostIds.splice(idx, 1);
+        if (userObj) {
+          userObj.repostedPostIds = userObj.repostedPostIds || [];
+          const userIdx = userObj.repostedPostIds.indexOf(postId);
+          if (userIdx > -1) userObj.repostedPostIds.splice(userIdx, 1);
+        }
+        target.reposts--;
+        target.repostedByUser = false;
+      } else {
+        State.currentUser.repostedPostIds.push(postId);
+        if (userObj) {
+          userObj.repostedPostIds = userObj.repostedPostIds || [];
+          userObj.repostedPostIds.push(postId);
+        }
+        target.reposts++;
+        target.repostedByUser = true;
+      }
     } else {
-      target.reposts++;
-      target.repostedByUser = true;
+      if (target.repostedByUser) {
+        target.reposts--;
+        target.repostedByUser = false;
+      } else {
+        target.reposts++;
+        target.repostedByUser = true;
+      }
     }
+    
     saveStateToStorage();
     State._cachedFeeds = {};
     renderDashboardFeed();
@@ -963,5 +993,130 @@ window.toggleRepliesAndFocus = function(postId) {
     const input = document.getElementById(`comment-input-${postId}`);
     if (input) input.focus();
   }, 100);
+};
+
+function renderSearchView() {
+  const usersContainer = document.getElementById('search-users-results');
+  const postsContainer = document.getElementById('search-posts-results');
+  if (!usersContainer || !postsContainer) return;
+  
+  const query = (State.searchQuery || '').toLowerCase();
+  
+  // 1. Render Users
+  const matchedUsers = State.users.filter(u => {
+    if (!query) return true;
+    return u.name.toLowerCase().includes(query) || (u.handle && u.handle.toLowerCase().includes(query)) || (u.bio && u.bio.toLowerCase().includes(query));
+  });
+  
+  usersContainer.innerHTML = '';
+  if (matchedUsers.length === 0) {
+    usersContainer.innerHTML = `<div style="font-size:12px; color:var(--muted-text); font-style:italic; padding:12px 0; text-align:center;">No nomads found matching "${query}".</div>`;
+  } else {
+    matchedUsers.forEach(u => {
+      const isMe = State.isSignedIn && u.name === State.currentUser.name;
+      const followingList = State.currentUser && State.currentUser.following || [];
+      const isFollowing = followingList.includes(u.name);
+      
+      const followBtn = isMe ? '' : `
+        <button class="btn btn-xs ${isFollowing ? 'btn-secondary' : 'btn-primary'}" onclick="window.toggleFollowUser('${u.name.replace(/'/g, "\\'")}'); renderSearchView();" style="padding:4px 12px; font-size:11px; border-radius:12px; height:24px;">
+          ${isFollowing ? 'Following' : 'Follow'}
+        </button>
+      `;
+      
+      const card = document.createElement('div');
+      card.style.display = 'flex';
+      card.style.alignItems = 'center';
+      card.style.gap = '10px';
+      card.style.padding = '10px 0';
+      card.style.borderBottom = '1px solid var(--border-light)';
+      
+      card.innerHTML = `
+        <img src="${getAvatarSrc(u.avatar)}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; cursor:pointer;" onclick="viewUserProfile('${u.name.replace(/'/g, "\\'")}')" />
+        <div style="flex-grow:1; display:flex; flex-direction:column; gap:2px; text-align:left;">
+          <span style="font-weight:700; font-size:13px; color:var(--text-main); cursor:pointer;" onclick="viewUserProfile('${u.name.replace(/'/g, "\\'")}')">${getUserRoleMarkup(u.name)}</span>
+          <span style="font-size:11px; color:var(--muted-text);">${u.handle || ''}</span>
+          ${u.bio ? `<span style="font-size:11px; color:var(--text-charcoal); margin-top:2px; display:block; max-height:2.6em; overflow:hidden; text-overflow:ellipsis;">${u.bio}</span>` : ''}
+        </div>
+        ${followBtn}
+      `;
+      usersContainer.appendChild(card);
+    });
+  }
+  
+  // 2. Render Posts & Spots
+  let combinedItems = [];
+  if (State.posts) {
+    State.posts.forEach(p => {
+      combinedItems.push({
+        id: p.id,
+        type: 'post',
+        content: p.content,
+        author: p.author || { name: "Nomad", avatar: "avatar_bob" },
+        time: p.time || '1h ago',
+        category: 'Post'
+      });
+    });
+  }
+  if (State.spots) {
+    State.spots.forEach(s => {
+      combinedItems.push({
+        id: s.id,
+        type: 'spot',
+        content: `📍 ${s.title} (${s.category}). ${s.description || ''}`,
+        author: s.author || { name: "Spot Finder", avatar: "avatar_surf" },
+        time: 'Spot',
+        category: 'Campsite'
+      });
+    });
+  }
+  
+  const matchedItems = combinedItems.filter(item => {
+    if (!query) return true;
+    return item.content.toLowerCase().includes(query) || item.author.name.toLowerCase().includes(query);
+  });
+  
+  postsContainer.innerHTML = '';
+  if (matchedItems.length === 0) {
+    postsContainer.innerHTML = `<div style="font-size:12px; color:var(--muted-text); font-style:italic; padding:12px 0; text-align:center;">No posts or campsites found matching "${query}".</div>`;
+  } else {
+    matchedItems.forEach(item => {
+      const card = document.createElement('div');
+      card.style.display = 'flex';
+      card.style.gap = '10px';
+      card.style.padding = '12px 0';
+      card.style.borderBottom = '1px solid var(--border-light)';
+      card.style.textAlign = 'left';
+      
+      const clickAction = item.type === 'spot' 
+        ? `triggerInfoDrawerFromMap('${item.id}'); switchTab('dashboard');`
+        : `window.openPostDetailModal('${item.id}')`;
+        
+      card.innerHTML = `
+        <img src="${getAvatarSrc(item.author.avatar)}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; cursor:pointer;" onclick="viewUserProfile('${item.author.name.replace(/'/g, "\\'")}')" />
+        <div style="flex-grow:1; display:flex; flex-direction:column; gap:2px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:700; font-size:12px; color:var(--text-main); cursor:pointer;" onclick="viewUserProfile('${item.author.name.replace(/'/g, "\\'")}')">${getUserRoleMarkup(item.author.name)}</span>
+            <span style="font-size:9px; background:var(--bg-sand); padding:2px 6px; border-radius:10px; color:var(--text-charcoal); font-weight:600;">${item.category}</span>
+          </div>
+          <p style="margin:4px 0 0 0; font-size:12px; line-height:1.4; color:var(--text-charcoal); cursor:pointer;" onclick="${clickAction}">${item.content}</p>
+        </div>
+      `;
+      postsContainer.appendChild(card);
+    });
+  }
+  
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+window.renderSearchView = renderSearchView;
+
+window.handlePostCardClick = function(event, postId) {
+  const target = event.target;
+  const ignoredTags = ['BUTTON', 'A', 'INPUT', 'TEXTAREA', 'LABEL', 'SELECT', 'OPTION'];
+  if (ignoredTags.includes(target.tagName) || target.closest('button') || target.closest('a') || target.closest('label') || target.closest('.thread-avatar-container') || target.closest('.thread-author-name') || target.closest('.chat-bubble-reaction') || target.closest('[onclick*="viewUserProfile"]')) {
+    return;
+  }
+  window.openPostDetailModal(postId);
 };
 

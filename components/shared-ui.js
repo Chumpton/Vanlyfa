@@ -111,7 +111,7 @@ function updateSidebarProfileWidget() {
     }
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = `<i data-lucide="send"></i> <span>Share Update</span>`;
+      submitBtn.innerHTML = `Post`;
     }
     if (photoUpload) {
       photoUpload.disabled = false;
@@ -146,7 +146,7 @@ function updateSidebarProfileWidget() {
     }
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.innerHTML = `<i data-lucide="lock"></i> <span>Locked</span>`;
+      submitBtn.innerHTML = `Locked`;
     }
     if (photoUpload) {
       photoUpload.disabled = true;

@@ -272,7 +272,7 @@ function renderTribeHubChat(tribeId) {
     const avatar = senderObj ? senderObj.avatar : 'solar';
     
     msgDiv.innerHTML = `
-      <div style="font-size:10px; color:var(--muted-text); font-weight:600; display:flex; align-items:center; gap:4px;">
+      <div style="font-size:10px; color:var(--muted-text); font-weight:600; display:flex; align-items:center; gap:4px; cursor:pointer;" onclick="viewUserProfile('${msg.sender}')">
         ${!isMe ? `<img src="${getAvatarSrc(avatar)}" style="width:14px; height:14px; border-radius:50%; object-fit:cover;" />` : ''}
         <span>${getUserRoleMarkup(msg.sender)}</span>
         <span style="font-size:8px;">${msg.time}</span>

@@ -528,71 +528,44 @@
         <div class="feed-tab-layout">
           
           <!-- Post Creation Box -->
-          <div class="feed-tab-post-creator">
-            <h3>Share an Update</h3>
-            <div class="feed-tab-post-creator-body">
-              <img src="" alt="User Avatar" class="profile-avatar" id="feed-tab-user-avatar">
-              <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 12px;">
-                <div class="formatting-toolbar" style="display: flex; gap: 4px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
-                  <button type="button" class="btn btn-sm btn-format" data-format="bold" data-target="feed-tab-post-text" title="Bold" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="bold" style="width: 14px; height: 14px;"></i></button>
-                  <button type="button" class="btn btn-sm btn-format" data-format="italic" data-target="feed-tab-post-text" title="Italic" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="italic" style="width: 14px; height: 14px;"></i></button>
-                  <button type="button" class="btn btn-sm btn-format" data-format="link" data-target="feed-tab-post-text" title="Insert Link" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="link-2" style="width: 14px; height: 14px;"></i></button>
-                  <button type="button" class="btn btn-sm btn-format" data-format="strikethrough" data-target="feed-tab-post-text" title="Strikethrough" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="strikethrough" style="width: 14px; height: 14px;"></i></button>
-                  <button type="button" class="btn btn-sm btn-format" data-format="quote" data-target="feed-tab-post-text" title="Quote" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="quote-right" style="width: 14px; height: 14px;"></i></button>
-                  <button type="button" class="btn btn-sm btn-format" data-format="code" data-target="feed-tab-post-text" title="Code Block" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="terminal" style="width: 14px; height: 14px;"></i></button>
+          <!-- Post Creation Box -->
+          <div class="feed-tab-post-creator-bubble" style="display: flex; gap: 12px; border: 1px solid var(--border-color); border-radius: 20px; padding: 12px 16px; background-color: var(--card-bg); align-items: flex-start; margin-bottom: 20px; margin-top: 12px; margin-left: 16px; margin-right: 16px;">
+            <img src="" alt="User Avatar" class="profile-avatar" id="feed-tab-user-avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0;">
+            <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 8px;">
+              <textarea id="feed-tab-post-text" placeholder="What's happening on the road? Share campsite views, solar upgrades, or camper hacks..." style="border: none; background: transparent; resize: none; outline: none; font-size: 14px; font-family: inherit; line-height: 1.5; color: var(--text-main); width: 100%; height: 50px; margin: 0; padding: 0;"></textarea>
+              
+              <!-- Preview/Crop Area inside the bubble -->
+              <div id="feed-tab-crop-workspace" style="display: none; flex-direction: column; align-items: center; gap: 8px; margin-top: 8px; padding: 8px; background: rgba(0,0,0,0.05); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
+                <canvas id="feed-tab-crop-canvas" width="320" height="200" style="border: 2px solid var(--accent-green); cursor: move; background: #333; max-width: 100%; height: auto;"></canvas>
+                <div style="display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 4px;">
+                  <i data-lucide="zoom-out" style="width: 14px; height: 14px; color: var(--muted-text);"></i>
+                  <input type="range" id="feed-tab-crop-zoom" min="0.1" max="3.0" step="0.05" value="1.0" style="flex-grow: 1; accent-color: var(--accent-green);">
+                  <i data-lucide="zoom-in" style="width: 14px; height: 14px; color: var(--muted-text);"></i>
                 </div>
-                <textarea id="feed-tab-post-text" placeholder="What's happening on the road? Share campsite views, solar upgrades, or camper hacks..."></textarea>
-                
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label for="feed-tab-photo-upload" style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px dashed var(--border-color); border-radius: var(--radius-md); background: var(--bg-sand); font-size: 12px; margin-bottom: 0;">
-                    <i data-lucide="camera" style="width: 14px; height: 14px;"></i>
-                    <span>Upload Image</span>
-                    <input type="file" id="feed-tab-photo-upload" accept="image/*" style="display: none;">
-                  </label>
-                  <span id="feed-tab-photo-upload-status" style="font-size: 11px; color: var(--muted-text); margin-left: 8px; vertical-align: middle;"></span>
-                  
-                  <div id="feed-tab-crop-workspace" style="display: none; flex-direction: column; align-items: center; gap: 8px; margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.15); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
-                    <canvas id="feed-tab-crop-canvas" width="320" height="200" style="border: 2px solid var(--accent-green); cursor: move; background: #333; max-width: 100%; height: auto;"></canvas>
-                    <div style="display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 4px;">
-                      <i data-lucide="zoom-out" style="width: 14px; height: 14px; color: var(--muted-text);"></i>
-                      <input type="range" id="feed-tab-crop-zoom" min="0.1" max="3.0" step="0.05" value="1.0" style="flex-grow: 1; accent-color: var(--accent-green);">
-                      <i data-lucide="zoom-in" style="width: 14px; height: 14px; color: var(--muted-text);"></i>
-                    </div>
-                    <span style="font-size: 10px; color: var(--muted-text); text-align: center;">Drag photo inside rectangle to position</span>
-                  </div>
-                </div>
+                <span id="feed-tab-photo-upload-status" style="font-size: 10px; color: var(--muted-text);">Drag photo inside rectangle to position</span>
+              </div>
 
-                <div class="feed-tab-post-creator-footer" style="margin-top: 8px;">
-                  <button class="btn btn-primary" id="feed-tab-post-submit" style="margin-left: auto;">
-                    <i data-lucide="send"></i>
-                    <span>Share Update</span>
-                  </button>
-                </div>
+              <!-- Controls row (inside the bubble) -->
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+                <!-- Left: Image Upload Icon Button -->
+                <label for="feed-tab-photo-upload" style="cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; color: var(--muted-text); hover:background-color: var(--bg-sand); transition: background-color 0.2s; margin-bottom: 0;">
+                  <i data-lucide="image" style="width: 16px; height: 16px;"></i>
+                  <input type="file" id="feed-tab-photo-upload" accept="image/*" style="display: none;">
+                </label>
+                
+                <!-- Right: Post Bubble Button -->
+                <button id="feed-tab-post-submit" class="btn btn-sm btn-primary" style="background-color: var(--accent-green); border-color: var(--accent-green); color: white; border-radius: 20px; padding: 4px 16px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; height: 28px; border: none; font-family: Inter, sans-serif;">
+                  Post
+                </button>
               </div>
             </div>
           </div>
-          <!-- Notifications Panel Removed from Feed tab layout -->
 
-          <!-- Feed Filters (Inline Organic Chips) -->
-          <div class="feed-filters-chips" style="margin-top: 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; width: 100%;">
-            <!-- Area Filter Chips: Area scroll area -->
-            <div class="filter-chip-group" style="display: flex; gap: 6px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 6px; width: 100%;">
-              <button class="filter-chip active" data-filter-type="area" data-value="all">All Areas</button>
-              <button class="filter-chip" data-filter-type="area" data-value="near">Near Me</button>
-              <button class="filter-chip" data-filter-type="area" data-value="moab">Moab</button>
-              <button class="filter-chip" data-filter-type="area" data-value="bend">Bend</button>
-              <button class="filter-chip" data-filter-type="area" data-value="flagstaff">Flagstaff</button>
-              <button class="filter-chip" data-filter-type="area" data-value="baja">Baja</button>
-            </div>
-            
-            <!-- Sort & Saved Filters: Combined scroll area -->
-            <div class="filter-chip-group" style="display: flex; gap: 6px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 6px; width: 100%;">
-              <button class="filter-chip active" data-filter-type="sort" data-value="trending">Trending</button>
-              <button class="filter-chip" data-filter-type="sort" data-value="recent">Recent</button>
-              <span style="border-right: 1px solid var(--border-color); margin: 0 4px;"></span>
-              <button class="filter-chip active" data-filter-type="saved" data-value="all">All Updates</button>
-              <button class="filter-chip" data-filter-type="saved" data-value="following">Following</button>
-              <button class="filter-chip" data-filter-type="saved" data-value="saved">Bookmarked</button>
+          <!-- Feed Tabs (For You / Following) centered -->
+          <div class="feed-tabs-container" style="display: flex; justify-content: center; border-bottom: 1px solid var(--border-color); margin-bottom: 16px; width: 100%;">
+            <div style="display: flex; gap: 32px;">
+              <button class="feed-tab-btn active" data-tab-value="for-you" style="background: none; border: none; padding: 12px 8px; font-weight: 700; font-size: 14px; color: var(--text-charcoal); border-bottom: 2px solid var(--accent-green); cursor: pointer; transition: all 0.2s;">For You</button>
+              <button class="feed-tab-btn" data-tab-value="following" style="background: none; border: none; padding: 12px 8px; font-weight: 700; font-size: 14px; color: var(--muted-text); border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s;">Following</button>
             </div>
           </div>
 
@@ -730,6 +703,9 @@
                 <!-- Chat messages -->
               </div>
               <form class="tribe-chat-input-bar" id="tribe-chat-form" style="border-top: 1px solid var(--border-color); padding: 12px; display: flex; gap: 8px; background-color: var(--card-bg);" onsubmit="sendTribeChatMessage(event)">
+                <button type="button" id="tribe-chat-back-btn" class="btn btn-icon" onclick="document.activeElement.blur();" style="border: none; background: none; color: var(--text-main); display: none; padding: 0 4px; align-items: center; justify-content: center;">
+                  <i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i>
+                </button>
                 <input type="text" id="tribe-chat-input" placeholder="Type a message to the tribe..." style="flex-grow:1; border: 1px solid var(--border-color); border-radius: 20px; padding: 8px 16px; outline:none; font-size:13px;" />
                 <button type="submit" class="btn btn-primary" style="border-radius:20px; padding: 6px 16px; display:flex; align-items:center; gap:6px;">
                   <i data-lucide="send" style="width:14px; height:14px;"></i> Send
@@ -766,20 +742,23 @@
           </button>
         </div>
         
-        <!-- Meetup Filters -->
-        <div class="filter-row" style="margin-bottom: 16px; display: flex; width: 100%;">
-          <select class="select-filter" id="meetup-filter-area">
-            <option value="all">All Areas</option>
-            <option value="near">Near Me (< 150 mi)</option>
-            <option value="moab">Moab, UT</option>
-            <option value="bend">Bend, OR</option>
-            <option value="flagstaff">Flagstaff, AZ</option>
-            <option value="baja">Baja California</option>
-          </select>
-          <select class="select-filter" id="meetup-filter-saved">
-            <option value="all">All Meetups</option>
-            <option value="saved">Bookmarked</option>
-          </select>
+        <!-- Meetup Filters (Bubble Rack) -->
+        <div class="meetup-filters-bubble-rack" style="display: flex; gap: 8px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 12px; margin-bottom: 16px; width: 100%;">
+          <button class="filter-chip active" data-meetup-filter="area" data-value="all" style="flex-shrink:0;">All Areas</button>
+          <button class="filter-chip" data-meetup-filter="area" data-value="near" style="flex-shrink:0;">Near Me</button>
+          <button class="filter-chip" data-meetup-filter="area" data-value="moab" style="flex-shrink:0;">Moab, UT</button>
+          <button class="filter-chip" data-meetup-filter="area" data-value="bend" style="flex-shrink:0;">Bend, OR</button>
+          <button class="filter-chip" data-meetup-filter="area" data-value="flagstaff" style="flex-shrink:0;">Flagstaff, AZ</button>
+          <button class="filter-chip" data-meetup-filter="area" data-value="baja" style="flex-shrink:0;">Baja California</button>
+          
+          <span style="border-right: 1px solid var(--border-color); margin: 0 4px; flex-shrink:0;"></span>
+          
+          <button class="filter-chip active" data-meetup-filter="sort" data-value="newest" style="flex-shrink:0;">Newest</button>
+          <button class="filter-chip" data-meetup-filter="sort" data-value="nearby" style="flex-shrink:0;">Nearby</button>
+          
+          <span style="border-right: 1px solid var(--border-color); margin: 0 4px; flex-shrink:0;"></span>
+          
+          <button class="filter-chip" data-meetup-filter="saved" data-value="saved" style="flex-shrink:0;">Bookmarked</button>
         </div>
 
         <div class="meetups-layout">
@@ -841,6 +820,14 @@
             <div class="reply-card" style="margin-top: 20px;">
               <div class="form-group">
                 <label for="forum-reply-text">Post a reply</label>
+                <div class="formatting-toolbar" style="display: flex; gap: 4px; margin-bottom: 6px;">
+                  <button type="button" class="btn btn-sm btn-format" data-format="bold" data-target="forum-reply-text" title="Bold" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="bold" style="width: 14px; height: 14px;"></i></button>
+                  <button type="button" class="btn btn-sm btn-format" data-format="italic" data-target="forum-reply-text" title="Italic" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="italic" style="width: 14px; height: 14px;"></i></button>
+                  <button type="button" class="btn btn-sm btn-format" data-format="link" data-target="forum-reply-text" title="Insert Link" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="link-2" style="width: 14px; height: 14px;"></i></button>
+                  <button type="button" class="btn btn-sm btn-format" data-format="strikethrough" data-target="forum-reply-text" title="Strikethrough" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="strikethrough" style="width: 14px; height: 14px;"></i></button>
+                  <button type="button" class="btn btn-sm btn-format" data-format="quote" data-target="forum-reply-text" title="Quote" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="quote-right" style="width: 14px; height: 14px;"></i></button>
+                  <button type="button" class="btn btn-sm btn-format" data-format="code" data-target="forum-reply-text" title="Code Block" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="terminal" style="width: 14px; height: 14px;"></i></button>
+                </div>
                 <textarea id="forum-reply-text" placeholder="Share your perspective..."></textarea>
               </div>
               <div style="display:flex; justify-content:flex-end;">
@@ -950,6 +937,12 @@
               </button>
             </div>
             
+            <!-- Share Profile link button -->
+            <button class="btn" style="width: 100%; justify-content:center; margin-top: 8px;" id="profile-share-btn" onclick="window.shareUserProfile()">
+              <i data-lucide="share-2"></i>
+              <span>Share Profile</span>
+            </button>
+            
             <!-- Friends list indicator -->
             <div style="margin-top: 16px; font-size: 13px; color: var(--muted-text); text-align: left; width: 100%; border-top: 1px solid var(--border-color); padding-top: 16px;">
               <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text-charcoal); margin-bottom: 8px;">
@@ -1053,6 +1046,38 @@
                 <!-- Dynamically populated rows -->
               </tbody>
             </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: SEARCH WINDOW -->
+      <section class="tab-content-pane" id="pane-search" style="padding: 24px 16px 80px 16px; max-width: 720px; margin: 0 auto;">
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          <div>
+            <h2 style="margin: 0; font-size: 20px; font-weight: 800; color: var(--text-main);">Search Directory</h2>
+            <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--muted-text);">Find nomads, posts, and campsites on the road.</p>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- Nomads / Users -->
+            <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+              <h3 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 700; color: var(--text-charcoal); display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="users" style="width: 16px; height: 16px; color: var(--accent-green);"></i> Nomads
+              </h3>
+              <div id="search-users-results" style="display: flex; flex-direction: column; gap: 12px; max-height: 250px; overflow-y: auto;">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+            
+            <!-- Posts & Spots -->
+            <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+              <h3 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 700; color: var(--text-charcoal); display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="rss" style="width: 16px; height: 16px; color: var(--accent-green);"></i> Feed Posts & Spots
+              </h3>
+              <div id="search-posts-results" style="display: flex; flex-direction: column; gap: 16px; max-height: 400px; overflow-y: auto;">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -1753,6 +1778,14 @@
         </div>
         <div class="form-group">
           <label for="thread-body-input">Thread Body / Question</label>
+          <div class="formatting-toolbar" style="display: flex; gap: 4px; margin-bottom: 6px;">
+            <button type="button" class="btn btn-sm btn-format" data-format="bold" data-target="thread-body-input" title="Bold" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="bold" style="width: 14px; height: 14px;"></i></button>
+            <button type="button" class="btn btn-sm btn-format" data-format="italic" data-target="thread-body-input" title="Italic" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="italic" style="width: 14px; height: 14px;"></i></button>
+            <button type="button" class="btn btn-sm btn-format" data-format="link" data-target="thread-body-input" title="Insert Link" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="link-2" style="width: 14px; height: 14px;"></i></button>
+            <button type="button" class="btn btn-sm btn-format" data-format="strikethrough" data-target="thread-body-input" title="Strikethrough" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="strikethrough" style="width: 14px; height: 14px;"></i></button>
+            <button type="button" class="btn btn-sm btn-format" data-format="quote" data-target="thread-body-input" title="Quote" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="quote-right" style="width: 14px; height: 14px;"></i></button>
+            <button type="button" class="btn btn-sm btn-format" data-format="code" data-target="thread-body-input" title="Code Block" style="padding: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px;"><i data-lucide="terminal" style="width: 14px; height: 14px;"></i></button>
+          </div>
           <textarea id="thread-body-input" placeholder="Describe your question or discussion topic in detail. If sharing knowledge, lay it out clearly."></textarea>
         </div>
         <div class="form-group">

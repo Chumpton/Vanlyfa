@@ -94,10 +94,21 @@ function initApp() {
   
   // Setup Search logic
   const searchInput = document.getElementById('global-search');
-  searchInput.addEventListener('input', debounce((e) => {
-    State.searchQuery = e.target.value.toLowerCase();
-    renderCurrentTab();
-  }, 250));
+  if (searchInput) {
+    searchInput.addEventListener('input', debounce((e) => {
+      State.searchQuery = e.target.value.toLowerCase();
+      if (State.searchQuery && State.activeTab !== 'search') {
+        switchTab('search');
+      } else {
+        renderCurrentTab();
+      }
+    }, 250));
+    searchInput.addEventListener('focus', () => {
+      if (State.activeTab !== 'search') {
+        switchTab('search');
+      }
+    });
+  }
 
   // Marketplace Filter Listeners
   const marketCat = document.getElementById('market-filter-category');
@@ -113,46 +124,78 @@ function initApp() {
   if (marketRad) marketRad.addEventListener('change', renderMarketplaceListings);
 
 
-  // Feed Filter Listeners (Chips)
-  State.feedFilterArea = State.feedFilterArea || 'all';
-  State.feedFilterSort = State.feedFilterSort || 'trending';
-  State.feedFilterSaved = State.feedFilterSaved || 'all';
+  // Feed Filter Listeners (For You / Following Tabs)
+  window.initFeedTabs = function() {
+    const selectedTab = State.feedFilterTab || 'for-you';
+    document.querySelectorAll('.feed-tab-btn').forEach(tab => {
+      const val = tab.getAttribute('data-tab-value');
+      if (val === selectedTab) {
+        tab.classList.add('active');
+        tab.style.color = 'var(--text-charcoal)';
+        tab.style.borderBottom = '2px solid var(--accent-green)';
+      } else {
+        tab.classList.remove('active');
+        tab.style.color = 'var(--muted-text)';
+        tab.style.borderBottom = '2px solid transparent';
+      }
 
-  document.querySelectorAll('.filter-chip').forEach(chip => {
-    const type = chip.getAttribute('data-filter-type');
-    const val = chip.getAttribute('data-value');
-    const activeVal = type === 'area' ? State.feedFilterArea : 
-                      (type === 'sort' ? State.feedFilterSort : State.feedFilterSaved);
-    if (val === activeVal) {
-      chip.classList.add('active');
-    } else {
-      chip.classList.remove('active');
-    }
-
-    chip.addEventListener('click', (e) => {
-      const typeAttr = e.currentTarget.getAttribute('data-filter-type');
-      const valAttr = e.currentTarget.getAttribute('data-value');
-      
-      document.querySelectorAll(`.filter-chip[data-filter-type="${typeAttr}"]`).forEach(btn => {
-        btn.classList.remove('active');
-      });
-      e.currentTarget.classList.add('active');
-      
-      if (typeAttr === 'area') State.feedFilterArea = valAttr;
-      else if (typeAttr === 'sort') State.feedFilterSort = valAttr;
-      else if (typeAttr === 'saved') State.feedFilterSaved = valAttr;
-      
-      saveStateToStorage();
-      State._cachedFeeds = {};
-      renderFeedTabPosts();
+      if (!tab.hasListener) {
+        tab.hasListener = true;
+        tab.addEventListener('click', (e) => {
+          const tabVal = e.currentTarget.getAttribute('data-tab-value');
+          State.feedFilterTab = tabVal;
+          saveStateToStorage();
+          State._cachedFeeds = {};
+          initFeedTabs();
+          renderFeedTabPosts();
+        });
+      }
     });
-  });
+  };
+  initFeedTabs();
 
-  // Meetup Filter Listeners
-  const meetupFilterArea = document.getElementById('meetup-filter-area');
-  if (meetupFilterArea) meetupFilterArea.addEventListener('change', renderMeetupsList);
-  const meetupFilterSaved = document.getElementById('meetup-filter-saved');
-  if (meetupFilterSaved) meetupFilterSaved.addEventListener('change', renderMeetupsList);
+  // Meetup Filter Listeners (Bubble Rack)
+  window.initMeetupFilters = function() {
+    const selectedArea = State.meetupFilterArea || 'all';
+    const selectedSort = State.meetupFilterSort || 'newest';
+    const selectedSaved = State.meetupFilterSaved || 'all';
+    
+    document.querySelectorAll('[data-meetup-filter]').forEach(chip => {
+      const type = chip.getAttribute('data-meetup-filter');
+      const val = chip.getAttribute('data-value');
+      
+      const isActive = (type === 'area' && val === selectedArea) ||
+                       (type === 'sort' && val === selectedSort) ||
+                       (type === 'saved' && val === selectedSaved);
+                       
+      if (isActive) {
+        chip.classList.add('active');
+      } else {
+        chip.classList.remove('active');
+      }
+      
+      if (!chip.hasListener) {
+        chip.hasListener = true;
+        chip.addEventListener('click', (e) => {
+          const typeAttr = e.currentTarget.getAttribute('data-meetup-filter');
+          const valAttr = e.currentTarget.getAttribute('data-value');
+          
+          if (typeAttr === 'area') {
+            State.meetupFilterArea = valAttr;
+          } else if (typeAttr === 'sort') {
+            State.meetupFilterSort = valAttr;
+          } else if (typeAttr === 'saved') {
+            State.meetupFilterSaved = State.meetupFilterSaved === 'saved' ? 'all' : 'saved';
+          }
+          
+          saveStateToStorage();
+          initMeetupFilters();
+          renderMeetupsList();
+        });
+      }
+    });
+  };
+  initMeetupFilters();
 
   // Theme Toggle Button
   document.getElementById('theme-toggle-btn').addEventListener('click', () => {
@@ -579,6 +622,24 @@ function initApp() {
         }
       }, 500);
     }, 600);
+  }
+
+  const sharedProfile = params.get('profile');
+  if (sharedProfile) {
+    setTimeout(() => {
+      if (typeof viewUserProfile === 'function') {
+        viewUserProfile(sharedProfile);
+      }
+    }, 600);
+  }
+  
+  const followUser = params.get('follow');
+  if (followUser) {
+    setTimeout(() => {
+      if (typeof window.toggleFollowUser === 'function') {
+        window.toggleFollowUser(followUser);
+      }
+    }, 1000);
   }
 
   // Onboarding Welcome Modal Dismiss
@@ -1101,8 +1162,18 @@ function saveUserProfileEdit() {
     user.avatar = State.currentUser.avatar;
   }
   
-  // Bio
-  user.bio = document.getElementById('edit-profile-bio').value.trim() || user.bio;
+  // Bio validation: Maybe no links allowed in bio, just insta and tiktok handles unless verified
+  const bioInput = document.getElementById('edit-profile-bio');
+  const bioVal = bioInput ? bioInput.value.trim() : '';
+  const isVerified = State.currentUser.role === 'admin' || State.currentUser.name === 'Google Traveler' || State.currentUser.verified === true || (user && user.verified === true);
+  if (!isVerified) {
+    const urlPattern = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.[a-zA-Z]{2,})/ig;
+    if (urlPattern.test(bioVal)) {
+      showToast("Only verified users can share website links in bio. Please remove links.", "error");
+      return;
+    }
+  }
+  user.bio = bioVal || user.bio;
   State.currentUser.bio = user.bio;
   
   // Social handles
@@ -1409,6 +1480,11 @@ function saveNewPost() {
 
 function saveNewListing() {
   if (!requireAuth()) return;
+  const userListings = State.marketplace.filter(m => m.seller && (m.seller === State.currentUser.name || (typeof m.seller === 'object' && m.seller.name === State.currentUser.name)));
+  if (userListings.length >= 3) {
+    showToast("You can only have up to 3 active marketplace listings at a time. Please delete one first.", "error");
+    return;
+  }
   const title = document.getElementById('list-title').value.trim();
   const priceVal = document.getElementById('list-price').value.trim();
   const category = document.getElementById('list-category').value;
@@ -1595,6 +1671,11 @@ function saveNewTribe() {
 
 function saveNewMeetup() {
   if (!requireAuth()) return;
+  const userMeetups = State.meetups.filter(m => m.host && (m.host.name === State.currentUser.name || m.host === State.currentUser.name));
+  if (userMeetups.length >= 1) {
+    showToast("You can only host 1 active meetup at a time. Please delete your current meetup first.", "error");
+    return;
+  }
   if (!checkRateLimit('meetup')) {
     showToast("Rate limit exceeded. You can only host 3 meetups per hour.", "error");
     return;

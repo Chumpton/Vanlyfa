@@ -671,7 +671,7 @@ function safeguardedRenderLeafletMarkers() {
   let pins = [];
   
   // High efficiency filter pass
-  if (zoom <= 4) {
+  if (zoom <= 6) {
     const allSeeded = (typeof ClusterEngine !== 'undefined') ? ClusterEngine.allSpots : [];
     const userSpots = State.spots.filter(s => !s.seeded && s.status !== 'hidden_flagged');
     const rawPins = [...userSpots, ...allSeeded, ...State.meetups];
@@ -699,7 +699,7 @@ function safeguardedRenderLeafletMarkers() {
         stateName = getStateFromLatLng(pin.lat, pin.lng);
       }
       
-      if (zoom <= 4 && pin.lng > -100 && stateName !== 'Other') {
+      if (zoom <= 6 && pin.lng > -100 && stateName !== 'Other') {
         stateName = 'East Coast';
       }
       
@@ -1533,9 +1533,9 @@ function getDetailedPopupHtml(pin) {
         <button class="btn btn-sm ${visitedBtnClass}" onclick="window.markVisitedFromPopup('${pin.id}')" style="justify-content:center;font-size:10px;padding:4px 6px;">
           ${checkSvg} ${visitedBtnText}
         </button>
-        <button class="btn btn-sm" onclick="window.plotRouteFromPopup('${pin.id}')" style="justify-content:center;font-size:10px;padding:4px 6px;">
-          ${routeSvg} Route
-        </button>
+        <a class="btn btn-sm" href="https://www.google.com/maps/search/?api=1&query=${pin.lat},${pin.lng}" target="_blank" style="justify-content:center;font-size:10px;padding:4px 6px;text-decoration:none;color:var(--text-main);background:var(--bg-sand);display:inline-flex;align-items:center;">
+          <i data-lucide="map" style="width:11px; height:11px; margin-right:3px;"></i> Map
+        </a>
         <button class="btn btn-sm" onclick="window.shareSpotFromPopup('${pin.id}')" style="justify-content:center;font-size:10px;padding:4px 6px;">
           ${shareSvg} Share
         </button>
@@ -1565,9 +1565,9 @@ function getDetailedPopupHtml(pin) {
         <button class="btn btn-sm" onclick="window.shareMeetupFromPopup('${pin.id}')" style="justify-content:center;font-size:10px;padding:4px 6px;">
           ${shareSvg} Share
         </button>
-        <button class="btn btn-sm" onclick="window.plotRouteFromPopup('${pin.id}')" style="grid-column: span 2; justify-content:center;font-size:10px;padding:4px 6px;">
-          ${routeSvg} Get Directions
-        </button>
+        <a class="btn btn-sm" href="https://www.google.com/maps/search/?api=1&query=${pin.lat},${pin.lng}" target="_blank" style="grid-column: span 2; justify-content:center;font-size:10px;padding:4px 6px;text-decoration:none;color:var(--text-main);background:var(--bg-sand);display:inline-flex;align-items:center;">
+          <i data-lucide="map" style="width:11px; height:11px; margin-right:3px;"></i> Open in Google Maps
+        </a>
       </div>
     `;
   }
@@ -1596,6 +1596,7 @@ function getDetailedPopupHtml(pin) {
       ${coordsHtml}
       
       ${buttonsHtml}
+      ${getPopupReviewsHtml(pin)}
     </div>
   `;
 }
@@ -1730,6 +1731,92 @@ window.refreshPopup = function(pinId) {
   if (marker && marker.isPopupOpen()) {
     const pin = [...State.spots, ...State.meetups].find(p => p.id === pinId);
     if (pin) {
+      marker.setPopupContent(getDetailedPopupHtml(pin));
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    }
+  }
+};
+
+function getPopupReviewsHtml(pin) {
+  const reviews = pin.reviews || [];
+  let html = `<div style="border-top:1px solid var(--border-color); margin-top:8px; padding-top:8px; max-height:120px; overflow-y:auto; text-align:left;">
+    <strong style="font-size:11px; display:block; margin-bottom:4px; color:var(--text-charcoal);">Reviews & Comments (${reviews.length})</strong>`;
+  
+  if (reviews.length === 0) {
+    html += `<div style="font-size:10px; color:var(--muted-text); font-style:italic;">No reviews yet. Be the first!</div>`;
+  } else {
+    reviews.forEach(r => {
+      let stars = '';
+      if (r.rating) {
+        for (let i = 1; i <= 5; i++) {
+          stars += i <= r.rating ? '★' : '☆';
+        }
+      }
+      html += `
+        <div style="font-size:10px; margin-bottom:6px; line-height:1.3; border-bottom:1px dashed var(--border-color); padding-bottom:4px; color:var(--text-main);">
+          <div style="display:flex; justify-content:space-between;">
+            <span style="font-weight:700;">${r.author || 'Nomad'}</span>
+            <span style="color:#F59E0B;">${stars}</span>
+          </div>
+          <div style="color:var(--text-main); margin-top:1px;">${r.text}</div>
+        </div>
+      `;
+    });
+  }
+  
+  html += `</div>`;
+  
+  if (State.isSignedIn) {
+    html += `
+      <form onsubmit="window.submitPopupReview(event, '${pin.id}')" style="display:flex; gap:4px; margin-top:6px; align-items:center;">
+        <input type="text" id="popup-review-text-${pin.id}" placeholder="Add comment..." style="flex-grow:1; font-size:10px; padding:4px 8px; border:1px solid var(--border-color); border-radius:12px; outline:none; background:var(--card-bg); color:var(--text-main);" required />
+        <select id="popup-review-rating-${pin.id}" style="font-size:10px; padding:3px; border:1px solid var(--border-color); border-radius:4px; background:var(--card-bg); color:var(--text-main);">
+          <option value="5">5★</option>
+          <option value="4">4★</option>
+          <option value="3">3★</option>
+          <option value="2">2★</option>
+          <option value="1">1★</option>
+        </select>
+        <button type="submit" class="btn btn-xs btn-primary" style="padding:4px 8px; font-size:10px; border-radius:12px; height:22px; display:inline-flex; align-items:center; justify-content:center;">Add</button>
+      </form>
+    `;
+  } else {
+    html += `<div style="font-size:9px; color:var(--muted-text); margin-top:4px; font-style:italic;">Sign in to leave a review.</div>`;
+  }
+  
+  return html;
+}
+
+window.submitPopupReview = function(event, pinId) {
+  event.preventDefault();
+  if (!requireAuth()) return;
+  
+  const textInput = document.getElementById(`popup-review-text-${pinId}`);
+  const ratingSelect = document.getElementById(`popup-review-rating-${pinId}`);
+  if (!textInput) return;
+  
+  const text = textInput.value.trim();
+  const rating = parseInt(ratingSelect ? ratingSelect.value : '5');
+  if (!text) return;
+  
+  const pin = [...State.spots, ...State.meetups].find(p => p.id === pinId);
+  if (pin) {
+    if (!pin.reviews) pin.reviews = [];
+    pin.reviews.unshift({
+      id: `review-${Date.now()}`,
+      author: State.currentUser.name,
+      rating: rating,
+      text: text,
+      time: "Just now"
+    });
+    
+    saveStateToStorage();
+    showToast("Review submitted successfully!", "success");
+    
+    const marker = State.leafletMarkersMap.get(pinId);
+    if (marker) {
       marker.setPopupContent(getDetailedPopupHtml(pin));
       if (window.lucide) {
         lucide.createIcons();

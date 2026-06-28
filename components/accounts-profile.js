@@ -86,6 +86,71 @@ function renderUserProfile() {
     }
   }
   
+  // Inject Profile Feeds Tabs at the top of the right column
+  const detailsRight = document.querySelector('.profile-details-right');
+  if (detailsRight) {
+    let tabsHeader = document.getElementById('profile-feeds-tabs');
+    if (!tabsHeader) {
+      tabsHeader = document.createElement('div');
+      tabsHeader.id = 'profile-feeds-tabs';
+      tabsHeader.className = 'profile-card-section';
+      tabsHeader.style.paddingBottom = '0';
+      tabsHeader.innerHTML = `
+        <div class="profile-details-tabs" style="display: flex; gap: 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 16px;">
+          <button class="profile-details-tab-btn active" data-profile-tab="posts" style="background: none; border: none; padding: 10px 4px; font-weight: 700; font-size: 13px; color: var(--text-charcoal); border-bottom: 2px solid var(--accent-green); cursor: pointer; transition: all 0.2s;">Posts</button>
+          <button class="profile-details-tab-btn" data-profile-tab="replies" style="background: none; border: none; padding: 10px 4px; font-weight: 700; font-size: 13px; color: var(--muted-text); border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s;">Replies</button>
+          <button class="profile-details-tab-btn" data-profile-tab="reposts" style="background: none; border: none; padding: 10px 4px; font-weight: 700; font-size: 13px; color: var(--muted-text); border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s;">Reposts</button>
+          <button class="profile-details-tab-btn" data-profile-tab="forums" style="background: none; border: none; padding: 10px 4px; font-weight: 700; font-size: 13px; color: var(--muted-text); border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s;">Forums</button>
+          <button class="profile-details-tab-btn" data-profile-tab="guestbook" style="background: none; border: none; padding: 10px 4px; font-weight: 700; font-size: 13px; color: var(--muted-text); border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s;">Guestbook</button>
+        </div>
+        <div id="profile-tab-content-area" style="display:flex; flex-direction:column; gap:0;"></div>
+      `;
+      detailsRight.insertBefore(tabsHeader, detailsRight.firstChild);
+      
+      // Bind click listeners
+      tabsHeader.querySelectorAll('.profile-details-tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const tab = e.currentTarget.getAttribute('data-profile-tab');
+          State.activeProfileTab = tab;
+          
+          tabsHeader.querySelectorAll('.profile-details-tab-btn').forEach(b => {
+            const bVal = b.getAttribute('data-profile-tab');
+            if (bVal === tab) {
+              b.classList.add('active');
+              b.style.color = 'var(--text-charcoal)';
+              b.style.borderBottom = '2px solid var(--accent-green)';
+            } else {
+              b.classList.remove('active');
+              b.style.color = 'var(--muted-text)';
+              b.style.borderBottom = '2px solid transparent';
+            }
+          });
+          
+          renderProfileTabContent(user);
+        });
+      });
+    }
+    
+    // Ensure active profile tab is set
+    State.activeProfileTab = State.activeProfileTab || 'posts';
+    
+    // Set active tab styling initially
+    tabsHeader.querySelectorAll('.profile-details-tab-btn').forEach(btn => {
+      const bVal = btn.getAttribute('data-profile-tab');
+      if (bVal === State.activeProfileTab) {
+        btn.classList.add('active');
+        btn.style.color = 'var(--text-charcoal)';
+        btn.style.borderBottom = '2px solid var(--accent-green)';
+      } else {
+        btn.classList.remove('active');
+        btn.style.color = 'var(--muted-text)';
+        btn.style.borderBottom = '2px solid transparent';
+      }
+    });
+
+    renderProfileTabContent(user);
+  }
+
   // Render photo gallery unconditionally
   const gallerySection = document.getElementById('profile-gallery-section');
   if (gallerySection) gallerySection.style.display = 'block';
@@ -420,3 +485,236 @@ function openProfileEditModal() {
   
   openModal('modal-edit-profile');
 }
+
+function renderProfileTabContent(user) {
+  const container = document.getElementById('profile-tab-content-area');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  const tab = State.activeProfileTab || 'posts';
+  
+  if (tab === 'posts') {
+    const userPosts = State.posts.filter(p => p.author && p.author.name === user.name);
+    if (userPosts.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:24px 0; color:var(--muted-text); font-size:12px; font-style:italic;">No posts yet.</div>`;
+    } else {
+      let html = '';
+      userPosts.forEach(post => {
+        html += getPostCardHtmlForProfile(post);
+      });
+      container.innerHTML = html;
+      if (window.lucide) lucide.createIcons();
+    }
+  } else if (tab === 'replies') {
+    const replies = [];
+    State.posts.forEach(p => {
+      if (p.comments) {
+        p.comments.forEach(c => {
+          if (c.user === user.name) {
+            replies.push({ post: p, comment: c });
+          }
+        });
+      }
+    });
+    
+    if (replies.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:24px 0; color:var(--muted-text); font-size:12px; font-style:italic;">No replies yet.</div>`;
+    } else {
+      let html = '';
+      replies.forEach(r => {
+        html += `
+          <div class="thread-reply-item" style="display:flex; gap:12px; align-items:flex-start; padding:16px 0; border-bottom:1px solid var(--border-color);">
+            <div style="position:relative; flex-shrink:0;">
+              <img src="${getAvatarSrc(user.avatar)}" style="width:36px; height:36px; border-radius:50%; object-fit:cover;">
+            </div>
+            <div style="flex-grow:1; text-align:left;">
+              <div style="font-size:13px; font-weight:700; color:var(--text-charcoal); margin-bottom:4px;">
+                ${user.name} <span style="font-weight:400; color:var(--muted-text);">replied to ${r.post.author ? r.post.author.name : 'Nomad'}'s post:</span>
+              </div>
+              <p style="color:var(--text-main); margin:0; font-size:13px; line-height:1.4; font-weight:500;">${parseMarkdownToHtml(r.comment.text)}</p>
+              <div style="font-size:11px; color:var(--muted-text); margin-top:8px; cursor:pointer;" onclick="window.openPostDetailModal('${r.post.id}')">
+                View original post
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+  } else if (tab === 'reposts') {
+    const repostedIds = user.repostedPostIds || [];
+    const repostedPosts = State.posts.filter(p => repostedIds.includes(p.id));
+    
+    if (repostedPosts.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:24px 0; color:var(--muted-text); font-size:12px; font-style:italic;">No reposts yet.</div>`;
+    } else {
+      let html = '';
+      repostedPosts.forEach(post => {
+        html += getPostCardHtmlForProfile(post);
+      });
+      container.innerHTML = html;
+      if (window.lucide) lucide.createIcons();
+    }
+  } else if (tab === 'forums') {
+    const userThreads = (State.forum || []).filter(t => t.author && t.author.name === user.name);
+    
+    if (userThreads.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:24px 0; color:var(--muted-text); font-size:12px; font-style:italic;">No forum threads yet.</div>`;
+    } else {
+      let html = '';
+      userThreads.forEach(t => {
+        html += `
+          <div style="padding:16px 0; border-bottom:1px solid var(--border-color); text-align:left; cursor:pointer;" onclick="window.viewForumThreadFromProfile('${t.id}')">
+            <div style="font-weight:700; font-size:14px; color:var(--text-charcoal);">${t.title}</div>
+            <div style="font-size:12px; color:var(--muted-text); margin-top:4px;">In ${t.category} • ${t.repliesCount} replies • ${t.viewsCount} views</div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+  } else if (tab === 'guestbook') {
+    const comments = user.profileComments || [];
+    let commentsHtml = '';
+    
+    comments.forEach((c, idx) => {
+      const commenter = State.users.find(u => u.name === c.user) || { avatar: 'avatar_bob' };
+      commentsHtml += `
+        <div style="display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--border-color);">
+          <img src="${getAvatarSrc(commenter.avatar)}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">
+          <div style="flex-grow:1; text-align:left;">
+            <div style="font-size:12px; display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-weight:700; color:var(--text-charcoal);">${c.user}</span>
+              <span style="color:var(--muted-text); font-size:11px;">${c.time || 'Just now'}</span>
+            </div>
+            <p style="color:var(--text-main); margin:4px 0 0 0; font-size:12px; line-height:1.4;">${parseMarkdownToHtml(c.text)}</p>
+          </div>
+        </div>
+      `;
+    });
+    
+    const isGuest = !State.isSignedIn;
+    const composeHtml = isGuest ? `
+      <div style="font-size:12px; color:var(--muted-text); font-style:italic; margin-bottom:16px;">Please sign in to write a comment.</div>
+    ` : `
+      <form onsubmit="window.submitProfileComment(event, '${user.name.replace(/'/g, "\\'")}')" style="display:flex; gap:8px; align-items:center; margin-bottom:16px;">
+        <img src="${getAvatarSrc(State.currentUser.avatar)}" alt="Me" style="width:28px; height:28px; border-radius:50%; object-fit:cover;">
+        <input type="text" id="profile-comment-input" placeholder="Write a comment on ${user.name}'s profile..." style="flex-grow:1; border: 1px solid var(--border-color); border-radius: 20px; padding: 6px 14px; outline:none; font-size:12px; background:var(--card-bg); color:var(--text-main);" required />
+        <button class="btn btn-sm btn-primary" type="submit" style="border-radius:20px;">Send</button>
+      </form>
+    `;
+    
+    container.innerHTML = `
+      <div style="padding:16px 0;">
+        ${composeHtml}
+        <div style="display:flex; flex-direction:column; gap:0;">
+          ${commentsHtml || '<div style="text-align:center; padding:12px 0; color:var(--muted-text); font-style:italic; font-size:12px;">No comments yet.</div>'}
+        </div>
+      </div>
+    `;
+  }
+}
+
+function getPostCardHtmlForProfile(post) {
+  const isSaved = State.currentUser && State.currentUser.savedPostIds && State.currentUser.savedPostIds.includes(post.id);
+  const likedByUser = post.likedByUser || false;
+  
+  let imgMarkup = '';
+  if (post.image && post.image !== 'none') {
+    imgMarkup = `<img src="${getImageSrc(post.image)}" alt="Post Media" style="border-radius:var(--radius-md); margin-top:8px; width:100%; max-height:250px; object-fit:contain; background:#111;">`;
+  }
+  
+  return `
+    <div class="feed-post-card" style="background-color: transparent; border: none; border-bottom: 1px solid var(--border-color); border-radius: 0; padding: 16px 0; margin-bottom: 0; width:100%;">
+      <div class="thread-post-layout" style="display:flex; gap:12px;">
+        <div class="thread-left-col" style="display:flex; flex-direction:column; align-items:center;">
+          <img src="${getAvatarSrc(post.author.avatar)}" alt="${post.author.name}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
+        </div>
+        <div class="thread-right-col" style="flex-grow:1; text-align:left;">
+          <div class="thread-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="thread-user-meta" style="display:flex; align-items:center; gap:6px; font-size:14px;">
+              <span class="thread-author-name" style="font-weight:700; color:var(--text-charcoal);">${post.author.name}</span>
+              <i data-lucide="check-circle-2" style="width:14px; height:14px; fill:#3B82F6; color:white; flex-shrink:0;"></i>
+              <span class="thread-time" style="color:var(--muted-text); font-size:13px; margin-left:4px;">${post.time || 'Just now'}</span>
+            </div>
+          </div>
+          <div style="margin-top:8px; font-size:14px; line-height:1.5; color:var(--text-main); font-weight:500;">${parseMarkdownToHtml(post.content)}</div>
+          ${imgMarkup}
+          <div style="display:flex; gap:28px; margin-top:12px; font-size:13px; color:var(--muted-text); align-items:center;">
+            <button onclick="window.toggleLike('${post.id}'); renderUserProfile('${post.author.name}')" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
+              <i data-lucide="heart" style="width:18px; height:18px; color:${likedByUser ? '#ef4444' : 'inherit'}; fill:${likedByUser ? '#ef4444' : 'none'};"></i>
+              <span>${post.likes || 0}</span>
+            </button>
+            <button onclick="window.openPostDetailModal('${post.id}')" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
+              <i data-lucide="message-circle" style="width:18px; height:18px;"></i>
+              <span>${post.comments ? post.comments.length : 0}</span>
+            </button>
+            <button onclick="window.toggleRepost('${post.id}'); renderUserProfile('${post.author.name}')" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
+              <i data-lucide="repeat" style="width:18px; height:18px;"></i>
+              <span>${post.reposts || 0}</span>
+            </button>
+            <button onclick="window.openShareMenu('${post.id}')" style="background:none; border:none; color:inherit; display:flex; align-items:center; gap:6px; cursor:pointer; padding:0;">
+              <i data-lucide="send" style="width:18px; height:18px;"></i>
+              <span>${post.shares || 0}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+window.viewForumThreadFromProfile = function(threadId) {
+  State.activeThreadId = threadId;
+  switchTab('forum');
+  if (typeof renderForumView === 'function') renderForumView();
+};
+
+window.submitProfileComment = function(event, profileOwnerName) {
+  event.preventDefault();
+  if (!requireAuth()) return;
+  
+  const input = document.getElementById('profile-comment-input');
+  if (!input || !input.value.trim()) return;
+  
+  const text = input.value.trim();
+  
+  let targetUser = State.users.find(u => u.name === profileOwnerName);
+  if (!targetUser) return;
+  
+  if (!targetUser.profileComments) targetUser.profileComments = [];
+  
+  targetUser.profileComments.unshift({
+    user: State.currentUser.name,
+    text: text,
+    time: "Just now"
+  });
+  
+  if (profileOwnerName !== State.currentUser.name) {
+    if (!targetUser.notifications) targetUser.notifications = [];
+    targetUser.notifications.unshift({
+      id: `notif-${Date.now()}`,
+      content: `💬 ${State.currentUser.name} left a comment on your profile guestbook: "${text.substring(0, 30)}${text.length > 30 ? '...' : ''}"`,
+      time: "Just now",
+      read: false
+    });
+  }
+  
+  saveStateToStorage();
+  input.value = '';
+  renderProfileTabContent(targetUser);
+};
+
+window.shareUserProfile = function(username) {
+  const name = username || (State.activeProfileName || (State.currentUser ? State.currentUser.name : ''));
+  if (!name) {
+    showToast("Please sign in or view a profile first.", "info");
+    return;
+  }
+  const shareUrl = `${window.location.origin}${window.location.pathname}?profile=${encodeURIComponent(name)}`;
+  
+  navigator.clipboard.writeText(shareUrl).then(() => {
+    showToast("Profile link copied to clipboard!", "success");
+  }).catch(() => {
+    showToast("Failed to copy link.", "error");
+  });
+};
