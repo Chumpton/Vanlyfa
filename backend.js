@@ -1408,6 +1408,45 @@ const Backend = {
     }
   },
 
+  /** Create a new user profile record in the database. */
+  async createProfile(profileData) {
+    this._logWrite();
+    if (this._mode === 'supabase') {
+      const { data, error } = await this._supabase
+        .from('profiles')
+        .insert({
+          id: profileData.id,
+          name: profileData.name,
+          handle: profileData.handle,
+          avatar: profileData.avatar,
+          bio: profileData.bio,
+          role: profileData.role || 'user',
+          spots_count: 0,
+          listings_count: 0,
+          reputation: 5,
+          saved_post_ids: [],
+          saved_meetup_ids: [],
+          blocked_users: [],
+          rig: profileData.rig || '',
+          solar: profileData.solar || '',
+          power: profileData.power || '',
+          water: profileData.water || ''
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } else {
+      const existingUser = State.users.find(u => u.name === profileData.name);
+      if (!existingUser) {
+        State.users.push(profileData);
+      } else {
+        Object.assign(existingUser, profileData);
+      }
+      this._persist();
+      return profileData;
+    }
+  },
 
   // ═══════════════════════════════════════════════════════════════════
   //  AUTH

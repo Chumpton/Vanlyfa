@@ -47,6 +47,21 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();
   }
+
+  // 3. Initialize avatar picker selection highlights
+  document.querySelectorAll('.avatar-picker-option').forEach(option => {
+    option.addEventListener('click', () => {
+      document.querySelectorAll('.avatar-picker-option').forEach(opt => {
+        opt.classList.remove('selected');
+        opt.style.borderColor = 'transparent';
+      });
+      option.classList.add('selected');
+      option.style.borderColor = 'var(--accent-green)';
+    });
+  });
+
+  // 4. Expose onboarding submit to global scope for form action
+  window.handleOnboardingSubmit = handleOnboardingSubmit;
 });
 
 function initApp() {
@@ -84,58 +99,64 @@ function initApp() {
             
             if (!profile) {
               if (typeof window.addDebugLog === 'function') {
-                window.addDebugLog(`Profile missing for User ${session.user.id}. Provisioning default profile...`);
+                window.addDebugLog(`Profile missing for User ${session.user.id}. Intercepting for onboarding...`);
               }
+              
+              // Capture details for profile onboarding
+              State.tempAuthUser = session.user;
+              
+              // Get pre-typed values from signup form
+              const signupUserVal = document.getElementById('signup-username')?.value.trim();
+              const signupBioVal = document.getElementById('signup-bio')?.value.trim();
+              
               const metadata = session.user.user_metadata || {};
-              const defaultName = metadata.full_name || session.user.email.split('@')[0];
+              const defaultName = signupUserVal || metadata.full_name || session.user.email.split('@')[0];
               const defaultHandle = `@${defaultName.replace(/\s+/g, '_').toLowerCase()}`;
+              const defaultBio = signupBioVal || "New nomad on the road.";
               
-              const newProfile = {
-                id: session.user.id,
-                name: defaultName,
-                handle: defaultHandle,
-                avatar: 'avatar_bob',
-                bio: 'Living full time on the road.',
-                role: 'user',
-                spots_count: 0,
-                listings_count: 0,
-                reputation: 5,
-                saved_post_ids: [],
-                saved_meetup_ids: [],
-                blocked_users: []
+              // Pre-populate Onboarding Modal fields
+              const dispNameInput = document.getElementById('onboard-display-name');
+              const handleInput = document.getElementById('onboard-handle');
+              const bioInput = document.getElementById('onboard-bio');
+              
+              if (dispNameInput) dispNameInput.value = defaultName;
+              if (handleInput) handleInput.value = defaultHandle;
+              if (bioInput) bioInput.value = defaultBio;
+              
+              // Render avatar picker SVGs dynamically
+              document.querySelectorAll('.onboard-avatar-img').forEach(img => {
+                const key = img.getAttribute('data-avatar-key');
+                if (key && typeof getAvatarSrc === 'function') {
+                  img.src = getAvatarSrc(key);
+                }
+              });
+              
+              // Close Auth modal and show Onboarding modal
+              closeModal('modal-auth-required');
+              openModal('modal-complete-profile');
+            } else {
+              State.currentUser = {
+                id: profile.id,
+                name: profile.name,
+                handle: profile.handle,
+                avatar: profile.avatar || 'avatar_bob',
+                bio: profile.bio || 'Living full time on the road.',
+                role: profile.role || 'user',
+                spotsCount: profile.spots_count || 0,
+                listingsCount: profile.listings_count || 0,
+                reputation: profile.reputation || 0,
+                savedPostIds: profile.saved_post_ids || [],
+                savedMeetupIds: profile.saved_meetup_ids || []
               };
+              State.isSignedIn = true;
               
-              const { data: inserted, error: insertErr } = await window.supabaseClient
-                .from('profiles')
-                .insert([newProfile])
-                .select()
-                .single();
-                
-              if (insertErr) throw insertErr;
-              profile = inserted;
+              // Close modals
+              closeModal('modal-auth-required');
+              closeModal('modal-complete-profile');
               
               if (typeof window.addDebugLog === 'function') {
-                window.addDebugLog(`Default profile created successfully: ${profile.handle}`);
+                window.addDebugLog(`Logged in as Nomad: ${profile.name} (${profile.handle})`);
               }
-            }
-            
-            State.currentUser = {
-              id: profile.id,
-              name: profile.name,
-              handle: profile.handle,
-              avatar: profile.avatar || 'avatar_bob',
-              bio: profile.bio || 'Living full time on the road.',
-              role: profile.role || 'user',
-              spotsCount: profile.spots_count || 0,
-              listingsCount: profile.listings_count || 0,
-              reputation: profile.reputation || 0,
-              savedPostIds: profile.saved_post_ids || [],
-              savedMeetupIds: profile.saved_meetup_ids || []
-            };
-            State.isSignedIn = true;
-            
-            if (typeof window.addDebugLog === 'function') {
-              window.addDebugLog(`Logged in as Nomad: ${profile.name} (${profile.handle})`);
             }
           } catch (err) {
             console.error("Error loading user profile on auth change:", err);
@@ -1181,6 +1202,118 @@ async function handleAuthSignUp(event) {
     renderCurrentTab();
   } catch(e) {
     showToast(e.message, 'error');
+  }
+}
+
+async function handleOnboardingSubmit(event) {
+  event.preventDefault();
+  
+  if (!State.tempAuthUser) {
+    showToast("Session lost. Please sign in again.", "error");
+    closeModal('modal-complete-profile');
+    openModal('modal-auth-required');
+    return;
+  }
+  
+  const displayName = document.getElementById('onboard-display-name').value.trim();
+  let handle = document.getElementById('onboard-handle').value.trim();
+  const bio = document.getElementById('onboard-bio').value.trim() || "New nomad on the road.";
+  const rigType = document.getElementById('onboard-rig-type').value;
+  const solar = document.getElementById('onboard-solar').value.trim();
+  const battery = document.getElementById('onboard-power').value.trim();
+  const water = document.getElementById('onboard-water').value.trim();
+  
+  if (!displayName || !handle) {
+    showToast("Please fill in both name and handle fields.", "error");
+    return;
+  }
+  
+  // Format handle: prepend '@' if missing, replace spaces/specials
+  if (!handle.startsWith('@')) {
+    handle = '@' + handle;
+  }
+  handle = handle.replace(/\s+/g, '_').toLowerCase();
+  
+  // Basic validation
+  if (handle.length < 3) {
+    showToast("Handle must be at least 3 characters long.", "error");
+    return;
+  }
+  
+  // Query handle uniqueness
+  try {
+    if (Backend._mode === 'supabase') {
+      const { data: existing, error } = await window.supabaseClient
+        .from('profiles')
+        .select('handle')
+        .eq('handle', handle);
+        
+      if (error) throw error;
+      if (existing && existing.length > 0) {
+        showToast("This handle is already taken by another Nomad. Please choose another.", "error");
+        return;
+      }
+    } else {
+      const existingUser = State.users.find(u => u.handle.toLowerCase() === handle.toLowerCase());
+      if (existingUser) {
+        showToast("This handle is already taken by another Nomad. Please choose another.", "error");
+        return;
+      }
+    }
+  } catch (err) {
+    console.error("Error checking handle uniqueness:", err);
+    showToast("Error checking handle uniqueness.", "error");
+    return;
+  }
+  
+  // Find selected avatar key
+  const selectedAvatarEl = document.querySelector('.avatar-picker-grid .avatar-picker-option.selected');
+  const avatarKey = selectedAvatarEl ? selectedAvatarEl.getAttribute('data-avatar') : 'avatar_bob';
+  
+  const profileData = {
+    id: State.tempAuthUser.id,
+    name: displayName,
+    handle: handle,
+    avatar: avatarKey,
+    bio: bio,
+    role: 'user',
+    rig: rigType,
+    solar: solar,
+    power: battery,
+    water: water
+  };
+  
+  try {
+    const profile = await Backend.createProfile(profileData);
+    
+    // Complete signed-in state
+    State.currentUser = {
+      id: profile.id,
+      name: profile.name,
+      handle: profile.handle,
+      avatar: profile.avatar || 'avatar_bob',
+      bio: profile.bio || 'Living full time on the road.',
+      role: profile.role || 'user',
+      spotsCount: 0,
+      listingsCount: 0,
+      reputation: 5,
+      savedPostIds: [],
+      savedMeetupIds: []
+    };
+    State.isSignedIn = true;
+    
+    // Clean up temporary variables
+    delete State.tempAuthUser;
+    
+    closeModal('modal-complete-profile');
+    showToast(`Welcome aboard, ${profile.name}!`, "success");
+    
+    // Repaint sidebar and active tab
+    updateSidebarProfileWidget();
+    renderCurrentTab();
+  } catch (err) {
+    console.error("Error completing onboarding profile creation:", err);
+    showToast(`Failed to complete profile: ${err.message}`, "error");
   }
 }
 

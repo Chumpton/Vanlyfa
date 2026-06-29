@@ -1158,6 +1158,88 @@
     </div>
   </div>
 
+  <!-- Modal: Complete Your Nomad Profile Onboarding -->
+  <div class="modal-overlay" id="modal-complete-profile">
+    <div class="modal-content" style="max-width: 500px; padding: 24px; border-radius: var(--radius-lg); background: var(--card-bg); border: 1px solid var(--border-color); overflow-y: auto; max-height: 90vh;">
+      <div class="modal-header" style="padding: 0 0 12px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <h3 style="font-size: 18px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; margin: 0;">
+          <i data-lucide="user" style="color: var(--accent-green); width: 20px; height: 20px;"></i>
+          <span>Complete Your Profile</span>
+        </h3>
+      </div>
+      <form id="onboarding-profile-form" onsubmit="handleOnboardingSubmit(event)" style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px;">
+        <div class="form-group">
+          <label for="onboard-display-name">Display Name</label>
+          <input type="text" id="onboard-display-name" placeholder="e.g. Nomad Bob" required class="auth-input w-full p-sm">
+        </div>
+        <div class="form-group">
+          <label for="onboard-handle">Nomad Handle (Unique)</label>
+          <input type="text" id="onboard-handle" placeholder="e.g. @wanderlust_bob" required class="auth-input w-full p-sm">
+          <span style="font-size: 10px; color: var(--muted-text);">Must start with @ and have no spaces.</span>
+        </div>
+        <div class="form-group">
+          <label for="onboard-bio">Bio</label>
+          <textarea id="onboard-bio" placeholder="Tell the road trip community about yourself..." class="auth-input w-full p-sm" style="height: 60px; resize: none;"></textarea>
+        </div>
+        
+        <!-- Avatar Selector Grid -->
+        <div class="form-group">
+          <label style="margin-bottom: 8px; display: block;">Choose Avatar</label>
+          <div class="avatar-picker-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;">
+            <div class="avatar-picker-option selected" data-avatar="avatar_bob" style="cursor: pointer; border: 2px solid var(--accent-green); border-radius: 50%; padding: 2px; transition: transform 0.2s;">
+              <img src="" class="onboard-avatar-img" data-avatar-key="avatar_bob" style="width: 100%; aspect-ratio: 1; border-radius: 50%; object-fit: cover;">
+            </div>
+            <div class="avatar-picker-option" data-avatar="avatar_clara" style="cursor: pointer; border: 2px solid transparent; border-radius: 50%; padding: 2px; transition: transform 0.2s;">
+              <img src="" class="onboard-avatar-img" data-avatar-key="avatar_clara" style="width: 100%; aspect-ratio: 1; border-radius: 50%; object-fit: cover;">
+            </div>
+            <div class="avatar-picker-option" data-avatar="avatar_forest" style="cursor: pointer; border: 2px solid transparent; border-radius: 50%; padding: 2px; transition: transform 0.2s;">
+              <img src="" class="onboard-avatar-img" data-avatar-key="avatar_forest" style="width: 100%; aspect-ratio: 1; border-radius: 50%; object-fit: cover;">
+            </div>
+            <div class="avatar-picker-option" data-avatar="avatar_solar" style="cursor: pointer; border: 2px solid transparent; border-radius: 50%; padding: 2px; transition: transform 0.2s;">
+              <img src="" class="onboard-avatar-img" data-avatar-key="avatar_solar" style="width: 100%; aspect-ratio: 1; border-radius: 50%; object-fit: cover;">
+            </div>
+            <div class="avatar-picker-option" data-avatar="avatar_surf" style="cursor: pointer; border: 2px solid transparent; border-radius: 50%; padding: 2px; transition: transform 0.2s;">
+              <img src="" class="onboard-avatar-img" data-avatar-key="avatar_surf" style="width: 100%; aspect-ratio: 1; border-radius: 50%; object-fit: cover;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Rig Specifications Section -->
+        <div style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+          <h4 style="font-size: 13px; font-weight: 700; color: var(--text-main); margin: 0 0 12px 0;">RIG SPECIFICATIONS (OPTIONAL)</h4>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label for="onboard-rig-type">Rig Type</label>
+            <select id="onboard-rig-type" style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-card); color: var(--text-main);">
+              <option value="Camper Van">Camper Van</option>
+              <option value="Travel Trailer">Travel Trailer</option>
+              <option value="Overland Truck">Overland Truck</option>
+              <option value="Motorhome">Motorhome</option>
+              <option value="Car Camper">Car Camper</option>
+              <option value="Standard Camper">Standard Camper</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+            <div class="form-group">
+              <label for="onboard-solar">Solar Power</label>
+              <input type="text" id="onboard-solar" placeholder="e.g. 300W" class="auth-input w-full p-sm" style="font-size: 12px;">
+            </div>
+            <div class="form-group">
+              <label for="onboard-power">Battery</label>
+              <input type="text" id="onboard-power" placeholder="e.g. 200Ah" class="auth-input w-full p-sm" style="font-size: 12px;">
+            </div>
+            <div class="form-group">
+              <label for="onboard-water">Water</label>
+              <input type="text" id="onboard-water" placeholder="e.g. 20 Gal" class="auth-input w-full p-sm" style="font-size: 12px;">
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full justify-center p-sm" style="margin-top: 12px;">Complete Profile & Launch App</button>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal: Set GPS Location -->
   <div class="modal-overlay" id="modal-gps-input">
     <div class="modal-content" style="max-width: 400px; padding: 24px; border-radius: var(--radius-lg); background: var(--card-bg); border: 1px solid var(--border-color);">
