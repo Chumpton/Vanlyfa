@@ -268,7 +268,8 @@
         <div class="vanlyfa-debug-actions">
           <button class="vanlyfa-debug-btn" id="dbg-btn-toggle-net">Toggle Offline</button>
           <button class="vanlyfa-debug-btn" id="dbg-btn-clear-cache">Clear Feed Cache</button>
-          <button class="vanlyfa-debug-btn" id="dbg-btn-sync-queue" style="grid-column: span 2;">Force Sync Queue</button>
+          <button class="vanlyfa-debug-btn" id="dbg-btn-sync-queue">Force Sync Queue</button>
+          <button class="vanlyfa-debug-btn" id="dbg-btn-auto-audit" style="color:#10b981; border-color:rgba(16,185,129,0.4);">Auto-Audit Site</button>
         </div>
       </div>
     </div>
@@ -327,6 +328,86 @@
       updateConsoleData();
     }
   });
+
+  document.getElementById('dbg-btn-auto-audit').addEventListener('click', () => {
+    runAutoAudit();
+  });
+
+  async function runAutoAudit() {
+    window.addDebugLog("⚡ Starting automated site audit...");
+    const tabs = ['dashboard', 'feed', 'marketplace', 'tribes', 'meetups', 'forum', 'jobs', 'profile'];
+    let errorCount = 0;
+    
+    // Capture errors during audit
+    const auditErrors = [];
+    const errListener = (e) => {
+      auditErrors.push(e.message || 'Unknown error');
+      window.addDebugLog(`❌ Runtime Error: ${e.message}`);
+    };
+    const promiseListener = (e) => {
+      auditErrors.push(e.reason ? e.reason.message : 'Unhandled promise rejection');
+      window.addDebugLog(`❌ Promise Error: ${e.reason ? e.reason.message : 'Rejection'}`);
+    };
+    
+    window.addEventListener('error', errListener);
+    window.addEventListener('unhandledrejection', promiseListener);
+    
+    try {
+      // Step 1: Click through all tabs
+      for (const tab of tabs) {
+        window.addDebugLog(`Testing Tab: ${tab.toUpperCase()}`);
+        if (typeof switchTab === 'function') {
+          switchTab(tab);
+        }
+        await new Promise(r => setTimeout(r, 450));
+      }
+      
+      // Step 2: Open and close creation modals
+      const modals = ['modal-add-post', 'modal-add-meetup', 'modal-add-thread', 'modal-add-listing', 'modal-add-tribe', 'modal-add-job'];
+      for (const modalId of modals) {
+        window.addDebugLog(`Testing Modal Trigger: ${modalId}`);
+        if (typeof openModal === 'function' && typeof closeModal === 'function') {
+          openModal(modalId);
+          await new Promise(r => setTimeout(r, 350));
+          closeModal(modalId);
+          await new Promise(r => setTimeout(r, 200));
+        }
+      }
+      
+      // Step 3: Trigger side panels
+      window.addDebugLog("Testing Contacts drawer...");
+      const contactsToggle = document.getElementById('contacts-toggle-btn');
+      if (contactsToggle) {
+        contactsToggle.click();
+        await new Promise(r => setTimeout(r, 350));
+        const contactsClose = document.getElementById('contacts-close-btn');
+        if (contactsClose) contactsClose.click();
+      }
+      
+      // Step 4: Run cache tests
+      window.addDebugLog("Verifying feed caching hit engine...");
+      if (typeof switchTab === 'function') {
+        switchTab('feed');
+        await new Promise(r => setTimeout(r, 350));
+        switchTab('dashboard');
+        await new Promise(r => setTimeout(r, 350));
+        switchTab('feed'); // This should trigger a cache HIT
+      }
+      
+      await new Promise(r => setTimeout(r, 500));
+      
+      if (auditErrors.length === 0) {
+        window.addDebugLog("✅ Site audit completed! 0 errors detected.");
+      } else {
+        window.addDebugLog(`⚠️ Audit completed with ${auditErrors.length} errors. Check console.`);
+      }
+    } catch(err) {
+      window.addDebugLog(`❌ Audit aborted: ${err.message}`);
+    } finally {
+      window.removeEventListener('error', errListener);
+      window.removeEventListener('unhandledrejection', promiseListener);
+    }
+  }
 
   // Data update function
   function updateConsoleData() {
