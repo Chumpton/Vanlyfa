@@ -70,6 +70,7 @@ function initApp() {
     
     if (Backend._mode === 'supabase') {
       loadStateFromStorage();
+      Backend.syncAllData().catch(err => console.error("Initial dynamic sync failed:", err));
       // Subscribe to Auth state changes
       window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (typeof window.addDebugLog === 'function') {

@@ -1820,7 +1820,7 @@ const Backend = {
 
       // Map Posts
       if (postsRes.data) {
-        State.posts = postsRes.data.map(d => ({
+        const mappedPosts = postsRes.data.map(d => ({
           id: d.id,
           content: d.content,
           image: d.image || 'none',
@@ -1830,6 +1830,7 @@ const Backend = {
           reposts: 0,
           shares: 0,
           time: d.created_at ? new Date(d.created_at).toLocaleDateString() : 'Just now',
+          created_at: d.created_at, // Preserve database created_at
           comments: (d.comments || []).map(c => ({
             id: c.id,
             text: c.text,
@@ -1840,6 +1841,17 @@ const Backend = {
           lat: d.latitude,
           lng: d.longitude
         }));
+
+        // Sort posts dynamically by Rising/Trending gravity score
+        mappedPosts.sort((a, b) => {
+          const hoursA = (Date.now() - new Date(a.created_at).getTime()) / 3600000;
+          const hoursB = (Date.now() - new Date(b.created_at).getTime()) / 3600000;
+          const scoreA = (a.likes + a.comments.length * 1.5 + 1) / Math.pow(hoursA + 2, 1.5);
+          const scoreB = (b.likes + b.comments.length * 1.5 + 1) / Math.pow(hoursB + 2, 1.5);
+          return scoreB - scoreA;
+        });
+
+        State.posts = mappedPosts;
       }
 
       // Map Spots
