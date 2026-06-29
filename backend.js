@@ -1418,6 +1418,49 @@ const Backend = {
     }
   },
 
+  /** Sign in with Google OAuth */
+  async signInWithGoogle() {
+    if (this._mode === 'supabase') {
+      const { data, error } = await this._supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) throw error;
+      return data;
+    } else {
+      // Mock Google Sign In
+      let user = State.users.find(u => u.handle === "@google_traveler");
+      if (!user) {
+        user = {
+          name: "Google Traveler",
+          handle: "@google_traveler",
+          email: "google.traveler@gmail.com",
+          avatar: "avatar_surf",
+          bio: "Signed in via Google Auth.",
+          role: "admin",
+          showRigProfile: true,
+          rig: "Adventure Van",
+          solar: "300W Solar",
+          power: "200Ah Lithium",
+          water: "20 Gal Fresh",
+          gallery: [],
+          visitedSpots: [],
+          friends: [],
+          reputation: 5,
+          givenRepTo: []
+        };
+        State.users.push(user);
+      }
+      
+      State.currentUser = { ...user };
+      State.isSignedIn = true;
+      this._persist();
+      return State.currentUser;
+    }
+  },
+
   /** Sign in. */
   async signIn(identifier, password) {
     const searchName = identifier.toLowerCase();

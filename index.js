@@ -43,13 +43,43 @@ function initApp() {
       window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (session) {
           try {
-            const { data: profile, error } = await window.supabaseClient
+            let { data: profile, error } = await window.supabaseClient
               .from('profiles')
               .select('*')
               .eq('id', session.user.id)
-              .single();
+              .maybeSingle();
               
             if (error) throw error;
+            
+            if (!profile) {
+              const metadata = session.user.user_metadata || {};
+              const defaultName = metadata.full_name || session.user.email.split('@')[0];
+              const defaultHandle = `@${defaultName.replace(/\s+/g, '_').toLowerCase()}`;
+              
+              const newProfile = {
+                id: session.user.id,
+                name: defaultName,
+                handle: defaultHandle,
+                avatar: 'avatar_bob',
+                bio: 'Living full time on the road.',
+                role: 'user',
+                spots_count: 0,
+                listings_count: 0,
+                reputation: 5,
+                saved_post_ids: [],
+                saved_meetup_ids: [],
+                blocked_users: []
+              };
+              
+              const { data: inserted, error: insertErr } = await window.supabaseClient
+                .from('profiles')
+                .insert([newProfile])
+                .select()
+                .single();
+                
+              if (insertErr) throw insertErr;
+              profile = inserted;
+            }
             
             State.currentUser = {
               id: profile.id,
@@ -1008,58 +1038,19 @@ function setupModalHandlers() {
   }
 }
 
-function handleGoogleSignIn() {
+async function handleGoogleSignIn() {
   showToast("Connecting to Google Auth...", "info");
-  setTimeout(() => {
-    let user = State.users.find(u => u.handle === "@google_traveler");
-    if (!user) {
-      user = {
-        name: "Google Traveler",
-        handle: "@google_traveler",
-        email: "google.traveler@gmail.com",
-        avatar: "avatar_surf",
-        bio: "Signed in via Google Auth.",
-        role: "admin",
-        avatar_crop: { x: 0, y: 0, zoom: 1 },
-        showRigProfile: true,
-        rig: "Adventure Van",
-        solar: "300W Solar",
-        power: "200Ah Lithium",
-        water: "20 Gal Fresh",
-        gallery: [],
-        visitedSpots: [],
-        friends: [],
-        reputation: 5,
-        givenRepTo: []
-      };
-      State.users.push(user);
+  try {
+    const user = await Backend.signInWithGoogle();
+    if (Backend._mode !== 'supabase') {
+      updateSidebarProfileWidget();
+      closeModal('modal-auth-required');
+      showToast("Signed in successfully via Google!", "success");
+      renderCurrentTab();
     }
-    
-    State.currentUser = {
-      name: user.name,
-      handle: user.handle,
-      avatar: user.avatar,
-      bio: user.bio || "",
-      showRigProfile: user.showRigProfile !== false,
-      rig_desc: user.rig_desc || "",
-      rig: user.rig || "",
-      solar: user.solar || "",
-      power: user.power || "",
-      water: user.water || "",
-      reputation: user.reputation || 0,
-      givenRepTo: user.givenRepTo || [],
-      role: user.role || "admin",
-      instagram_handle: user.instagram_handle || "",
-      tiktok_handle: user.tiktok_handle || "",
-      avatar_crop: user.avatar_crop || { x: 0, y: 0, zoom: 1 }
-    };
-    State.isSignedIn = true;
-    saveStateToStorage();
-    updateSidebarProfileWidget();
-    closeModal('modal-auth-required');
-    showToast("Signed in successfully via Google!", "success");
-    renderCurrentTab();
-  }, 1000);
+  } catch (e) {
+    showToast(e.message, "error");
+  }
 }
 window.handleGoogleSignIn = handleGoogleSignIn;
 
