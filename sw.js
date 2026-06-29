@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vanlyfa-cache-v2';
+const CACHE_NAME = 'vanlyfa-cache-v3';
 const STATIC_ASSETS = [
   './',
   'index.html',
@@ -24,7 +24,7 @@ const STATIC_ASSETS = [
   'components/tribes.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-  'https://unpkg.com/lucide@latest'
+  'https://unpkg.com/lucide@0.400.0/dist/umd/lucide.js'
 ];
 
 // Install Event
