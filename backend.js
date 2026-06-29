@@ -126,10 +126,12 @@ const Backend = {
         const { data, error } = await this._supabase
           .from('posts')
           .insert({
-            text: content,
+            content: content,
             image: image,
             author_id: State.currentUser.id,
-            status: 'approved'
+            status: 'approved',
+            latitude: lat,
+            longitude: lng
           })
           .select('*, author:profiles!author_id(*)')
           .single();
@@ -143,7 +145,7 @@ const Backend = {
             id: data.id,
             author: { name: data.author.name, avatar: data.author.avatar },
             time: 'Just now',
-            content: data.text,
+            content: data.content,
             image: data.image,
             likes: 0,
             likedByUser: false,
@@ -151,7 +153,7 @@ const Backend = {
             reposts: 0,
             shares: 0,
             status: data.status,
-            lat: lat, lng: lng
+            lat: data.latitude, lng: data.longitude
           };
         }
       } else {
@@ -633,8 +635,8 @@ const Backend = {
           .insert({
             title: spotData.title,
             category: spotData.category,
-            lat: spotData.lat,
-            lng: spotData.lng,
+            latitude: spotData.lat,
+            longitude: spotData.lng,
             description: spotData.description || '',
             author_id: State.currentUser.id,
             status: spotData.requiresApproval ? 'pending' : 'approved'
@@ -650,8 +652,8 @@ const Backend = {
             id: data.id,
             title: data.title,
             category: data.category,
-            lat: data.lat,
-            lng: data.lng,
+            lat: data.latitude,
+            lng: data.longitude,
             description: data.description,
             image: data.image,
             fee: data.fee,
@@ -903,8 +905,8 @@ const Backend = {
             date: meetupData.date,
             time: meetupData.time,
             location: meetupData.location,
-            lat: meetupData.lat,
-            lng: meetupData.lng,
+            latitude: meetupData.lat,
+            longitude: meetupData.lng,
             description: meetupData.description || '',
             host_id: State.currentUser.id,
             status: 'approved'
@@ -922,8 +924,8 @@ const Backend = {
             date: data.date,
             time: data.time,
             location: data.location,
-            lat: data.lat,
-            lng: data.lng,
+            lat: data.latitude,
+            lng: data.longitude,
             description: data.description,
             image: data.image,
             host: { name: data.host.name, avatar: data.host.avatar },
