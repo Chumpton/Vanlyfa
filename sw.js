@@ -55,6 +55,9 @@ self.addEventListener('activate', (e) => {
 
 // Fetch Event (Network-First for local static assets, Cache-First for tiles & external libs)
 self.addEventListener('fetch', (e) => {
+  // Only intercept GET requests to avoid issues with database insertions, uploads, and auth mutations
+  if (e.request.method !== 'GET') return;
+
   const url = e.request.url;
 
   // Handle tile caching specially
