@@ -38,6 +38,7 @@ function initApp() {
     Backend._supabase = window.supabaseClient;
     
     if (Backend._mode === 'supabase') {
+      loadStateFromStorage();
       // Subscribe to Auth state changes
       window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (session) {
