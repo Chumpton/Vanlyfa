@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vanlyfa-cache-v3';
+const CACHE_NAME = 'vanlyfa-cache-v4';
 const STATIC_ASSETS = [
   './',
   'index.html',
@@ -53,7 +53,7 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Fetch Event (Cache-First strategy for static assets, Cache-then-Network for tiles)
+// Fetch Event (Network-First for local static assets, Cache-First for tiles & external libs)
 self.addEventListener('fetch', (e) => {
   const url = e.request.url;
 
@@ -89,14 +89,37 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Default Shell cache handling
+  // Network-First for local static files (index.html, JS controllers, components CSS)
+  const isLocalRequest = url.startsWith(self.location.origin);
+  if (isLocalRequest && e.request.method === 'GET' && !url.includes('sockjs')) {
+    e.respondWith(
+      fetch(e.request).then((networkResponse) => {
+        if (networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(e.request, responseClone);
+          });
+        }
+        return networkResponse;
+      }).catch(() => {
+        return caches.match(e.request).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
+          if (e.request.mode === 'navigate') {
+            return caches.match('index.html');
+          }
+        });
+      })
+    );
+    return;
+  }
+
+  // Cache-First for external resources (CDNs, stylesheets, leaflet files)
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
       return fetch(e.request).then((networkResponse) => {
-        // Cache dynamic GET requests
         if (e.request.method === 'GET' && !url.startsWith('chrome-extension') && !url.includes('sockjs')) {
           return caches.open(CACHE_NAME).then((cache) => {
             cache.put(e.request, networkResponse.clone());
@@ -105,7 +128,6 @@ self.addEventListener('fetch', (e) => {
         }
         return networkResponse;
       }).catch(() => {
-        // Offline fallback if needed
         if (e.request.mode === 'navigate') {
           return caches.match('index.html');
         }
