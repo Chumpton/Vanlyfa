@@ -15,11 +15,23 @@ function renderSocialFeed(containerId, isSidebar = false) {
   if (!State._cachedFeeds) {
     State._cachedFeeds = {};
   }
+  
+  if (!window._cacheHits) window._cacheHits = 0;
+  if (!window._cacheMisses) window._cacheMisses = 0;
+  
   const cacheKey = `${containerId}_${query}_${State.isSignedIn}_${State.currentUser ? State.currentUser.name : 'guest'}_${selectedTab}`;
   if (State._cachedFeeds[cacheKey]) {
     container.innerHTML = State._cachedFeeds[cacheKey];
+    window._cacheHits++;
+    if (typeof window.addDebugLog === 'function') {
+      window.addDebugLog(`Feed cache HIT [key: ${selectedTab}]`);
+    }
     if (window.lucide) lucide.createIcons();
     return;
+  }
+  window._cacheMisses++;
+  if (typeof window.addDebugLog === 'function') {
+    window.addDebugLog(`Feed cache MISS - fetching live [key: ${selectedTab}]`);
   }
   
   container.innerHTML = '';

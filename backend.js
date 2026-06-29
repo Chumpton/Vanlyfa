@@ -23,12 +23,31 @@ const Backend = {
 
   /** Persist entire State to localStorage */
   _persist() {
+    this._logWrite();
     if (typeof saveStateToStorage === 'function') saveStateToStorage();
   },
 
   /** Clear cached feed renders so next render rebuilds */
   _invalidateFeeds() {
     if (State) State._cachedFeeds = {};
+  },
+
+  _logRead() {
+    if (!window._apiReads) window._apiReads = 0;
+    window._apiReads++;
+    if (typeof window.addDebugLog === 'function') {
+      window.addDebugLog(`API Read operation (cumulative: ${window._apiReads})`);
+    }
+    if (window._updateDebugConsole) window._updateDebugConsole();
+  },
+
+  _logWrite() {
+    if (!window._apiWrites) window._apiWrites = 0;
+    window._apiWrites++;
+    if (typeof window.addDebugLog === 'function') {
+      window.addDebugLog(`API Write operation (cumulative: ${window._apiWrites})`);
+    }
+    if (window._updateDebugConsole) window._updateDebugConsole();
   },
 
   /** Commit: persist state + selectively re-render affected UI areas. */
