@@ -1513,25 +1513,132 @@ const Backend = {
 
   /** Sign in. */
   async signIn(identifier, password) {
-    const searchName = identifier.toLowerCase();
-    const user = State.users.find(u =>
-      u.name.toLowerCase() === searchName || 
-      (u.handle && u.handle.toLowerCase() === searchName) ||
-      (u.handle && u.handle.toLowerCase() === `@${searchName}`)
-    );
+    if (this._mode === 'supabase') {
+      let email = identifier;
+      
+      // Map mock usernames/handles to mock emails
+      const searchName = identifier.toLowerCase();
+      const mockUser = DefaultUsers.find(u =>
+        u.name.toLowerCase() === searchName || 
+        (u.handle && u.handle.toLowerCase() === searchName) ||
+        (u.handle && u.handle.toLowerCase() === `@${searchName}`)
+      );
+      
+      if (mockUser) {
+        email = mockUser.handle.replace('@', '') + '@vanlyfa.com';
+      }
 
-    if (!user) throw new Error('No nomad found with that name. Sign up instead!');
-    if (user.banned) throw new Error('This account has been deactivated.');
-    if (user.password && password !== user.password) throw new Error('Incorrect password.');
+      if (typeof window.addDebugLog === 'function') {
+        window.addDebugLog(`📡 Supabase Auth Sign In: ${email}`);
+      }
 
-    State.currentUser = { ...user };
-    State.currentUser.savedPostIds = State.currentUser.savedPostIds || [];
-    State.currentUser.savedMeetupIds = State.currentUser.savedMeetupIds || [];
-    State.currentUser.blockedUsers = State.currentUser.blockedUsers || [];
-    State.isSignedIn = true;
+      const { data, error } = await this._supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
 
-    this.commit(['profile', 'feed', 'dashboard']);
-    return State.currentUser;
+      if (error) {
+        if (error.message.includes('Invalid login credentials') || error.message.includes('User not found') || error.message.includes('Email not confirmed')) {
+          if (mockUser) {
+            if (typeof window.addDebugLog === 'function') {
+              window.addDebugLog(`👤 Mock user ${email} not found. Registering on the fly...`);
+            }
+            const signup = await this._supabase.auth.signUp({
+              email: email,
+              password: password,
+              options: {
+                data: {
+                  name: mockUser.name,
+                  handle: mockUser.handle
+                }
+              }
+            });
+            if (signup.error) throw signup.error;
+            return this.signIn(identifier, password);
+          } else {
+            throw new Error('Invalid email or password.');
+          }
+        } else {
+          throw error;
+        }
+      }
+
+      // Load/ensure profile exists
+      let { data: profile, error: pErr } = await this._supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      if (pErr || !profile) {
+        if (typeof window.addDebugLog === 'function') {
+          window.addDebugLog(`➕ Profile missing for user ${data.user.id}. Creating default...`);
+        }
+        const profileData = {
+          id: data.user.id,
+          name: mockUser ? mockUser.name : email.split('@')[0],
+          handle: mockUser ? mockUser.handle : `@${email.split('@')[0]}`,
+          avatar: mockUser ? mockUser.avatar : 'avatar_bob',
+          bio: mockUser ? mockUser.bio : 'New nomad on the road.',
+          role: mockUser ? mockUser.role : 'user',
+          rig: mockUser ? mockUser.rig : '',
+          solar: mockUser ? mockUser.solar : '',
+          power: mockUser ? mockUser.power : '',
+          water: mockUser ? mockUser.water : ''
+        };
+        const { error: insErr } = await this._supabase
+          .from('profiles')
+          .insert(profileData);
+        if (insErr) throw insErr;
+        
+        profile = profileData;
+      }
+
+      State.currentUser = {
+        id: profile.id,
+        name: profile.name,
+        handle: profile.handle,
+        avatar: profile.avatar || 'avatar_bob',
+        bio: profile.bio || 'Living full time on the road.',
+        role: profile.role || 'user',
+        spotsCount: profile.spots_count || 0,
+        listingsCount: profile.listings_count || 0,
+        reputation: profile.reputation || 0,
+        savedPostIds: profile.saved_post_ids || [],
+        savedMeetupIds: profile.saved_meetup_ids || [],
+        rig: profile.rig || '',
+        solar: profile.solar || '',
+        power: profile.power || '',
+        water: profile.water || ''
+      };
+      
+      State.isSignedIn = true;
+      this.commit(['profile', 'feed', 'dashboard']);
+      
+      // Load all data
+      await this.syncAllData();
+      return State.currentUser;
+    } else {
+      const searchName = identifier.toLowerCase();
+      const user = State.users.find(u =>
+        u.name.toLowerCase() === searchName || 
+        (u.handle && u.handle.toLowerCase() === searchName) ||
+        (u.handle && u.handle.toLowerCase() === `@${searchName}`)
+      );
+
+      if (!user) throw new Error('No nomad found with that name. Sign up instead!');
+      if (user.banned) throw new Error('This account has been deactivated.');
+      if (user.password && password !== user.password) throw new Error('Incorrect password.');
+
+      State.currentUser = { ...user };
+      State.currentUser.savedPostIds = State.currentUser.savedPostIds || [];
+      State.currentUser.savedMeetupIds = State.currentUser.savedMeetupIds || [];
+      State.currentUser.blockedUsers = State.currentUser.blockedUsers || [];
+      State.isSignedIn = true;
+
+      this.commit(['profile', 'feed', 'dashboard']);
+      return State.currentUser;
+    }
   },
 
   /** Sign out. */
@@ -1654,6 +1761,168 @@ const Backend = {
     if (State.notifications) {
       State.notifications.forEach(n => n.read = true);
       this._persist();
+    }
+  },
+
+  /** Synchronize full application state from Supabase. */
+  async syncAllData() {
+    if (this._mode !== 'supabase' || !this._supabase) return;
+    try {
+      if (typeof window.addDebugLog === 'function') {
+        window.addDebugLog('🔄 Syncing full application state from Supabase...');
+      }
+
+      const currentUserId = State.currentUser?.id;
+
+      // 1. Fetch Posts
+      const postsPromise = this._supabase
+        .from('posts')
+        .select('*, author:profiles!author_id(*), comments(*, author:profiles!author_id(*)), post_likes(user_id)')
+        .order('created_at', { ascending: false });
+
+      // 2. Fetch Spots
+      const spotsPromise = this._supabase
+        .from('spots')
+        .select('*, author:profiles!author_id(*), visited_spots(user_id, profile:profiles!user_id(*))');
+
+      // 3. Fetch Meetups
+      const meetupsPromise = this._supabase
+        .from('meetups')
+        .select('*, host:profiles!host_id(*), meetup_attendees(user_id, profile:profiles!user_id(*))')
+        .order('date', { ascending: true });
+
+      // 4. Fetch Marketplace
+      const marketplacePromise = this._supabase
+        .from('marketplace')
+        .select('*, seller:profiles!seller_id(*)')
+        .eq('status', 'approved');
+
+      // 5. Fetch Forum Threads
+      const forumPromise = this._supabase
+        .from('forum_threads')
+        .select('*, author:profiles!author_id(*), forum_replies(*, author:profiles!author_id(*))')
+        .order('created_at', { ascending: false });
+
+      // Run queries in parallel
+      const [postsRes, spotsRes, meetupsRes, marketplaceRes, forumRes] = await Promise.all([
+        postsPromise,
+        spotsPromise,
+        meetupsPromise,
+        marketplacePromise,
+        forumPromise
+      ]);
+
+      if (postsRes.error) console.error('Error fetching posts:', postsRes.error);
+      if (spotsRes.error) console.error('Error fetching spots:', spotsRes.error);
+      if (meetupsRes.error) console.error('Error fetching meetups:', meetupsRes.error);
+      if (marketplaceRes.error) console.error('Error fetching marketplace:', marketplaceRes.error);
+      if (forumRes.error) console.error('Error fetching forum:', forumRes.error);
+
+      // Map Posts
+      if (postsRes.data) {
+        State.posts = postsRes.data.map(d => ({
+          id: d.id,
+          content: d.content,
+          image: d.image || 'none',
+          author: { name: d.author?.name || 'Unknown Nomad', avatar: d.author?.avatar || 'avatar_bob' },
+          likes: (d.post_likes || []).length,
+          likedByUser: (d.post_likes || []).some(l => l.user_id === currentUserId),
+          reposts: 0,
+          shares: 0,
+          time: d.created_at ? new Date(d.created_at).toLocaleDateString() : 'Just now',
+          comments: (d.comments || []).map(c => ({
+            id: c.id,
+            text: c.text,
+            time: c.created_at ? new Date(c.created_at).toLocaleDateString() : 'Just now',
+            author: { name: c.author?.name || 'Unknown Nomad', avatar: c.author?.avatar || 'avatar_bob' }
+          })),
+          status: d.status,
+          lat: d.latitude,
+          lng: d.longitude
+        }));
+      }
+
+      // Map Spots
+      if (spotsRes.data) {
+        State.spots = spotsRes.data.map(d => ({
+          id: d.id,
+          title: d.title,
+          category: d.category,
+          lat: d.latitude,
+          lng: d.longitude,
+          description: d.description || '',
+          image: d.image || 'none',
+          fee: d.fee || 'Free',
+          author: { name: d.author?.name || 'Unknown Nomad', avatar: d.author?.avatar || 'avatar_bob' },
+          vouches: (d.visited_spots || []).length,
+          vouchedBy: (d.visited_spots || []).map(v => v.profile?.name || 'Unknown Nomad'),
+          comments: [],
+          status: d.status
+        }));
+      }
+
+      // Map Meetups
+      if (meetupsRes.data) {
+        State.meetups = meetupsRes.data.map(d => ({
+          id: d.id,
+          title: d.title,
+          date: d.date,
+          time: d.time,
+          location: d.location,
+          lat: d.latitude,
+          lng: d.longitude,
+          description: d.description || '',
+          image: d.image || 'none',
+          host: { name: d.host?.name || 'Unknown Nomad', avatar: d.host?.avatar || 'avatar_bob' },
+          attendees: (d.meetup_attendees || []).map(a => a.profile?.avatar || 'avatar_bob'),
+          attendeeNames: (d.meetup_attendees || []).map(a => a.profile?.name || 'Unknown Nomad'),
+          comments: [],
+          status: d.status
+        }));
+      }
+
+      // Map Marketplace
+      if (marketplaceRes.data) {
+        State.marketplace = marketplaceRes.data.map(d => ({
+          id: d.id,
+          title: d.title,
+          price: d.price,
+          category: d.category,
+          location: d.location,
+          zip: d.zip,
+          description: d.description || '',
+          image: d.image || 'none',
+          condition: d.condition || 'Used',
+          seller: { name: d.seller?.name || 'Unknown Seller', avatar: d.seller?.avatar || 'avatar_bob' },
+          status: d.status
+        }));
+      }
+
+      // Map Forum Threads
+      if (forumRes.data) {
+        State.forum = forumRes.data.map(d => ({
+          id: d.id,
+          title: d.title,
+          category: d.category,
+          body: d.body || '',
+          author: { name: d.author?.name || 'Unknown Nomad', avatar: d.author?.avatar || 'avatar_bob' },
+          viewsCount: d.views_count || 0,
+          repliesCount: (d.forum_replies || []).length,
+          date: d.created_at ? new Date(d.created_at).toLocaleDateString() : 'Just now',
+          replies: (d.forum_replies || []).map(r => ({
+            id: r.id,
+            body: r.body,
+            author: { name: r.author?.name || 'Unknown Nomad', avatar: r.author?.avatar || 'avatar_bob' },
+            date: r.created_at ? new Date(r.created_at).toLocaleDateString() : 'Just now'
+          })),
+          status: d.status
+        }));
+      }
+
+      this.commit(['feed', 'dashboard', 'map', 'meetups', 'marketplace', 'forum']);
+
+    } catch (err) {
+      console.error('[Backend] Error syncing all data:', err);
     }
   }
 };

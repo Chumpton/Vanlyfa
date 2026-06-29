@@ -152,6 +152,9 @@ function initApp() {
               if (typeof window.addDebugLog === 'function') {
                 window.addDebugLog(`Logged in as Nomad: ${profile.name} (${profile.handle})`);
               }
+              
+              // Fetch full dynamic app state from Supabase
+              await Backend.syncAllData();
             }
           } catch (err) {
             console.error("Error loading user profile on auth change:", err);
