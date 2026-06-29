@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vanlyfa-cache-v1';
+const CACHE_NAME = 'vanlyfa-cache-v2';
 const STATIC_ASSETS = [
   './',
   'index.html',
@@ -10,6 +10,7 @@ const STATIC_ASSETS = [
   'VLLOGO.png',
   'components/accounts-profile.js',
   'components/admin.js',
+  'components/debugger.js',
   'components/app-shell.js',
   'components/feed.js',
   'components/forum.js',
