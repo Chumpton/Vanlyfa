@@ -146,7 +146,11 @@ function initApp() {
                 listingsCount: profile.listings_count || 0,
                 reputation: profile.reputation || 0,
                 savedPostIds: profile.saved_post_ids || [],
-                savedMeetupIds: profile.saved_meetup_ids || []
+                savedMeetupIds: profile.saved_meetup_ids || [],
+                rig: profile.rig || '',
+                solar: profile.solar || '',
+                power: profile.power || '',
+                water: profile.water || ''
               };
               State.isSignedIn = true;
               
@@ -1298,7 +1302,11 @@ async function handleOnboardingSubmit(event) {
       listingsCount: 0,
       reputation: 5,
       savedPostIds: [],
-      savedMeetupIds: []
+      savedMeetupIds: [],
+      rig: profile.rig || '',
+      solar: profile.solar || '',
+      power: profile.power || '',
+      water: profile.water || ''
     };
     State.isSignedIn = true;
     
