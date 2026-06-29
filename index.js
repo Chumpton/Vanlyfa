@@ -41,17 +41,24 @@ function initApp() {
       loadStateFromStorage();
       // Subscribe to Auth state changes
       window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        if (typeof window.addDebugLog === 'function') {
+          window.addDebugLog(`Auth change event fired: ${event} (Session active: ${!!session})`);
+        }
         if (session) {
           try {
-            let { data: profile, error } = await window.supabaseClient
+            const { data: profiles, error } = await window.supabaseClient
               .from('profiles')
               .select('*')
-              .eq('id', session.user.id)
-              .maybeSingle();
+              .eq('id', session.user.id);
               
             if (error) throw error;
             
+            let profile = (profiles && profiles.length > 0) ? profiles[0] : null;
+            
             if (!profile) {
+              if (typeof window.addDebugLog === 'function') {
+                window.addDebugLog(`Profile missing for User ${session.user.id}. Provisioning default profile...`);
+              }
               const metadata = session.user.user_metadata || {};
               const defaultName = metadata.full_name || session.user.email.split('@')[0];
               const defaultHandle = `@${defaultName.replace(/\s+/g, '_').toLowerCase()}`;
@@ -79,6 +86,10 @@ function initApp() {
                 
               if (insertErr) throw insertErr;
               profile = inserted;
+              
+              if (typeof window.addDebugLog === 'function') {
+                window.addDebugLog(`Default profile created successfully: ${profile.handle}`);
+              }
             }
             
             State.currentUser = {
@@ -95,12 +106,19 @@ function initApp() {
               savedMeetupIds: profile.saved_meetup_ids || []
             };
             State.isSignedIn = true;
+            
+            if (typeof window.addDebugLog === 'function') {
+              window.addDebugLog(`Logged in as Nomad: ${profile.name} (${profile.handle})`);
+            }
           } catch (err) {
             console.error("Error loading user profile on auth change:", err);
             showToast("Failed to retrieve profile data.", "error");
           }
         } else {
           await Backend.signOut();
+          if (typeof window.addDebugLog === 'function') {
+            window.addDebugLog("Signed out session. Reverting to Guest mode.");
+          }
         }
         updateSidebarProfileWidget();
         renderCurrentTab();
