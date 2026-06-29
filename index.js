@@ -48,20 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
   }
 
-  // 3. Initialize avatar picker selection highlights
-  document.querySelectorAll('.avatar-picker-option').forEach(option => {
-    option.addEventListener('click', () => {
-      document.querySelectorAll('.avatar-picker-option').forEach(opt => {
-        opt.classList.remove('selected');
-        opt.style.borderColor = 'transparent';
-      });
-      option.classList.add('selected');
-      option.style.borderColor = 'var(--accent-green)';
-    });
-  });
-
-  // 4. Expose onboarding submit to global scope for form action
+  // 3. Expose onboarding submit and file upload to global scope for form action
   window.handleOnboardingSubmit = handleOnboardingSubmit;
+  window.handleOnboardAvatarUpload = handleOnboardAvatarUpload;
 });
 
 function initApp() {
@@ -123,13 +112,15 @@ function initApp() {
               if (handleInput) handleInput.value = defaultHandle;
               if (bioInput) bioInput.value = defaultBio;
               
-              // Render avatar picker SVGs dynamically
-              document.querySelectorAll('.onboard-avatar-img').forEach(img => {
-                const key = img.getAttribute('data-avatar-key');
-                if (key && typeof getAvatarSrc === 'function') {
-                  img.src = getAvatarSrc(key);
-                }
-              });
+              // Reset uploader preview and temp state
+              const preview = document.getElementById('onboard-avatar-preview');
+              const placeholder = document.getElementById('onboard-avatar-placeholder');
+              if (preview && placeholder) {
+                preview.src = '';
+                preview.style.display = 'none';
+                placeholder.style.display = 'flex';
+              }
+              delete State.tempOnboardAvatar;
               
               // Close Auth modal and show Onboarding modal
               closeModal('modal-auth-required');
@@ -1209,6 +1200,43 @@ async function handleAuthSignUp(event) {
   }
 }
 
+function handleOnboardAvatarUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const size = 150; // Lightweight 150x150 square icon
+      canvas.width = size;
+      canvas.height = size;
+      
+      const ctx = canvas.getContext('2d');
+      const minDim = Math.min(img.width, img.height);
+      const sx = (img.width - minDim) / 2;
+      const sy = (img.height - minDim) / 2;
+      
+      ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+      
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+      
+      State.tempOnboardAvatar = compressedDataUrl;
+      const preview = document.getElementById('onboard-avatar-preview');
+      const placeholder = document.getElementById('onboard-avatar-placeholder');
+      
+      if (preview && placeholder) {
+        preview.src = compressedDataUrl;
+        preview.style.display = 'block';
+        placeholder.style.display = 'none';
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 async function handleOnboardingSubmit(event) {
   event.preventDefault();
   
@@ -1222,29 +1250,22 @@ async function handleOnboardingSubmit(event) {
   const displayName = document.getElementById('onboard-display-name').value.trim();
   let handle = document.getElementById('onboard-handle').value.trim();
   const bio = document.getElementById('onboard-bio').value.trim() || "New nomad on the road.";
-  const rigType = document.getElementById('onboard-rig-type').value;
-  const solar = document.getElementById('onboard-solar').value.trim();
-  const battery = document.getElementById('onboard-power').value.trim();
-  const water = document.getElementById('onboard-water').value.trim();
   
   if (!displayName || !handle) {
     showToast("Please fill in both name and handle fields.", "error");
     return;
   }
   
-  // Format handle: prepend '@' if missing, replace spaces/specials
   if (!handle.startsWith('@')) {
     handle = '@' + handle;
   }
   handle = handle.replace(/\s+/g, '_').toLowerCase();
   
-  // Basic validation
   if (handle.length < 3) {
     showToast("Handle must be at least 3 characters long.", "error");
     return;
   }
   
-  // Query handle uniqueness
   try {
     if (Backend._mode === 'supabase') {
       const { data: existing, error } = await window.supabaseClient
@@ -1270,27 +1291,24 @@ async function handleOnboardingSubmit(event) {
     return;
   }
   
-  // Find selected avatar key
-  const selectedAvatarEl = document.querySelector('.avatar-picker-grid .avatar-picker-option.selected');
-  const avatarKey = selectedAvatarEl ? selectedAvatarEl.getAttribute('data-avatar') : 'avatar_bob';
+  const avatarValue = State.tempOnboardAvatar || 'avatar_bob';
   
   const profileData = {
     id: State.tempAuthUser.id,
     name: displayName,
     handle: handle,
-    avatar: avatarKey,
+    avatar: avatarValue,
     bio: bio,
     role: 'user',
-    rig: rigType,
-    solar: solar,
-    power: battery,
-    water: water
+    rig: '',
+    solar: '',
+    power: '',
+    water: ''
   };
   
   try {
     const profile = await Backend.createProfile(profileData);
     
-    // Complete signed-in state
     State.currentUser = {
       id: profile.id,
       name: profile.name,
@@ -1303,20 +1321,19 @@ async function handleOnboardingSubmit(event) {
       reputation: 5,
       savedPostIds: [],
       savedMeetupIds: [],
-      rig: profile.rig || '',
-      solar: profile.solar || '',
-      power: profile.power || '',
-      water: profile.water || ''
+      rig: '',
+      solar: '',
+      power: '',
+      water: ''
     };
     State.isSignedIn = true;
     
-    // Clean up temporary variables
     delete State.tempAuthUser;
+    delete State.tempOnboardAvatar;
     
     closeModal('modal-complete-profile');
     showToast(`Welcome aboard, ${profile.name}!`, "success");
     
-    // Repaint sidebar and active tab
     updateSidebarProfileWidget();
     renderCurrentTab();
   } catch (err) {

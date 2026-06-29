@@ -131,7 +131,7 @@ const Backend = {
             author_id: State.currentUser.id,
             status: 'approved'
           })
-          .select('*, author:profiles(*)')
+          .select('*, author:profiles!author_id(*)')
           .single();
 
         if (error) throw error;
@@ -230,12 +230,12 @@ const Backend = {
             .from('post_likes')
             .delete()
             .eq('post_id', postId)
-            .eq('profile_id', State.currentUser.id);
+            .eq('user_id', State.currentUser.id);
           if (error) throw error;
         } else {
           const { error } = await this._supabase
             .from('post_likes')
-            .insert({ post_id: postId, profile_id: State.currentUser.id });
+            .insert({ post_id: postId, user_id: State.currentUser.id });
           if (error) throw error;
         }
       } else {
@@ -294,7 +294,7 @@ const Backend = {
             text: commentText.trim(),
             author_id: State.currentUser.id
           })
-          .select('*, author:profiles(*)')
+          .select('*, author:profiles!author_id(*)')
           .single();
 
         if (error) throw error;
@@ -445,11 +445,10 @@ const Backend = {
             title,
             body,
             category,
-            image,
             author_id: State.currentUser.id,
             status: 'approved'
           })
-          .select('*, author:profiles(*)')
+          .select('*, author:profiles!author_id(*)')
           .single();
 
         if (error) throw error;
@@ -519,7 +518,7 @@ const Backend = {
             body: body.trim(),
             author_id: State.currentUser.id
           })
-          .select('*, author:profiles(*)')
+          .select('*, author:profiles!author_id(*)')
           .single();
 
         if (error) throw error;
@@ -637,12 +636,10 @@ const Backend = {
             lat: spotData.lat,
             lng: spotData.lng,
             description: spotData.description || '',
-            image: spotData.image || null,
-            fee: spotData.fee || 0,
             author_id: State.currentUser.id,
             status: spotData.requiresApproval ? 'pending' : 'approved'
           })
-          .select('*, author:profiles(*)')
+          .select('*, author:profiles!author_id(*)')
           .single();
 
         if (error) throw error;
@@ -704,7 +701,7 @@ const Backend = {
       if (this._mode === 'supabase') {
         const { error } = await this._supabase
           .from('visited_spots')
-          .insert({ spot_id: spotId, profile_id: State.currentUser.id });
+          .insert({ spot_id: spotId, user_id: State.currentUser.id });
         if (error) throw error;
       } else {
         await new Promise(resolve => setTimeout(resolve, 400));
@@ -793,7 +790,7 @@ const Backend = {
             seller_id: State.currentUser.id,
             status: 'approved'
           })
-          .select('*, seller:profiles(*)')
+          .select('*, seller:profiles!seller_id(*)')
           .single();
 
         if (error) throw error;
@@ -909,11 +906,10 @@ const Backend = {
             lat: meetupData.lat,
             lng: meetupData.lng,
             description: meetupData.description || '',
-            image: meetupData.image || null,
             host_id: State.currentUser.id,
             status: 'approved'
           })
-          .select('*, host:profiles(*)')
+          .select('*, host:profiles!host_id(*)')
           .single();
 
         if (error) throw error;
@@ -981,12 +977,12 @@ const Backend = {
             .from('meetup_attendees')
             .delete()
             .eq('meetup_id', meetupId)
-            .eq('profile_id', State.currentUser.id);
+            .eq('user_id', State.currentUser.id);
           if (error) throw error;
         } else {
           const { error } = await this._supabase
             .from('meetup_attendees')
-            .insert({ meetup_id: meetupId, profile_id: State.currentUser.id });
+            .insert({ meetup_id: meetupId, user_id: State.currentUser.id });
           if (error) throw error;
         }
       } else {
@@ -1074,7 +1070,7 @@ const Backend = {
           .from('messages')
           .insert({
             sender_id: State.currentUser.id,
-            receiver_id: recipient.id,
+            recipient_id: recipient.id,
             text: options.isImage ? null : text,
             image: options.isImage ? text : null,
             status: 'sent'
