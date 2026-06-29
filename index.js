@@ -2,6 +2,33 @@
    VANLYFA MAIN INITIALIZER & CONTROLLER - index.js
    ========================================================================== */
 
+// One-time cache and service worker purge to migrate users from the old cache-first trap
+(async function purgeOldServiceWorker() {
+  if (!localStorage.getItem('vanlyfa_cache_purged_v4')) {
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (let registration of registrations) {
+          await registration.unregister();
+        }
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        for (let key of keys) {
+          await caches.delete(key);
+        }
+      }
+      localStorage.setItem('vanlyfa_cache_purged_v4', 'true');
+      console.log('[VanLyfa] Purged old service worker and caches. Reloading...');
+      if (typeof window.location.reload === 'function') {
+        window.location.reload();
+      }
+    } catch (e) {
+      console.error('[VanLyfa] Error purging service worker:', e);
+    }
+  }
+})();
+
 function debounce(func, wait) {
   let timeout;
   return function(...args) {
