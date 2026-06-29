@@ -16,7 +16,7 @@ function mockUuid() {
 const Backend = {
 
   // ─── Configuration ─────────────────────────────────────────────────
-  _mode: 'local',        // 'local' | 'supabase'
+  _mode: 'supabase',        // 'local' | 'supabase'
   _supabase: null,       // Supabase client instance (set during init)
 
   // ─── Internal Helpers ──────────────────────────────────────────────

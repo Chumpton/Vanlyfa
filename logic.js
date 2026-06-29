@@ -990,31 +990,6 @@ function simulateAutoReply(username, text, delay) {
   showToast(`New message from ${username}`);
 }
 
-const Backend = {
-  createListing(listing) {
-    return new Promise((resolve, reject) => {
-      simulateApiCall(
-        () => {
-          State.marketplace.push(listing);
-          saveStateToStorage();
-          resolve();
-        },
-        () => {
-          if (State.isOffline) {
-            listing.pendingSync = true;
-            State.marketplace.push(listing);
-            State.syncQueue.push({ type: 'CREATE_LISTING', payload: listing });
-            saveStateToStorage();
-            updateConnectionUI();
-            resolve();
-          } else {
-            reject(new Error("Network sync failed."));
-          }
-        }
-      );
-    });
-  }
-};
 
 function createCropObject() {
   return {

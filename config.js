@@ -2,6 +2,10 @@
    VANLYFA APPLICATION CONFIGURATION & COPY - config.js
    ========================================================================== */
 
+// Supabase Configuration (Leave blank for offline local mode, populate for live server)
+window.SUPABASE_URL = window.SUPABASE_URL || "https://dduzwvbjjhgzfyqzyvcx.supabase.co";
+window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkdXp3dmJqamhnemZ5cXp5dmN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2NzY3MzgsImV4cCI6MjA5ODI1MjczOH0.sGacLuLHsoXSBpOCc-X7ZGuXZ7xYxgWHEdBN8uOtz-4";
+
 const AppConfig = {
   defaultCenter: [37.7749, -122.4194],
   defaultZoom: 4,
