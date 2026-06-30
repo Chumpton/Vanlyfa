@@ -1381,6 +1381,11 @@
               </div>
             </div>
           </div>
+        <div class="form-group" style="margin-top: 8px; margin-bottom: 8px;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-main); font-weight: 500;">
+            <input type="checkbox" id="spot-private-location" style="accent-color: var(--accent-green);">
+            <span>📍 Approximate / Vicinity Only (Hide precise GPS)</span>
+          </label>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -2211,7 +2216,7 @@
           <div style="width: 60px; height: 60px; background: rgba(16, 185, 129, 0.1); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; border: 2px dashed var(--accent-green);">
             <i data-lucide="award" style="width: 32px; height: 32px; color: var(--accent-green);"></i>
           </div>
-          <p style="font-size: 14px; line-height: 1.5; color: var(--text-main);">Join the elite tier of vanlifers. A single, one-time payment of <strong>$30</strong> unlocks lifetime benefits.</p>
+          <p style="font-size: 14px; line-height: 1.5; color: var(--text-main);">Join the elite tier of vanlifers. Request lifetime premium benefits from the Admin team.</p>
         </div>
         
         <div style="background: var(--bg-sand); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px;">
@@ -2224,26 +2229,15 @@
           </ul>
         </div>
         
-        <form id="premium-checkout-form" onsubmit="processPremiumPurchase(event)" style="display: flex; flex-direction: column; gap: 12px;">
-          <div class="form-group">
-            <label for="premium-card-number">Card Number</label>
-            <input type="text" id="premium-card-number" placeholder="4111 2222 3333 4444" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 13px; background: var(--bg-sand); color: var(--text-main);">
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div class="form-group">
-              <label for="premium-card-expiry">Expiry Date</label>
-              <input type="text" id="premium-card-expiry" placeholder="MM/YY" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 13px; background: var(--bg-sand); color: var(--text-main);">
-            </div>
-            <div class="form-group">
-              <label for="premium-card-cvc">CVC</label>
-              <input type="text" id="premium-card-cvc" placeholder="123" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 13px; background: var(--bg-sand); color: var(--text-main);">
-            </div>
-          </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; font-size: 14px; padding: 12px; margin-top: 8px;">
-            <i data-lucide="shield-check" style="width: 16px; height: 16px; margin-right: 6px;"></i>
-            <span>Pay $30.00 & Verify Account</span>
+        <div style="display: flex; flex-direction: column; gap: 12px; text-align: center;">
+          <p style="font-size: 12px; color: var(--muted-text); line-height: 1.4;">
+            To unlock these features, please send a message to the Admin team. We will review your account and activate premium benefits.
+          </p>
+          <button onclick="window.contactHost('Admin', 'Premium Lifetime Upgrade'); closeModal('modal-premium-pass');" class="btn btn-primary" style="width: 100%; justify-content: center; font-size: 14px; padding: 12px;">
+            <i data-lucide="message-square" style="width: 16px; height: 16px; margin-right: 6px;"></i>
+            <span>Message Admin to Request Upgrade</span>
           </button>
-        </form>
+        </div>
       </div>
     </div>
   </div>

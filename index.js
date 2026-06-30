@@ -1597,18 +1597,28 @@ async function saveNewSpot() {
   const lat = parseFloat(document.getElementById('spot-lat').value);
   const lng = parseFloat(document.getElementById('spot-lng').value);
   const description = document.getElementById('spot-desc').value.trim();
+  const isPrivate = document.getElementById('spot-private-location').checked;
   
   if (!title || isNaN(lat) || isNaN(lng) || !description) {
     showToast("Please fill all coordinates and name parameters.", "error");
     return;
   }
   
+  let finalLat = lat;
+  let finalLng = lng;
+  if (isPrivate) {
+    // Obfuscate with a tiny offset (~1-2 miles) to represent vicinity
+    finalLat += (Math.random() - 0.5) * 0.025;
+    finalLng += (Math.random() - 0.5) * 0.025;
+  }
+  
   const spotData = {
     title,
     category,
-    lat,
-    lng,
-    description
+    lat: finalLat,
+    lng: finalLng,
+    description,
+    privateLocation: isPrivate
   };
   
   if (category === 'driveway-host') {
@@ -1646,6 +1656,7 @@ async function saveNewSpot() {
   document.getElementById('amenity-water').checked = false;
   document.getElementById('amenity-wifi').checked = false;
   document.getElementById('amenity-pets').checked = false;
+  document.getElementById('spot-private-location').checked = false;
   document.getElementById('spot-hosting-fields').style.display = 'none';
   
   closeModal('modal-add-spot');

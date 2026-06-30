@@ -1521,8 +1521,8 @@ function getDetailedPopupHtml(pin) {
           ${shareSvg} Share
         </button>
         ${pin.category === 'driveway-host' ? `
-        <button class="btn btn-sm btn-primary" onclick="window.bookDrivewayFromPopup('${pin.id}')" style="grid-column: span 2; justify-content:center; font-size:11px; padding:5px; font-weight:700; background-color:var(--accent-green); border-color:var(--accent-green); color:white; margin-top:4px;">
-          ${bookSvg} Book Space
+        <button class="btn btn-sm btn-primary" onclick="window.contactHost('${author.name}', '${pin.title}')" style="grid-column: span 2; justify-content:center; font-size:11px; padding:5px; font-weight:700; background-color:var(--accent-green); border-color:var(--accent-green); color:white; margin-top:4px;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:3px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> Message Host
         </button>
         ` : ''}
       </div>

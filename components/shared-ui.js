@@ -276,7 +276,7 @@ function getUserRoleMarkup(username) {
 
 function contactHost(hostName, meetupOrJobTitle) {
   if (!requireAuth()) return;
-  openDirectChat(hostName);
+  window.openDirectChat(hostName);
   if (meetupOrJobTitle) {
     setTimeout(() => {
       const chatKey = hostName;
@@ -443,3 +443,5 @@ window.triggerHashtagSearch = function(tag) {
     renderCurrentTab();
   }
 };
+
+window.contactHost = contactHost;
