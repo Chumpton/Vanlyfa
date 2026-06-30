@@ -361,8 +361,10 @@ function renderUserProfile() {
     }
   }
   
-  // Initialize Profile Map
-  initProfileMap(user);
+  // Defer map initialization to prevent blocking the UI thread (resolves INP issue)
+  setTimeout(() => {
+    initProfileMap(user);
+  }, 60);
   
   lucide.createIcons();
 }
