@@ -1,7 +1,3 @@
-/* ==========================================================================
-   VANLYFA COMPONENT: APP-SHELL.JS
-   ========================================================================== */
-
 function switchTab(tabName, isPopState = false) {
   if (tabName === 'messages') {
     if (!requireAuth()) return;
@@ -161,7 +157,7 @@ function triggerMainActionButtonModal() {
   const modalId = modals[State.activeTab];
   if (modalId) {
     if (State.activeTab === 'marketplace') {
-      if (localStorage.getItem('vanlyfa_marketplace_agreed') !== 'true') {
+      if (window.SafeStorage.getItem('vanlyfa_marketplace_agreed') !== 'true') {
         State._onMarketplaceSafetyAgreed = () => {
           openModal('modal-add-listing');
         };

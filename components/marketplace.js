@@ -132,7 +132,7 @@ function renderMarketplaceListings() {
 }
 
 function contactSeller(sellerName, itemTitle) {
-  if (localStorage.getItem('vanlyfa_marketplace_agreed') !== 'true') {
+  if (window.SafeStorage.getItem('vanlyfa_marketplace_agreed') !== 'true') {
     State._onMarketplaceSafetyAgreed = () => {
       contactSeller(sellerName, itemTitle);
     };

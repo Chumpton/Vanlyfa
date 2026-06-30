@@ -1,7 +1,3 @@
-/* ==========================================================================
-   VANLYFA CORE APPLICATION LOGIC & STATE - logic.js
-   ========================================================================== */
-
 // Global Application State (Loaded from localStorage or config.js defaults)
 let State = {
   isOffline: false,
@@ -69,31 +65,31 @@ const LOCATION_CACHE_STORAGE_KEY = 'vanlyfa_location_cache_v2';
 const DEFAULT_LOCATION_CACHE = { status: 'not-present', lat: 5, lng: 5 };
 
 function hasDismissedWelcome() {
-  return localStorage.getItem(WELCOME_DISMISSED_STORAGE_KEY) === 'true';
+  return window.SafeStorage.getItem(WELCOME_DISMISSED_STORAGE_KEY) === 'true';
 }
 
 function cacheWelcomeDismissal() {
-  localStorage.setItem(WELCOME_DISMISSED_STORAGE_KEY, 'true');
+  window.SafeStorage.setItem(WELCOME_DISMISSED_STORAGE_KEY, 'true');
 }
 
 function hasAskedGps() {
-  return localStorage.getItem(GPS_ASKED_STORAGE_KEY) === 'true';
+  return window.SafeStorage.getItem(GPS_ASKED_STORAGE_KEY) === 'true';
 }
 
 function cacheGpsAsked() {
-  localStorage.setItem(GPS_ASKED_STORAGE_KEY, 'true');
+  window.SafeStorage.setItem(GPS_ASKED_STORAGE_KEY, 'true');
 }
 
 function hasEncouragedSignup() {
-  return localStorage.getItem(SIGNUP_ENCOURAGED_STORAGE_KEY) === 'true';
+  return window.SafeStorage.getItem(SIGNUP_ENCOURAGED_STORAGE_KEY) === 'true';
 }
 
 function cacheSignupEncouraged() {
-  localStorage.setItem(SIGNUP_ENCOURAGED_STORAGE_KEY, 'true');
+  window.SafeStorage.setItem(SIGNUP_ENCOURAGED_STORAGE_KEY, 'true');
 }
 
 function getCachedLocation() {
-  const saved = localStorage.getItem(LOCATION_CACHE_STORAGE_KEY);
+  const saved = window.SafeStorage.getItem(LOCATION_CACHE_STORAGE_KEY);
   if (!saved) return null;
 
   try {
@@ -105,11 +101,11 @@ function getCachedLocation() {
 }
 
 function cacheLocationNotPresent() {
-  localStorage.setItem(LOCATION_CACHE_STORAGE_KEY, JSON.stringify(DEFAULT_LOCATION_CACHE));
+  window.SafeStorage.setItem(LOCATION_CACHE_STORAGE_KEY, JSON.stringify(DEFAULT_LOCATION_CACHE));
 }
 
 function cacheLocationPresent(lat, lng, label = 'Current location') {
-  localStorage.setItem(LOCATION_CACHE_STORAGE_KEY, JSON.stringify({
+  window.SafeStorage.setItem(LOCATION_CACHE_STORAGE_KEY, JSON.stringify({
     status: 'present',
     lat,
     lng,
@@ -127,7 +123,7 @@ function getSvgDataUri(svgString) {
 }
 
 function saveStateToStorage() {
-  localStorage.setItem('vanlyfa_state', JSON.stringify({
+  window.SafeStorage.setItem('vanlyfa_state', JSON.stringify({
     spots: State.spots,
     meetups: State.meetups,
     posts: State.posts,
@@ -153,7 +149,7 @@ function saveStateToStorage() {
 }
 
 function loadStateFromStorage() {
-  const saved = localStorage.getItem('vanlyfa_state');
+  const saved = window.SafeStorage.getItem('vanlyfa_state');
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
@@ -1105,7 +1101,7 @@ function checkRateLimit(type) {
   const oneHour = 60 * 60 * 1000;
   
   const storageKey = `vanlyfa_rate_limit_${type}`;
-  const timestampsStr = localStorage.getItem(storageKey);
+  const timestampsStr = window.SafeStorage.getItem(storageKey);
   let timestamps = [];
   
   if (timestampsStr) {
@@ -1124,7 +1120,7 @@ function checkRateLimit(type) {
   }
   
   timestamps.push(now);
-  localStorage.setItem(storageKey, JSON.stringify(timestamps));
+  window.SafeStorage.setItem(storageKey, JSON.stringify(timestamps));
   return true;
 }
 

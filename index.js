@@ -1,10 +1,6 @@
-/* ==========================================================================
-   VANLYFA MAIN INITIALIZER & CONTROLLER - index.js
-   ========================================================================== */
-
 // One-time cache and service worker purge to migrate users from the old cache-first trap
 (async function purgeOldServiceWorker() {
-  if (!localStorage.getItem('vanlyfa_cache_purged_v4')) {
+  if (!window.SafeStorage.getItem('vanlyfa_cache_purged_v4')) {
     try {
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
@@ -18,7 +14,7 @@
           await caches.delete(key);
         }
       }
-      localStorage.setItem('vanlyfa_cache_purged_v4', 'true');
+      window.SafeStorage.setItem('vanlyfa_cache_purged_v4', 'true');
       console.log('[VanLyfa] Purged old service worker and caches. Reloading...');
       if (typeof window.location.reload === 'function') {
         window.location.reload();
@@ -55,9 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initApp() {
   // One-time localStorage migration to clear out old mock data caches for Supabase prep
-  if (!localStorage.getItem('vanlyfa_supabase_prep_v1')) {
-    localStorage.removeItem('vanlyfa_state');
-    localStorage.setItem('vanlyfa_supabase_prep_v1', 'true');
+  if (!window.SafeStorage.getItem('vanlyfa_supabase_prep_v1')) {
+    window.SafeStorage.removeItem('vanlyfa_state');
+    window.SafeStorage.setItem('vanlyfa_supabase_prep_v1', 'true');
   }
 
   // Initialize Supabase Client if credentials are provided
@@ -178,7 +174,7 @@ function initApp() {
   }
   
   // Read saved theme
-  const savedDarkVal = localStorage.getItem('vanlyfa_dark_mode');
+  const savedDarkVal = window.SafeStorage.getItem('vanlyfa_dark_mode');
   if (savedDarkVal === null || savedDarkVal === 'true') {
     State.darkMode = true;
     document.body.classList.add('dark-mode');
@@ -346,7 +342,7 @@ function initApp() {
   document.getElementById('theme-toggle-btn').addEventListener('click', () => {
     State.darkMode = !State.darkMode;
     document.body.classList.toggle('dark-mode', State.darkMode);
-    localStorage.setItem('vanlyfa_dark_mode', State.darkMode);
+    window.SafeStorage.setItem('vanlyfa_dark_mode', State.darkMode);
     updateThemeToggleUI();
   });
   
@@ -624,7 +620,7 @@ function initApp() {
     popoutThemeBtn.addEventListener('click', () => {
       State.darkMode = !State.darkMode;
       document.body.classList.toggle('dark-mode', State.darkMode);
-      localStorage.setItem('vanlyfa_dark_mode', State.darkMode);
+      window.SafeStorage.setItem('vanlyfa_dark_mode', State.darkMode);
       updateThemeToggleUI();
     });
   }
@@ -791,14 +787,26 @@ function initApp() {
   window.dismissWelcomeModal = function() {
     const welcomeModal = document.getElementById('welcome-modal');
     if (welcomeModal) {
-      if (typeof cacheWelcomeDismissal === 'function') cacheWelcomeDismissal();
-      if (typeof ensureLocationCacheFallback === 'function') ensureLocationCacheFallback();
+      try {
+        if (typeof cacheWelcomeDismissal === 'function') cacheWelcomeDismissal();
+      } catch (e) {
+        console.warn("Welcome dismissal caching failed:", e);
+      }
+      try {
+        if (typeof ensureLocationCacheFallback === 'function') ensureLocationCacheFallback();
+      } catch (e) {
+        console.warn("Location cache fallback failed:", e);
+      }
       welcomeModal.classList.add('fading');
       setTimeout(() => {
         welcomeModal.classList.remove('active', 'fading');
         welcomeModal.style.display = 'none';
-        if (typeof requestOnboardingGeolocation === 'function') {
-          requestOnboardingGeolocation();
+        try {
+          if (typeof requestOnboardingGeolocation === 'function') {
+            requestOnboardingGeolocation();
+          }
+        } catch (e) {
+          console.warn("Onboarding geolocation request failed:", e);
         }
       }, 300);
     }
@@ -1093,7 +1101,7 @@ function setupModalHandlers() {
     });
     
     agreeBtn.addEventListener('click', () => {
-      localStorage.setItem('vanlyfa_marketplace_agreed', 'true');
+      window.SafeStorage.setItem('vanlyfa_marketplace_agreed', 'true');
       closeModal('modal-market-safety');
       // Reset checkboxes
       safetyChecks.forEach(c => c.checked = false);
@@ -2206,7 +2214,7 @@ function handleTabCreateButton(modalId) {
   if (!requireAuth()) return;
   
   if (modalId === 'modal-add-listing') {
-    if (localStorage.getItem('vanlyfa_marketplace_agreed') !== 'true') {
+    if (window.SafeStorage.getItem('vanlyfa_marketplace_agreed') !== 'true') {
       State._onMarketplaceSafetyAgreed = () => {
         openModal('modal-add-listing');
       };
