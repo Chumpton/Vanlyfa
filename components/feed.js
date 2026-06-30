@@ -350,6 +350,8 @@ function renderSocialFeed(containerId, isSidebar = false) {
     `;
   }
   
+  const displayItems = filtered.slice(0, limit);
+  
   let feedHtml = '';
   
   displayItems.forEach(post => {
