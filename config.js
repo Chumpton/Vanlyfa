@@ -6,6 +6,31 @@
 window.SUPABASE_URL = window.SUPABASE_URL || "https://dduzwvbjjhgzfyqzyvcx.supabase.co";
 window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkdXp3dmJqamhnemZ5cXp5dmN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2NzY3MzgsImV4cCI6MjA5ODI1MjczOH0.sGacLuLHsoXSBpOCc-X7ZGuXZ7xYxgWHEdBN8uOtz-4";
 
+window.SafeStorage = {
+  getItem(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      console.warn("Storage read failed for key:", key, e);
+      return null;
+    }
+  },
+  setItem(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      console.warn("Storage write failed for key:", key, e);
+    }
+  },
+  removeItem(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.warn("Storage remove failed for key:", key, e);
+    }
+  }
+};
+
 const AppConfig = {
   defaultCenter: [37.7749, -122.4194],
   defaultZoom: 4,

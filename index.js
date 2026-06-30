@@ -788,19 +788,25 @@ function initApp() {
   }
 
   // Onboarding Welcome Modal Dismiss
-  const welcomeDismissBtn = document.getElementById('welcome-dismiss-btn');
-  const welcomeModal = document.getElementById('welcome-modal');
-  if (welcomeDismissBtn && welcomeModal) {
-    welcomeDismissBtn.addEventListener('click', () => {
-      cacheWelcomeDismissal();
-      ensureLocationCacheFallback();
+  window.dismissWelcomeModal = function() {
+    const welcomeModal = document.getElementById('welcome-modal');
+    if (welcomeModal) {
+      if (typeof cacheWelcomeDismissal === 'function') cacheWelcomeDismissal();
+      if (typeof ensureLocationCacheFallback === 'function') ensureLocationCacheFallback();
       welcomeModal.classList.add('fading');
       setTimeout(() => {
         welcomeModal.classList.remove('active', 'fading');
         welcomeModal.style.display = 'none';
-        requestOnboardingGeolocation();
+        if (typeof requestOnboardingGeolocation === 'function') {
+          requestOnboardingGeolocation();
+        }
       }, 300);
-    });
+    }
+  };
+
+  const welcomeDismissBtn = document.getElementById('welcome-dismiss-btn');
+  if (welcomeDismissBtn) {
+    welcomeDismissBtn.addEventListener('click', window.dismissWelcomeModal);
   }
   
   // Initialize Leaflet Map
