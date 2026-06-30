@@ -2046,8 +2046,130 @@ const Backend = {
 
       this.commit(['feed', 'dashboard', 'map', 'meetups', 'marketplace', 'forum', 'tribes']);
 
+      // Start real-time listeners for updates
+      this.initializeRealtimeSubscriptions();
+
     } catch (err) {
       console.error('[Backend] Error syncing all data:', err);
+    }
+  },
+
+  _realtimeChannels: {},
+
+  initializeRealtimeSubscriptions() {
+    if (this._mode !== 'supabase' || !this._supabase || !State.isSignedIn || !State.currentUser) return;
+
+    this.unsubscribeAllRealtime();
+
+    const currentUserId = State.currentUser.id;
+
+    // 1. Direct Messages Subscription
+    const dmChannel = this._supabase
+      .channel('realtime_direct_messages')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        async (payload) => {
+          const newMsg = payload.new;
+          if (newMsg.recipient_id === currentUserId) {
+            console.log("New real-time message received:", newMsg);
+            const { data: senderProfile } = await this._supabase
+              .from('profiles')
+              .select('name, avatar')
+              .eq('id', newMsg.sender_id)
+              .single();
+
+            if (senderProfile) {
+              const username = senderProfile.name;
+              if (!State.chats) State.chats = {};
+              if (!State.chats[username]) State.chats[username] = [];
+
+              const msgObj = {
+                id: newMsg.id,
+                sender: username,
+                text: newMsg.text || '',
+                isImage: !!newMsg.image,
+                time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                status: 'delivered'
+              };
+
+              if (!State.chats[username].some(m => m.id === msgObj.id)) {
+                State.chats[username].push(msgObj);
+                
+                if (typeof renderContactsList === 'function') renderContactsList();
+                if (typeof renderChatWindow === 'function') renderChatWindow(username);
+                
+                if (State.activeChatPartner !== username) {
+                  showToast(`New message from ${username}: "${msgObj.text.substring(0, 30)}..."`, "info");
+                }
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    this._realtimeChannels.dm = dmChannel;
+
+    // 2. Feed Posts Subscription
+    const postsChannel = this._supabase
+      .channel('realtime_posts')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'posts' },
+        async (payload) => {
+          const newPost = payload.new;
+          if (newPost.author_id !== currentUserId) {
+            console.log("New background post detected:", newPost);
+            const { data: authorProfile } = await this._supabase
+              .from('profiles')
+              .select('name, avatar')
+              .eq('id', newPost.author_id)
+              .single();
+
+            const postObj = {
+              id: newPost.id,
+              content: newPost.content,
+              image: newPost.image || 'none',
+              lat: newPost.latitude,
+              lng: newPost.longitude,
+              likes: 0,
+              saves: 0,
+              views: 0,
+              comments: [],
+              time: 'Just now',
+              created_at: newPost.created_at,
+              author: {
+                name: authorProfile?.name || 'Nomad',
+                avatar: authorProfile?.avatar || 'avatar_bob'
+              }
+            };
+
+            State.pendingFeedPosts = State.pendingFeedPosts || [];
+            if (!State.pendingFeedPosts.some(p => p.id === postObj.id)) {
+              State.pendingFeedPosts.unshift(postObj);
+              State._cachedFeeds = {}; // Clear feed render cache
+              
+              if (State.activeTab === 'feed' && typeof renderSocialFeed === 'function') {
+                renderSocialFeed('social-feed-container');
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    this._realtimeChannels.posts = postsChannel;
+  },
+
+  unsubscribeAllRealtime() {
+    if (this._realtimeChannels) {
+      Object.keys(this._realtimeChannels).forEach(key => {
+        if (this._realtimeChannels[key]) {
+          this._realtimeChannels[key].unsubscribe();
+        }
+      });
+      this._realtimeChannels = {};
     }
   }
 };

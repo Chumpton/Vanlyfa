@@ -321,7 +321,34 @@ function renderSocialFeed(containerId, isSidebar = false) {
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const defaultLimit = isMobile ? 12 : 30;
   const limit = State._feedLimit || defaultLimit;
-  const displayItems = filtered.slice(0, limit);
+  let newPostsBannerHtml = '';
+  if (!isSidebar && State.pendingFeedPosts && State.pendingFeedPosts.length > 0) {
+    const newCount = State.pendingFeedPosts.length;
+    newPostsBannerHtml = `
+      <div id="feed-pending-banner" class="floating-feed-banner" onclick="window.loadPendingFeedPosts()" style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: var(--accent-green);
+        color: white;
+        padding: 10px 18px;
+        border-radius: 24px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(59, 122, 87, 0.4);
+        margin: 12px auto;
+        width: fit-content;
+        text-align: center;
+        border: 2px solid white;
+        transition: transform 0.2s, background-color 0.2s;
+      " onmouseover="this.style.transform='scale(1.05)'; this.style.backgroundColor='#2d5e43'" onmouseout="this.style.transform='none'; this.style.backgroundColor='var(--accent-green)'">
+        <i data-lucide="sparkles" style="width: 14px; height: 14px; stroke-width: 2.5;"></i>
+        <span>✨ ${newCount} new post${newCount > 1 ? 's' : ''} available. Load new posts.</span>
+      </div>
+    `;
+  }
   
   let feedHtml = '';
   
@@ -543,8 +570,8 @@ function renderSocialFeed(containerId, isSidebar = false) {
     `;
   }
   
-  container.innerHTML = feedHtml;
-  State._cachedFeeds[cacheKey] = feedHtml;
+  container.innerHTML = newPostsBannerHtml + feedHtml;
+  State._cachedFeeds[cacheKey] = newPostsBannerHtml + feedHtml;
   if (window.lucide) lucide.createIcons();
 }
 
@@ -1132,6 +1159,28 @@ window.handlePostCardClick = function(event, postId) {
     }
   } else {
     window.openPostDetailModal(postId);
+  }
+};
+
+window.loadPendingFeedPosts = function() {
+  if (State.pendingFeedPosts && State.pendingFeedPosts.length > 0) {
+    // Unshift pending posts to the main State.posts list
+    State.posts = [...State.pendingFeedPosts, ...State.posts];
+    State.pendingFeedPosts = [];
+    
+    // Clear feed cache to force fresh render
+    State._cachedFeeds = {};
+    
+    // Re-render feed
+    if (typeof renderSocialFeed === 'function') {
+      renderSocialFeed('social-feed-container');
+    }
+    
+    // Smooth scroll to top of feed
+    const feedHeader = document.getElementById('social-feed-container');
+    if (feedHeader) {
+      feedHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
 };
 

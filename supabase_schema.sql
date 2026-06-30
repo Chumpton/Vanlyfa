@@ -458,3 +458,68 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+
+-- ==========================================
+-- 16. Tribes
+-- ==========================================
+create table public.tribes (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  description text,
+  banner_url text,
+  icon_url text,
+  icon_letter text,
+  is_public boolean default true not null,
+  created_at timestamptz default timezone('utc'::text, now()) not null
+);
+
+alter table public.tribes enable row level security;
+create policy "Tribes are viewable by everyone" on public.tribes for select using (true);
+create policy "Authenticated users can create tribes" on public.tribes for insert with check (auth.role() = 'authenticated');
+
+-- ==========================================
+-- 17. Tribe Members
+-- ==========================================
+create table public.tribe_members (
+  tribe_id uuid references public.tribes(id) on delete cascade not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default timezone('utc'::text, now()) not null,
+  primary key (tribe_id, user_id)
+);
+
+alter table public.tribe_members enable row level security;
+create policy "Tribe membership is viewable by everyone" on public.tribe_members for select using (true);
+create policy "Users can join tribes" on public.tribe_members for insert with check (auth.role() = 'authenticated' and auth.uid() = user_id);
+create policy "Users can leave tribes" on public.tribe_members for delete using (auth.uid() = user_id);
+
+-- ==========================================
+-- 18. Tribe Messages
+-- ==========================================
+create table public.tribe_messages (
+  id uuid default gen_random_uuid() primary key,
+  tribe_id uuid references public.tribes(id) on delete cascade not null,
+  sender_id uuid references public.profiles(id) on delete cascade not null,
+  message_text text not null,
+  created_at timestamptz default timezone('utc'::text, now()) not null
+);
+
+alter table public.tribe_messages enable row level security;
+
+create policy "Tribe messages are viewable by members of that tribe" on public.tribe_messages for select using (
+  exists (
+    select 1 from public.tribe_members 
+    where tribe_members.tribe_id = tribe_messages.tribe_id 
+      and tribe_members.user_id = auth.uid()
+  ) or public.is_admin()
+);
+
+create policy "Tribe members can send messages" on public.tribe_messages for insert with check (
+  auth.role() = 'authenticated' and auth.uid() = sender_id and (
+    exists (
+      select 1 from public.tribe_members 
+      where tribe_members.tribe_id = tribe_messages.tribe_id 
+        and tribe_members.user_id = auth.uid()
+    )
+  )
+);

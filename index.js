@@ -1932,7 +1932,7 @@ async function saveNewMeetup() {
   closeModal('modal-add-meetup');
 }
 
-function saveNewForumThread() {
+async function saveNewForumThread() {
   if (!requireAuth()) return;
   if (!checkRateLimit('forum')) {
     showToast("Rate limit exceeded. You can only create 5 threads per hour.", "error");
@@ -1969,28 +1969,19 @@ function saveNewForumThread() {
     replies: []
   };
   
-  if (State.isOffline) {
-    newThread.pendingSync = true;
-    State.forum.unshift(newThread);
-    State.syncQueue.push({ type: 'CREATE_THREAD', payload: newThread });
-    saveStateToStorage();
-    updateConnectionUI();
-    showToast("Offline mode: thread queued for sync!", "warning");
-    renderForumView();
-  } else {
-    newThread.pendingSync = true;
-    State.forum.unshift(newThread);
-    saveStateToStorage();
-    renderForumView();
-
-    const sql = `INSERT INTO forum_threads (id, title, category, author_id, body, image_url, replies_count, views_count) VALUES ('${newThread.id}', '${newThread.title.replace(/'/g, "''")}', '${newThread.category}', '${State.currentUser.name}', '${newThread.body.replace(/'/g, "''")}', ${newThread.image ? "'[image_data]'" : "NULL"}, 0, 1);`;
-    const rls = `CREATE POLICY "Enable insert for authenticated authors" ON forum_threads FOR INSERT TO authenticated WITH CHECK (auth.uid() = author_id);`;
-
-    window.simulateDatabaseWrite(newThread, 'forum thread', sql, rls, () => {
+  try {
+    if (typeof Backend !== 'undefined' && Backend._mode === 'supabase') {
+      await Backend.createThread({ title, body, category, image: finalImage });
+      showToast("Thread published to discussion board!", "success");
+    } else {
+      newThread.pendingSync = false;
+      State.forum.unshift(newThread);
       saveStateToStorage();
       renderForumView();
       showToast("Thread published to discussion board!", "success");
-    });
+    }
+  } catch (err) {
+    showToast(`Failed to publish thread: ${err.message}`, "error");
   }
   
   State.activeForumCategory = 'all'; // reset to all to see the new thread
