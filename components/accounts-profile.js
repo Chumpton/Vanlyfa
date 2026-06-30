@@ -4,7 +4,7 @@
 
 function renderUserProfile() {
   const user = getActiveUser();
-  const isOwner = user.name === State.currentUser.name;
+  const isOwner = State.isSignedIn && user.name === State.currentUser.name;
   
   // Update left column details
   document.getElementById('profile-user-avatar').src = getAvatarSrc(user.avatar);

@@ -265,11 +265,11 @@ function getUserRoleMarkup(username) {
     baseMarkup = `<span class="role-name-nomad" style="color: var(--text-main); font-weight: 500;">${cleanName}</span><span class="role-badge-nomad" style="background: rgba(120, 120, 120, 0.1); color: var(--muted-text); border: 1px solid rgba(120, 120, 120, 0.2); border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 500; margin-left: 4px; vertical-align: middle;">NOMAD</span>`;
   }
 
-  /* Premium verified badge is hidden for initial launch
-  if (user && user.isPremium) {
-    baseMarkup += `<span class="role-badge-premium" style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid #10B981; border-radius: 4px; padding: 1px 4px; font-size: 9px; font-weight: 700; margin-left: 4px; vertical-align: middle; display: inline-flex; align-items: center; gap: 2px;">✔ VERIFIED</span>`;
+  // Verified blue checkmark check (roles: admin, pro, or custom verified state)
+  const isVerified = user && (user.role === 'admin' || user.role === 'pro' || user.verified === true || user.is_verified === true);
+  if (isVerified) {
+    baseMarkup += ` <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#3b82f6" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="verified-badge-icon" style="vertical-align: middle; display: inline-block; margin-left: 2px;" title="Verified Nomad"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></svg>`;
   }
-  */
 
   return baseMarkup;
 }

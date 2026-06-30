@@ -1346,7 +1346,7 @@ async function handleOnboardingSubmit(event) {
   }
 }
 
-function saveUserProfileEdit() {
+async function saveUserProfileEdit() {
   const oldName = State.currentUser.name;
   const newName = document.getElementById('edit-profile-name').value.trim() || oldName;
   
@@ -1457,100 +1457,118 @@ function saveUserProfileEdit() {
   user.name = newName;
   State.currentUser.name = newName;
   
-  // Optimistic UI updates propagation across all data structures
-  const nameChanged = oldName !== newName;
-  const avatarChanged = oldAvatar !== newAvatar;
-  
-  if (nameChanged || avatarChanged) {
-    // 1. Update posts and comments
-    State.posts.forEach(p => {
-      if (p.author && p.author.name === oldName) {
-        if (nameChanged) p.author.name = newName;
-        if (avatarChanged) p.author.avatar = newAvatar;
-      }
-      if (p.comments) {
-        p.comments.forEach(c => {
-          if (c.user === oldName) {
-            if (nameChanged) c.user = newName;
+  try {
+    // Persist to Supabase Database
+    await Backend.updateProfile({
+      name: newName,
+      avatar: newAvatar,
+      bio: State.currentUser.bio,
+      rig: State.currentUser.rig || '',
+      solar: State.currentUser.solar || '',
+      power: State.currentUser.power || '',
+      water: State.currentUser.water || '',
+      instagram_handle: State.currentUser.instagram_handle,
+      tiktok_handle: State.currentUser.tiktok_handle,
+      role: State.currentUser.role
+    });
+
+    // Optimistic UI updates propagation across all data structures
+    const nameChanged = oldName !== newName;
+    const avatarChanged = oldAvatar !== newAvatar;
+    
+    if (nameChanged || avatarChanged) {
+      // 1. Update posts and comments
+      State.posts.forEach(p => {
+        if (p.author && p.author.name === oldName) {
+          if (nameChanged) p.author.name = newName;
+          if (avatarChanged) p.author.avatar = newAvatar;
+        }
+        if (p.comments) {
+          p.comments.forEach(c => {
+            if (c.user === oldName) {
+              if (nameChanged) c.user = newName;
+            }
+          });
+        }
+      });
+      
+      // 2. Update spots
+      State.spots.forEach(s => {
+        if (s.author && s.author.name === oldName) {
+          if (nameChanged) s.author.name = newName;
+          if (avatarChanged) s.author.avatar = newAvatar;
+        }
+      });
+      
+      // 3. Update meetups & attendees
+      State.meetups.forEach(m => {
+        if (m.host && m.host.name === oldName) {
+          if (nameChanged) m.host.name = newName;
+          if (avatarChanged) m.host.avatar = newAvatar;
+        }
+        if (m.attendees && avatarChanged) {
+          const idx = m.attendees.indexOf(oldAvatar);
+          if (idx !== -1) {
+            m.attendees[idx] = newAvatar;
           }
-        });
-      }
-    });
-    
-    // 2. Update spots
-    State.spots.forEach(s => {
-      if (s.author && s.author.name === oldName) {
-        if (nameChanged) s.author.name = newName;
-        if (avatarChanged) s.author.avatar = newAvatar;
-      }
-    });
-    
-    // 3. Update meetups & attendees
-    State.meetups.forEach(m => {
-      if (m.host && m.host.name === oldName) {
-        if (nameChanged) m.host.name = newName;
-        if (avatarChanged) m.host.avatar = newAvatar;
-      }
-      if (m.attendees && avatarChanged) {
-        const idx = m.attendees.indexOf(oldAvatar);
-        if (idx !== -1) {
-          m.attendees[idx] = newAvatar;
+        }
+      });
+      
+      // 4. Update marketplace seller
+      State.marketplace.forEach(m => {
+        if (m.seller && m.seller.name === oldName) {
+          if (nameChanged) m.seller.name = newName;
+          if (avatarChanged) m.seller.avatar = newAvatar;
+        }
+      });
+      
+      // 5. Update forum threads & replies
+      State.forum.forEach(t => {
+        if (t.author && t.author.name === oldName) {
+          if (nameChanged) t.author.name = newName;
+          if (avatarChanged) t.author.avatar = newAvatar;
+        }
+        if (t.replies) {
+          t.replies.forEach(r => {
+            if (r.author && r.author.name === oldName) {
+              if (nameChanged) r.author.name = newName;
+              if (avatarChanged) r.author.avatar = newAvatar;
+            }
+          });
+        }
+      });
+      
+      // 6. Update direct message/chats keys
+      if (nameChanged && State.chats) {
+        if (State.chats[oldName]) {
+          State.chats[newName] = State.chats[oldName];
+          delete State.chats[oldName];
         }
       }
-    });
-    
-    // 4. Update marketplace seller
-    State.marketplace.forEach(m => {
-      if (m.seller && m.seller.name === oldName) {
-        if (nameChanged) m.seller.name = newName;
-        if (avatarChanged) m.seller.avatar = newAvatar;
-      }
-    });
-    
-    // 5. Update forum threads & replies
-    State.forum.forEach(t => {
-      if (t.author && t.author.name === oldName) {
-        if (nameChanged) t.author.name = newName;
-        if (avatarChanged) t.author.avatar = newAvatar;
-      }
-      if (t.replies) {
-        t.replies.forEach(r => {
-          if (r.author && r.author.name === oldName) {
-            if (nameChanged) r.author.name = newName;
-            if (avatarChanged) r.author.avatar = newAvatar;
-          }
-        });
-      }
-    });
-    
-    // 6. Update direct message/chats keys
-    if (nameChanged && State.chats) {
-      if (State.chats[oldName]) {
-        State.chats[newName] = State.chats[oldName];
-        delete State.chats[oldName];
-      }
+      
+      // 7. Update friends arrays
+      State.users.forEach(u => {
+        if (u.friends && nameChanged) {
+          u.friends = u.friends.map(f => f === oldName ? newName : f);
+        }
+      });
     }
     
-    // 7. Update friends arrays
-    State.users.forEach(u => {
-      if (u.friends && nameChanged) {
-        u.friends = u.friends.map(f => f === oldName ? newName : f);
-      }
-    });
-  }
-  
-  saveStateToStorage();
-  updateSidebarProfileWidget();
-  renderUserProfile();
-  closeModal('modal-edit-profile');
-  
-  const statusSpan = document.getElementById('profile-photo-upload-status');
-  if (statusSpan) statusSpan.innerText = "";
-  
-  if (!handleSaved) {
-    showToast(`Profile details updated! ${handleSavedMsg}`, "warning");
-  } else {
-    showToast("Profile details updated!", "success");
+    saveStateToStorage();
+    updateSidebarProfileWidget();
+    renderUserProfile();
+    closeModal('modal-edit-profile');
+    
+    const statusSpan = document.getElementById('profile-photo-upload-status');
+    if (statusSpan) statusSpan.innerText = "";
+    
+    if (!handleSaved) {
+      showToast(`Profile details updated! ${handleSavedMsg}`, "warning");
+    } else {
+      showToast("Profile details updated!", "success");
+    }
+  } catch (err) {
+    showToast(`Failed to update profile: ${err.message}`, "error");
   }
 }
 
@@ -1755,7 +1773,7 @@ async function saveNewListing() {
   closeModal('modal-add-listing');
 }
 
-function saveNewTribe() {
+async function saveNewTribe() {
   if (!requireAuth()) return;
   if (!checkRateLimit('meetup')) { // Tribes are similar in complexity to meetups, so check against meetup limit
     showToast("Rate limit exceeded. You can only create 3 groups per hour.", "error");
@@ -1809,41 +1827,48 @@ function saveNewTribe() {
     ideal: "Off-grid / Boondocking"
   };
   
-  newTribe.pendingSync = true;
-  State.tribes.push(newTribe);
-  saveStateToStorage();
-  renderTribesList();
-  
-  // Clean inputs
-  document.getElementById('tribe-name-input').value = '';
-  document.getElementById('tribe-desc-input').value = '';
-  document.getElementById('tribe-privacy-input').checked = true;
-  document.getElementById('tribe-icon-upload').value = '';
-  document.getElementById('tribe-banner-upload').value = '';
-  
-  const iconStatus = document.getElementById('tribe-icon-upload-status');
-  if (iconStatus) iconStatus.innerText = '';
-  const bannerStatus = document.getElementById('tribe-banner-upload-status');
-  if (bannerStatus) bannerStatus.innerText = '';
-  
-  const iconWorkspace = document.getElementById('tribe-icon-crop-workspace');
-  if (iconWorkspace) iconWorkspace.style.display = 'none';
-  const bannerWorkspace = document.getElementById('tribe-banner-crop-workspace');
-  if (bannerWorkspace) bannerWorkspace.style.display = 'none';
-  
-  State.tribeIconCropState = createCropObject();
-  State.tribeBannerCropState = createCropObject();
-  
-  closeModal('modal-add-tribe');
+  try {
+    if (typeof Backend !== 'undefined' && Backend._mode === 'supabase') {
+      await Backend.createTribe({
+        id: newTribe.id,
+        title: newTribe.title,
+        description: newTribe.description,
+        bannerUrl: newTribe.banner,
+        iconUrl: newTribe.icon,
+        iconLetter: newTribe.iconLetter,
+        isPublic: newTribe.isPublic
+      });
+    }
 
-  const sql = `INSERT INTO tribes (id, title, description, banner_url, icon_url, icon_letter, is_public, members_count) VALUES ('${newTribe.id}', '${newTribe.title.replace(/'/g, "''")}', '${newTribe.description.replace(/'/g, "''")}', '[banner_data]', '[icon_data]', '${newTribe.iconLetter}', ${newTribe.isPublic}, 1);`;
-  const rls = `CREATE POLICY "Enable insert for authenticated users" ON tribes FOR INSERT TO authenticated WITH CHECK (true);`;
-
-  window.simulateDatabaseWrite(newTribe, 'tribe', sql, rls, () => {
+    State.tribes.push(newTribe);
     saveStateToStorage();
     renderTribesList();
+    
+    // Clean inputs
+    document.getElementById('tribe-name-input').value = '';
+    document.getElementById('tribe-desc-input').value = '';
+    document.getElementById('tribe-privacy-input').checked = true;
+    document.getElementById('tribe-icon-upload').value = '';
+    document.getElementById('tribe-banner-upload').value = '';
+    
+    const iconStatus = document.getElementById('tribe-icon-upload-status');
+    if (iconStatus) iconStatus.innerText = '';
+    const bannerStatus = document.getElementById('tribe-banner-upload-status');
+    if (bannerStatus) bannerStatus.innerText = '';
+    
+    const iconWorkspace = document.getElementById('tribe-icon-crop-workspace');
+    if (iconWorkspace) iconWorkspace.style.display = 'none';
+    const bannerWorkspace = document.getElementById('tribe-banner-crop-workspace');
+    if (bannerWorkspace) bannerWorkspace.style.display = 'none';
+    
+    State.tribeIconCropState = createCropObject();
+    State.tribeBannerCropState = createCropObject();
+    
+    closeModal('modal-add-tribe');
     showToast(`"${title}" Tribe formed! You are the first member.`, "success");
-  });
+  } catch (err) {
+    showToast(`Failed to form tribe: ${err.message}`, "error");
+  }
 }
 
 async function saveNewMeetup() {

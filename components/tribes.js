@@ -144,6 +144,9 @@ function openTribeHub(tribeId) {
 
 function closeTribeHub() {
   State.activeTribeId = null;
+  if (typeof unsubscribeFromTribeChat === 'function') {
+    unsubscribeFromTribeChat();
+  }
   document.getElementById('tribe-detail-view').style.display = 'none';
   document.getElementById('tribes-main-view').style.display = 'block';
   renderTribesList();
@@ -217,12 +220,29 @@ function switchTribeHubTab(tabName) {
     forumBtn.classList.remove('active');
     chatPane.style.display = 'block';
     forumPane.style.display = 'none';
-    renderTribeHubChat(State.activeTribeId);
+    
+    if (typeof Backend !== 'undefined' && Backend._mode === 'supabase') {
+      Backend.fetchTribeChats(State.activeTribeId).then(() => {
+        renderTribeHubChat(State.activeTribeId);
+        if (typeof subscribeToTribeChat === 'function') {
+          subscribeToTribeChat(State.activeTribeId);
+        }
+      }).catch(err => {
+        console.error("Error loading group chat:", err);
+        renderTribeHubChat(State.activeTribeId);
+      });
+    } else {
+      renderTribeHubChat(State.activeTribeId);
+    }
   } else {
     chatBtn.classList.remove('active');
     forumBtn.classList.add('active');
     chatPane.style.display = 'none';
     forumPane.style.display = 'block';
+    
+    if (typeof unsubscribeFromTribeChat === 'function') {
+      unsubscribeFromTribeChat();
+    }
     renderTribeHubForum(State.activeTribeId);
   }
 }
@@ -403,4 +423,55 @@ window.shareTribe = function(tribeId) {
   const shareUrl = `${window.location.origin}${window.location.pathname}?tribe=${tribeId}`;
   navigator.clipboard.writeText(shareUrl);
   showToast("Tribe invite link copied to clipboard!", "success");
+};
+
+let tribeRealtimeSubscription = null;
+
+window.subscribeToTribeChat = function(tribeId) {
+  if (tribeRealtimeSubscription) {
+    tribeRealtimeSubscription.unsubscribe();
+    tribeRealtimeSubscription = null;
+  }
+  
+  if (typeof Backend !== 'undefined' && Backend._mode === 'supabase' && Backend._supabase) {
+    tribeRealtimeSubscription = Backend._supabase
+      .channel(`tribe_chat_${tribeId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'tribe_messages', filter: `tribe_id=eq.${tribeId}` },
+        async (payload) => {
+          console.log("New real-time tribe message:", payload.new);
+          const { data: profile } = await Backend._supabase
+            .from('profiles')
+            .select('name, avatar')
+            .eq('id', payload.new.sender_id)
+            .single();
+            
+          const msg = {
+            id: payload.new.id,
+            sender: profile?.name || 'Unknown Nomad',
+            avatar: profile?.avatar || 'avatar_bob',
+            text: payload.new.message_text,
+            time: new Date(payload.new.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            created_at: payload.new.created_at
+          };
+          
+          if (!State.tribeChats) State.tribeChats = {};
+          if (!State.tribeChats[tribeId]) State.tribeChats[tribeId] = [];
+          
+          if (!State.tribeChats[tribeId].some(m => m.id === msg.id)) {
+            State.tribeChats[tribeId].push(msg);
+            renderTribeHubChat(tribeId);
+          }
+        }
+      )
+      .subscribe();
+  }
+};
+
+window.unsubscribeFromTribeChat = function() {
+  if (tribeRealtimeSubscription) {
+    tribeRealtimeSubscription.unsubscribe();
+    tribeRealtimeSubscription = null;
+  }
 };

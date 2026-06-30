@@ -1155,20 +1155,56 @@ const Backend = {
     if (!State.isSignedIn) throw new Error('auth_required');
     if (!text || !text.trim()) return null;
 
+    if (this._mode === 'supabase') {
+      const { data, error } = await this._supabase
+        .from('tribe_messages')
+        .insert({
+          tribe_id: tribeId,
+          sender_id: State.currentUser.id,
+          message_text: text.trim()
+        })
+        .select();
+      if (error) throw error;
+      return data[0];
+    } else {
+      if (!State.tribeChats) State.tribeChats = {};
+      if (!State.tribeChats[tribeId]) State.tribeChats[tribeId] = [];
+
+      const msg = {
+        id: mockUuid(),
+        sender: State.currentUser.name,
+        avatar: State.currentUser.avatar,
+        text: text.trim(),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      State.tribeChats[tribeId].push(msg);
+      this._persist();
+      return msg;
+    }
+  },
+
+  /** Fetch live chat messages for a specific tribe from Supabase. */
+  async fetchTribeChats(tribeId) {
+    if (this._mode !== 'supabase') return;
+
+    const { data, error } = await this._supabase
+      .from('tribe_messages')
+      .select('*, sender:profiles!sender_id(*)')
+      .eq('tribe_id', tribeId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
     if (!State.tribeChats) State.tribeChats = {};
-    if (!State.tribeChats[tribeId]) State.tribeChats[tribeId] = [];
-
-    const msg = {
-      id: mockUuid(),
-      author: State.currentUser.name,
-      avatar: State.currentUser.avatar,
-      text: text.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-
-    State.tribeChats[tribeId].push(msg);
-    this._persist();
-    return msg;
+    State.tribeChats[tribeId] = (data || []).map(m => ({
+      id: m.id,
+      sender: m.sender?.name || 'Unknown Nomad',
+      avatar: m.sender?.avatar || 'avatar_bob',
+      text: m.message_text,
+      time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      created_at: m.created_at
+    }));
   },
 
   /** Join tribe. */
@@ -1184,18 +1220,26 @@ const Backend = {
     if (!wasMember) {
       tribe.members.push(State.currentUser.name);
       tribe.memberCount = (tribe.memberCount || 0) + 1;
+      tribe.joined = true;
     }
     this.commit(['tribes']);
 
     try {
       if (this._mode === 'supabase') {
-        // Connect database join mapping
+        const { error } = await this._supabase
+          .from('tribe_members')
+          .insert({
+            tribe_id: tribeId,
+            user_id: State.currentUser.id
+          });
+        if (error) throw error;
       }
       return tribe;
     } catch (err) {
       if (!wasMember) {
         tribe.members = tribe.members.filter(m => m !== State.currentUser.name);
         tribe.memberCount = Math.max(0, (tribe.memberCount || 0) - 1);
+        tribe.joined = false;
       }
       this.commit(['tribes']);
       throw err;
@@ -1214,20 +1258,58 @@ const Backend = {
 
     tribe.members = tribe.members.filter(m => m !== State.currentUser.name);
     tribe.memberCount = Math.max(0, (tribe.memberCount || 0) - 1);
+    tribe.joined = false;
     this.commit(['tribes']);
 
     try {
       if (this._mode === 'supabase') {
-        // Connect database leave mapping
+        const { error } = await this._supabase
+          .from('tribe_members')
+          .delete()
+          .eq('tribe_id', tribeId)
+          .eq('user_id', State.currentUser.id);
+        if (error) throw error;
       }
       return tribe;
     } catch (err) {
       if (wasMember) {
         tribe.members.push(State.currentUser.name);
         tribe.memberCount = tribe.memberCount + 1;
+        tribe.joined = true;
       }
       this.commit(['tribes']);
       throw err;
+    }
+  },
+
+  /** Create a new tribe and auto-join the creator. */
+  async createTribe(tribeData) {
+    if (!State.isSignedIn) throw new Error('auth_required');
+
+    if (this._mode === 'supabase') {
+      const { data, error } = await this._supabase
+        .from('tribes')
+        .insert({
+          id: tribeData.id,
+          title: tribeData.title,
+          description: tribeData.description,
+          banner_url: tribeData.bannerUrl,
+          icon_url: tribeData.iconUrl,
+          icon_letter: tribeData.iconLetter,
+          is_public: tribeData.isPublic
+        })
+        .select();
+      if (error) throw error;
+
+      // Creator automatically joins the tribe
+      await this._supabase
+        .from('tribe_members')
+        .insert({
+          tribe_id: tribeData.id,
+          user_id: State.currentUser.id
+        });
+
+      return data[0];
     }
   },
 
@@ -1391,7 +1473,10 @@ const Backend = {
             rig: profileData.rig,
             solar: profileData.solar,
             power: profileData.power,
-            water: profileData.water
+            water: profileData.water,
+            instagram_handle: profileData.instagram_handle,
+            tiktok_handle: profileData.tiktok_handle,
+            role: profileData.role
           })
           .eq('id', State.currentUser.id);
         if (error) throw error;
@@ -1803,13 +1888,19 @@ const Backend = {
         .select('*, author:profiles!author_id(*), forum_replies(*, author:profiles!author_id(*))')
         .order('created_at', { ascending: false });
 
+      // 6. Fetch Tribes
+      const tribesPromise = this._supabase
+        .from('tribes')
+        .select('*, tribe_members(user_id)');
+
       // Run queries in parallel
-      const [postsRes, spotsRes, meetupsRes, marketplaceRes, forumRes] = await Promise.all([
+      const [postsRes, spotsRes, meetupsRes, marketplaceRes, forumRes, tribesRes] = await Promise.all([
         postsPromise,
         spotsPromise,
         meetupsPromise,
         marketplacePromise,
-        forumPromise
+        forumPromise,
+        tribesPromise
       ]);
 
       if (postsRes.error) console.error('Error fetching posts:', postsRes.error);
@@ -1817,6 +1908,7 @@ const Backend = {
       if (meetupsRes.error) console.error('Error fetching meetups:', meetupsRes.error);
       if (marketplaceRes.error) console.error('Error fetching marketplace:', marketplaceRes.error);
       if (forumRes.error) console.error('Error fetching forum:', forumRes.error);
+      if (tribesRes.error) console.error('Error fetching tribes:', tribesRes.error);
 
       // Map Posts
       if (postsRes.data) {
@@ -1931,7 +2023,28 @@ const Backend = {
         }));
       }
 
-      this.commit(['feed', 'dashboard', 'map', 'meetups', 'marketplace', 'forum']);
+      // Map Tribes
+      if (tribesRes.data) {
+        State.tribes = tribesRes.data.map(t => {
+          const membersList = (t.tribe_members || []).map(m => m.user_id);
+          const isMember = State.isSignedIn && membersList.includes(currentUserId);
+          
+          return {
+            id: t.id,
+            title: t.title,
+            description: t.description || '',
+            bannerUrl: t.banner_url || 'none',
+            iconUrl: t.icon_url || 'none',
+            iconLetter: t.icon_letter || t.title.substring(0, 2).toUpperCase(),
+            isPublic: t.is_public,
+            joined: isMember,
+            memberCount: membersList.length,
+            members: membersList // Store member UUIDs
+          };
+        });
+      }
+
+      this.commit(['feed', 'dashboard', 'map', 'meetups', 'marketplace', 'forum', 'tribes']);
 
     } catch (err) {
       console.error('[Backend] Error syncing all data:', err);

@@ -135,6 +135,28 @@ function renderSocialFeed(containerId, isSidebar = false) {
     });
   }
   
+  // Add forum threads
+  if (State.forum) {
+    State.forum.forEach(ft => {
+      combinedItems.push({
+        id: `forum-post-${ft.id}`,
+        rawId: ft.id,
+        type: 'forum_thread',
+        content: `💬 FORUM DISCUSSION: "${ft.title}"\n${ft.body || ''}`,
+        image: 'none',
+        author: ft.author ? { name: ft.author.name, avatar: ft.author.avatar } : { name: "Nomad", avatar: "avatar_bob" },
+        likes: ft.likes || 0,
+        likedByUser: ft.likedByUser || false,
+        time: ft.time || 'Forum',
+        comments: ft.replies || [],
+        status: ft.status || 'approved',
+        views: ft.viewsCount || 0,
+        saves: 0,
+        created_at: ft.created_at
+      });
+    });
+  }
+  
   // Helper for Area matching
   function postMatchesArea(item, area) {
     if (area === 'all') return true;
@@ -263,11 +285,29 @@ function renderSocialFeed(containerId, isSidebar = false) {
     });
     filtered.sort((a, b) => b._engagementScore - a._engagementScore);
   } else {
-    // Chronological (Recent)
+    // Chronological (Recent) prioritizing user content
     filtered.sort((a, b) => {
-      const aTime = a.id.includes('-') ? parseInt(a.id.split('-').pop()) || 0 : 0;
-      const bTime = b.id.includes('-') ? parseInt(b.id.split('-').pop()) || 0 : 0;
-      return bTime - aTime;
+      const getPriority = (type) => {
+        if (type === 'post' || type === 'forum_thread') return 1;
+        if (type === 'meetup') return 2;
+        if (type === 'marketplace') return 3;
+        return 4; // 'spot' / Pinned locations
+      };
+      
+      const priorityA = getPriority(a.type);
+      const priorityB = getPriority(b.type);
+      
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.id.includes('-') ? parseInt(a.id.split('-').pop()) || 0 : 0);
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.id.includes('-') ? parseInt(b.id.split('-').pop()) || 0 : 0);
+      
+      if (isNaN(timeA) && isNaN(timeB)) return 0;
+      if (isNaN(timeA)) return 1;
+      if (isNaN(timeB)) return -1;
+      return timeB - timeA;
     });
   }
   
@@ -325,6 +365,8 @@ function renderSocialFeed(containerId, isSidebar = false) {
       typeBadgeMarkup = `<span style="background:rgba(239,68,68,0.12); color:#ef4444; border: 1px solid rgba(239,68,68,0.2); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="flame" style="width:10px; height:10px;"></i> meetup</span>`;
     } else if (post.type === 'spot') {
       typeBadgeMarkup = `<span style="background:rgba(59,122,87,0.12); color:var(--accent-green); border: 1px solid var(--accent-green-light); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="map-pin" style="width:10px; height:10px;"></i> vouched</span>`;
+    } else if (post.type === 'forum_thread') {
+      typeBadgeMarkup = `<span style="background:rgba(59,130,246,0.12); color:#3b82f6; border: 1px solid rgba(59,130,246,0.2); font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:2px;"><i data-lucide="message-square" style="width:10px; height:10px;"></i> forum</span>`;
     }
     
     // Moderation tag
@@ -412,6 +454,8 @@ function renderSocialFeed(containerId, isSidebar = false) {
       clickGoMarkup = `<button class="btn btn-xs" onclick="switchTab('meetups')" title="View Event" style="font-size: 10px; background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.15); display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; padding: 0; cursor: pointer; margin-left: 2px;"><i data-lucide="calendar-days" style="width:13px; height:13px;"></i></button>`;
     } else if (post.type === 'spot') {
       clickGoMarkup = `<button class="btn btn-xs" onclick="viewSpotFromProfile('${post.rawId}')" title="View Map Pin" style="font-size: 10px; background: rgba(59,122,87,0.1); color: var(--accent-green); border: 1px solid var(--accent-green-light); display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; padding: 0; cursor: pointer; margin-left: 2px;"><i data-lucide="map" style="width:13px; height:13px;"></i></button>`;
+    } else if (post.type === 'forum_thread') {
+      clickGoMarkup = `<button class="btn btn-xs" onclick="switchTab('forum'); if (typeof viewThreadDetail === 'function') viewThreadDetail('${post.rawId}');" title="View Discussion" style="font-size: 10px; background: rgba(59,130,246,0.1); color: #3b82f6; border: 1px solid rgba(59,130,246,0.15); display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; padding: 0; cursor: pointer; margin-left: 2px;"><i data-lucide="messages-square" style="width:13px; height:13px;"></i></button>`;
     }
 
     const isSaved = State.currentUser && State.currentUser.savedPostIds && State.currentUser.savedPostIds.includes(post.rawId);
@@ -1080,6 +1124,14 @@ window.handlePostCardClick = function(event, postId) {
   if (ignoredTags.includes(target.tagName) || target.closest('button') || target.closest('a') || target.closest('label') || target.closest('.thread-avatar-container') || target.closest('.thread-author-name') || target.closest('.chat-bubble-reaction') || target.closest('[onclick*="viewUserProfile"]')) {
     return;
   }
-  window.openPostDetailModal(postId);
+  if (postId.startsWith('forum-post-')) {
+    const rawId = postId.replace('forum-post-', '');
+    switchTab('forum');
+    if (typeof viewThreadDetail === 'function') {
+      viewThreadDetail(rawId);
+    }
+  } else {
+    window.openPostDetailModal(postId);
+  }
 };
 
